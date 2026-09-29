@@ -1,0 +1,11 @@
+// TODO(T2,T3): modelar User, Category, Facility, Schedule, Reservation, Payment, AccessLog.
+// Este esqueleto permite `prisma generate` cuando se instalen las dependencias.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
