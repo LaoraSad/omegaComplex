@@ -17,7 +17,7 @@ enum nameRole {
 }
 
 model Role {
-  id    String   @id @default(uuid()) @db.uuid
+  id    String   @id @default(uuid()) @db.Uuid
   name  nameRole @default(user)
   users User[]
 }
