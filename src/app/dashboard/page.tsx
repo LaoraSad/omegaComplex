@@ -3,9 +3,33 @@ export default function Dashboard() {
     <main className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto py-12">
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Panel de Control</h1>
-        <p className="text-gray-600">
-          Bienvenido al panel de control de Omega Complex
-        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatsCard
+            title="Total Reservas"
+            value="1,247"
+            subtitle="Este mes"
+            color="blue"
+          />
+          <StatsCard
+            title="Ingresos"
+            value="$12,540"
+            subtitle="Este mes"
+            color="green"
+          />
+          <StatsCard
+            title="Usuarios Activos"
+            value="243"
+            subtitle="Este mes"
+            color="orange"
+          />
+          <StatsCard
+            title="Capacidad Ocupada"
+            value="78%"
+            subtitle="Este mes"
+            color="red"
+          />
+        </div>
       </div>
     </main>
   )
