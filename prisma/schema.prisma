@@ -1,0 +1,327 @@
+// TODO(T2,T3): modelar User, Category, Facility, Schedule, Reservation, Payment, AccessLog.
+// Este esqueleto permite `prisma generate` cuando se instalen las dependencias.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum nameRole {
+  user
+  admin
+  employee
+}
+
+model Role {
+  id    String   @id @default(uuid()) @db.Uuid
+  name  nameRole @unique @default(user)
+  users User[]
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  roleId       String   @db.Uuid
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  phone        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  role Role @relation(fields: [roleId], references: [id])
+
+  customer           Customer?
+  employee           Employee?
+  oauthAccounts      OAuthAccount[]
+  emailVerifications EmailVerification[]
+  passwordResets     PasswordReset[]
+  reservations       Reservation[]
+}
+
+model Customer {
+  id       String  @id @default(uuid()) @db.Uuid
+  userId   String  @unique @db.Uuid
+  document String?
+  address  String?
+
+  user         User          @relation(fields: [userId], references: [id])
+  reservations Reservation[]
+}
+
+model Category {
+  id          String  @id @default(uuid()) @db.Uuid
+  name        String  @unique
+  description String?
+
+  services Service[]
+}
+
+model Service {
+  id          String  @id @default(uuid()) @db.Uuid
+  categoryId  String  @db.Uuid
+  name        String  @unique
+  description String?
+  price       Int
+  capacity    Int
+
+  category            Category             @relation(fields: [categoryId], references: [id])
+  serviceSchedules    ServiceSchedule[]
+  serviceClosures     ServiceClosure[]
+  serviceSlots        ServiceSlot[]
+  employeeAssignments EmployeeAssignment[]
+  reservations        Reservation[]
+}
+
+// ========= ENUMS =========
+
+enum ReservationStatus {
+  pending_payment
+  payment_processing
+  confirmed
+  payment_rejected
+  expired
+  used
+}
+
+enum ReservationChannel {
+  online
+  in_person
+}
+
+enum HoldStatus {
+  active
+  released
+  consumed
+}
+
+enum PaymentMethod {
+  card
+  cash
+}
+
+enum PaymentStatus {
+  pending
+  succeeded
+  failed
+  // refunded
+}
+
+enum QrStatus {
+  active
+  used
+  expired
+}
+
+enum AccessResult {
+  allowed
+  denied
+}
+
+// ========= USUARIOS (complemento) =========
+
+model Employee {
+  id       String  @id @default(uuid()) @db.Uuid
+  userId   String  @unique @db.Uuid
+  document String  @unique
+  isActive Boolean @default(true)
+
+  user        User                 @relation(fields: [userId], references: [id])
+  assignments EmployeeAssignment[]
+  accesses    Access[]
+}
+
+model OAuthAccount {
+  id                String @id @default(uuid()) @db.Uuid
+  userId            String @db.Uuid
+  provider          String
+  providerAccountId String
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([provider, providerAccountId])
+}
+
+model EmailVerification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  codeHash  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model PasswordReset {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String //guarda el hash del token de recuperación
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ========= CATÁLOGO Y DISPONIBILIDAD =========
+
+model ServiceSchedule {
+  id        String @id @default(uuid()) @db.Uuid
+  serviceId String @db.Uuid
+  dayOfWeek Int // 0 = domingo ... 6 = sábado
+  openTime  String // "08:00"
+  closeTime String // "17:00"
+
+  service Service @relation(fields: [serviceId], references: [id])
+
+  @@unique([serviceId, dayOfWeek]) // dice que la combinación de serviceId + dayOfWeek no se puede repetir en la tabla, aunque cada campo por separado sí puede repetirse muchas veces.
+}
+
+model ServiceClosure {
+  id        String   @id @default(uuid()) @db.Uuid
+  serviceId String?  @db.Uuid // null = cierra todo el complejo
+  dateFrom  DateTime @db.Date
+  dateTo    DateTime @db.Date
+  reason    String
+
+  service Service? @relation(fields: [serviceId], references: [id])
+}
+
+model ServiceSlot {
+  id          String   @id @default(uuid()) @db.Uuid
+  serviceId   String   @db.Uuid
+  startsAt    DateTime
+  endsAt      DateTime
+  capacity    Int //cuántos cupos tiene esa franja específica. Normalmente copia el capacity del Service, pero lo duplicas aquí por si en el futuro un servicio tiene capacidad distinta según el día u horario (por ejemplo, menos cupos en horario de mantenimiento parcial).
+  bookedCount Int      @default(0) //cuántos cupos ya están confirmados (reservas pagadas) en esa franja.
+  heldCount   Int      @default(0) //cuántos cupos están bloqueados temporalmente (alguien está en proceso de pago, sección 10 del documento) pero todavía no confirmados.
+
+  service          Service           @relation(fields: [serviceId], references: [id])
+  reservationSlots ReservationSlot[]
+
+  @@unique([serviceId, startsAt]) //Evita que el job generador de franjas (o un reintento del cron) cree dos filas para "Cancha 1, martes 10:00am" por error. Sin esto, tendrías dos ServiceSlot compitiendo por la misma hora real, con cupos separados, y se podría reservar el doble de lo que la cancha realmente soporta.
+  @@index([serviceId, startsAt]) //Es un índice de consulta (no de unicidad), optimiza la query más frecuente del sistema: "dame todas las franjas de este servicio a partir de esta fecha", que es exactamente lo que se ejecuta cada vez que un cliente abre el calendario de un servicio para ver disponibilidad.
+}
+
+model EmployeeAssignment {
+  employeeId String @db.Uuid
+  serviceId  String @db.Uuid
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+  service  Service  @relation(fields: [serviceId], references: [id])
+
+  @@id([employeeId, serviceId])
+}
+
+// ========= RESERVAS =========
+
+model Reservation {
+  id         String             @id @default(uuid()) @db.Uuid
+  customerId String             @db.Uuid
+  serviceId  String             @db.Uuid
+  createdBy  String?            @db.Uuid // venta física hecha por un usuario (empleado/admin)
+  status     ReservationStatus  @default(pending_payment)
+  channel    ReservationChannel @default(online)
+  quantity   Int                @default(1)
+  totalCop   Int
+  startsAt   DateTime
+  endsAt     DateTime
+  createdAt  DateTime           @default(now())
+  // updatedAt   DateTime           @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id])
+  service  Service  @relation(fields: [serviceId], references: [id])
+  creator  User?    @relation(fields: [createdBy], references: [id])
+
+  slots    ReservationSlot[]
+  holds    ReservationHold[]
+  payments Payment[]
+  qrTokens QrToken[]
+
+  @@index([customerId, startsAt, endsAt]) //sin este index, Postgres tendría que revisar todas las reservas de la tabla para encontrar las de ese cliente y comparar fechas una por una.
+}
+
+model ReservationSlot {
+  reservationId String @db.Uuid
+  slotId        String @db.Uuid
+  quantity      Int    @default(1)
+
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+  slot        ServiceSlot @relation(fields: [slotId], references: [id])
+
+  @@id([reservationId, slotId]) //Evita duplicados automáticamente, sin necesitar un @@unique aparte. Hace los include/where más directos, porque puedes buscar por el par exacto sin pasar por un índice secundario.
+}
+
+model ReservationHold {
+  id            String     @id @default(uuid()) @db.Uuid
+  reservationId String     @db.Uuid
+  status        HoldStatus @default(active)
+  expiresAt     DateTime
+  createdAt     DateTime   @default(now())
+
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+
+  @@index([status, expiresAt])
+}
+
+// ========= PAGOS =========
+
+model Payment {
+  id                    String        @id @default(uuid()) @db.Uuid
+  reservationId         String        @db.Uuid
+  method                PaymentMethod @default(card)
+  status                PaymentStatus @default(pending)
+  amountCop             Int
+  stripeSessionId       String?       @unique
+  stripePaymentIntentId String?       @unique
+  paidAt                DateTime?
+  createdAt             DateTime      @default(now())
+
+  reservation  Reservation   @relation(fields: [reservationId], references: [id])
+  stripeEvents StripeEvent[]
+}
+
+model StripeEvent {
+  eventId     String   @id // id del evento de Stripe, garantiza idempotencia
+  paymentId   String?  @db.Uuid
+  type        String
+  payload     Json
+  processedAt DateTime @default(now())
+
+  payment Payment? @relation(fields: [paymentId], references: [id])
+}
+
+// ========= QR Y CONTROL DE ACCESO =========
+
+model QrToken {
+  id            String    @id @default(uuid()) @db.Uuid
+  reservationId String    @db.Uuid
+  tokenHash     String    @unique
+  seqNo         Int       @default(1)
+  status        QrStatus  @default(active)
+  createdAt     DateTime  @default(now())
+  usedAt        DateTime?
+  // printedAt     DateTime?
+
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+  accesses    Access[]
+}
+
+model Access {
+  id             String       @id @default(uuid()) @db.Uuid
+  qrTokenId      String       @db.Uuid
+  employeeId     String       @db.Uuid
+  result         AccessResult
+  denialReason   String?
+  wristbandColor String?
+  accessedAt     DateTime     @default(now())
+
+  qrToken  QrToken  @relation(fields: [qrTokenId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
+}
