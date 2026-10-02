@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Omega Complex",
-  description: "Proyecto Next.js desde cero",
+  title: {
+    default: "Omega Complex",
+    template: "%s | Omega Complex",
+  },
+  description: "Accede a tu cuenta de Omega Complex.",
 };
 
 export default function RootLayout({
@@ -12,8 +15,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
-      <body>{children}</body>
+    <html lang="es" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }
