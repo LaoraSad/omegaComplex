@@ -1,3 +1,7 @@
+import DashboardSidebar from "@/components/ui/dashboard-sidebar";
+import StatsCard from "@/components/ui/stats-card";
+import RecentActivity from "@/components/ui/recent-activity";
+
 export default function Dashboard() {
   return (
     <main className="min-h-screen bg-gray-50">
