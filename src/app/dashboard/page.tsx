@@ -30,6 +30,10 @@ export default function Dashboard() {
             color="red"
           />
         </div>
+
+        <div className="mt-8">
+          <RecentActivity />
+        </div>
       </div>
     </main>
   )
