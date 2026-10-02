@@ -1,0 +1,1 @@
+// TODO(catalog): componente placeholder
