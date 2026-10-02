@@ -18,7 +18,7 @@ enum nameRole {
 
 model Role {
   id    String   @id @default(uuid()) @db.Uuid
-  name  nameRole @default(user)
+  name  nameRole @unique @default(user)
   users User[]
 }
 
@@ -65,9 +65,9 @@ model Category {
 model Service {
   id          String  @id @default(uuid()) @db.Uuid
   categoryId  String  @db.Uuid
-  name        String
+  name        String  @unique
   description String?
-  price       Decimal
+  price       Int
   capacity    Int
 
   category            Category             @relation(fields: [categoryId], references: [id])
