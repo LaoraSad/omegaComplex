@@ -1,12 +1,14 @@
 import { SignJWT, jwtVerify } from "jose";
 
-const secret = process.env.JWT_SECRET;
+function getSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
 
-if (!secret) {
-  throw new Error("JWT_SECRET no está configurado");
+  if (!secret) {
+    throw new Error("JWT_SECRET no está configurado");
+  }
+
+  return new TextEncoder().encode(secret);
 }
-
-const JWT_SECRET = new TextEncoder().encode(secret);
 
 export type JwtPayload = {
   userId: string;
@@ -21,11 +23,11 @@ export async function createToken(payload: JwtPayload) {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
-    .sign(JWT_SECRET);
+    .sign(getSecret());
 }
 
 export async function verifyToken(token: string): Promise<JwtPayload> {
-  const { payload } = await jwtVerify(token, JWT_SECRET);
+  const { payload } = await jwtVerify(token, getSecret());
 
   if (
     typeof payload.userId !== "string" ||

@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import {
   Menu,
   X,
@@ -14,12 +14,62 @@ import {
   Layers,
   LayoutDashboard,
 } from 'lucide-react';
+import { AuthApiError, logout, me, type AuthUser } from '@/lib/api/auth';
 
-export default function Navbar() {
+interface NavbarProps {
+  initialUser: AuthUser | null;
+}
+
+export default function Navbar({ initialUser }: NavbarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  // Estado para alternar entre usuario autenticado y no autenticado (para demostración del cliente)
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(initialUser);
+  const [prevInitialUser, setPrevInitialUser] = useState<AuthUser | null>(initialUser);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  // Sincroniza si el layout entrega un usuario distinto (p. ej. tras login).
+  if (initialUser !== prevInitialUser) {
+    setPrevInitialUser(initialUser);
+    setUser(initialUser);
+  }
+
+  // Respaldo: si el layout se renderizó sin sesión (navegación cliente),
+  // consulta la sesión vigente una sola vez al montar.
+  useEffect(() => {
+    if (initialUser) return;
+    let cancelled = false;
+    me().then(
+      (current) => {
+        if (!cancelled) setUser(current);
+      },
+      (error: unknown) => {
+        if (!cancelled && error instanceof AuthApiError && error.status === 401) {
+          setUser(null);
+        }
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [initialUser]);
+
+  const isAuthenticated = user !== null;
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    try {
+      await logout();
+    } catch {
+      // Aunque falle la red, se limpia el estado local y se redirige.
+    } finally {
+      setUser(null);
+      setMobileMenuOpen(false);
+      setLoggingOut(false);
+      router.push('/login');
+      router.refresh();
+    }
+  }
 
   const isActive = (path: string) => pathname === path;
 
@@ -118,15 +168,15 @@ export default function Navbar() {
 
         {/* Acciones de Autenticación Desktop */}
         <div className="hidden md:flex items-center gap-4">
-          {/* Botón interactivo para simular rol / estado de login */}
-          <button
-            onClick={() => setIsAuthenticated(!isAuthenticated)}
-            className="text-[11px] font-semibold text-[#6B7280] bg-[#F5F5F5] hover:bg-[#E5E7EB] px-3.5 py-1.5 rounded-full border border-[#E5E7EB] transition-colors flex items-center gap-1.5 cursor-pointer"
-            title="Alternar vista de usuario en la demo"
-          >
-            <span className={`w-2 h-2 rounded-full ${isAuthenticated ? 'bg-emerald-500' : 'bg-gray-400'}`} />
-            <span>{isAuthenticated ? 'Modo Cliente' : 'Modo Visitante'}</span>
-          </button>
+          {isAuthenticated && user ? (
+            <span
+              className="text-[11px] font-semibold text-[#1F1F1F] bg-[#F5F5F5] px-3.5 py-1.5 rounded-full border border-[#E5E7EB] flex items-center gap-1.5"
+              title={user.email}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Hola, {user.firstName}</span>
+            </span>
+          ) : null}
 
           {!isAuthenticated ? (
             <>
@@ -146,23 +196,23 @@ export default function Navbar() {
             </>
           ) : (
             <button
-              onClick={() => setIsAuthenticated(false)}
-              className="text-sm font-semibold text-[#6B7280] hover:text-[#7A1F3D] px-4 py-2 rounded-xl border border-[#E5E7EB] hover:border-[#7A1F3D] transition-colors flex items-center gap-1.5 cursor-pointer"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="text-sm font-semibold text-[#6B7280] hover:text-[#7A1F3D] px-4 py-2 rounded-xl border border-[#E5E7EB] hover:border-[#7A1F3D] transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
             >
               <LogOut className="w-4 h-4" />
-              <span>Cerrar sesión</span>
+              <span>{loggingOut ? 'Cerrando…' : 'Cerrar sesión'}</span>
             </button>
           )}
         </div>
 
         {/* Botón Hamburger Mobile */}
         <div className="md:hidden flex items-center gap-2">
-          <button
-            onClick={() => setIsAuthenticated(!isAuthenticated)}
-            className="text-[11px] font-semibold text-[#6B7280] bg-[#F5F5F5] px-2.5 py-1 rounded-md border border-[#E5E7EB]"
-          >
-            {isAuthenticated ? 'Cliente' : 'Visitante'}
-          </button>
+          {isAuthenticated && user ? (
+            <span className="text-[11px] font-semibold text-[#1F1F1F] bg-[#F5F5F5] px-2.5 py-1 rounded-md border border-[#E5E7EB] max-w-28 truncate">
+              {user.firstName}
+            </span>
+          ) : null}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-2.5 rounded-xl text-[#1F1F1F] hover:bg-[#F5F5F5] border border-[#E5E7EB]"
@@ -251,14 +301,12 @@ export default function Navbar() {
               </>
             ) : (
               <button
-                onClick={() => {
-                  setIsAuthenticated(false);
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full py-2.5 text-center font-semibold text-sm text-[#7A1F3D] border border-[#7A1F3D] rounded-xl flex items-center justify-center gap-1.5"
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="w-full py-2.5 text-center font-semibold text-sm text-[#7A1F3D] border border-[#7A1F3D] rounded-xl flex items-center justify-center gap-1.5 disabled:opacity-60"
               >
                 <LogOut className="w-4 h-4" />
-                <span>Cerrar sesión</span>
+                <span>{loggingOut ? 'Cerrando…' : 'Cerrar sesión'}</span>
               </button>
             )}
           </div>

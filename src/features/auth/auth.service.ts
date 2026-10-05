@@ -1,45 +1,30 @@
-// TODO(auth): implementar auth.service.ts
 import bcrypt from "bcryptjs";
 
 import { createSession } from "@/shared/auth/session";
 
 import {
   ConflictError,
+  HttpError,
   UnauthorizedError,
 } from "@/shared/http/errors";
 
 import {
-  createUser,
+  createUserWithCustomer,
+  findCustomerByDocument,
   findRoleByName,
   findUserByEmail,
 } from "./auth.repository";
 
 import type { LoginInput, RegisterInput } from "./auth.schemas";
 
-export async function register(input: RegisterInput) {
-  const existingUser = await findUserByEmail(input.email);
-
-  if (existingUser) {
-    throw new ConflictError("El correo ya está registrado");
-  }
-
-  const role = await findRoleByName("user");
-
-  if (!role) {
-    throw new Error("El rol user no existe");
-  }
-
-  const passwordHash = await bcrypt.hash(input.password, 12);
-
-  const user = await createUser({
-    email: input.email,
-    passwordHash,
-    firstName: input.firstName,
-    lastName: input.lastName,
-    phone: input.phone,
-    roleId: role.id,
-  });
-
+function toAuthUser(user: {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  role: { name: string };
+}) {
   return {
     id: user.id,
     email: user.email,
@@ -48,6 +33,68 @@ export async function register(input: RegisterInput) {
     phone: user.phone,
     role: user.role.name,
   };
+}
+
+export async function register(input: RegisterInput) {
+  const existingUser = await findUserByEmail(input.email);
+
+  if (existingUser) {
+    throw new ConflictError("El correo ya está registrado");
+  }
+
+  const existingCustomer = await findCustomerByDocument(input.document);
+
+  if (existingCustomer) {
+    throw new ConflictError("El documento ya está registrado");
+  }
+
+  const role = await findRoleByName("user");
+
+  if (!role) {
+    // Error de configuración (falta seed), no del usuario.
+    throw new HttpError(
+      500,
+      "ROLE_NOT_SEEDED",
+      "El rol de usuario no existe. Ejecuta el seed de la base de datos.",
+    );
+  }
+
+  const birthDate = new Date(`${input.birthDate}T00:00:00`);
+
+  if (Number.isNaN(birthDate.getTime())) {
+    throw new ConflictError("La fecha de nacimiento no es válida");
+  }
+
+  const passwordHash = await bcrypt.hash(input.password, 12);
+
+  try {
+    const user = await createUserWithCustomer({
+      email: input.email,
+      passwordHash,
+      firstName: input.firstName,
+      lastName: input.lastName,
+      phone: input.phone,
+      document: input.document,
+      birthDate,
+      roleId: role.id,
+    });
+
+    // Sesión inmediata: el registro deja al usuario autenticado.
+    await createSession(user.id, user.role.name as "user" | "admin" | "employee");
+
+    return toAuthUser(user);
+  } catch (error) {
+    // Condición de carrera en unique (email/document).
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: string }).code === "P2002"
+    ) {
+      throw new ConflictError("El correo o documento ya está registrado");
+    }
+    throw error;
+  }
 }
 
 export async function login(input: LoginInput) {
@@ -70,14 +117,7 @@ export async function login(input: LoginInput) {
     throw new UnauthorizedError("Credenciales inválidas");
   }
 
-  await createSession(user.id, user.role.name);
+  await createSession(user.id, user.role.name as "user" | "admin" | "employee");
 
-  return {
-    id: user.id,
-    email: user.email,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    phone: user.phone,
-    role: user.role.name,
-  };
+  return toAuthUser(user);
 }
