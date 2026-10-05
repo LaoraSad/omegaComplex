@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 import { handler } from "@/shared/http/handler";
 import { ok } from "@/shared/http/api-response";
+import { catalogService } from "@/features/catalog/catalog.service";
 
-// TODO(Dev2): listar/crear categorías (catalog).
 export const GET = handler(async () => {
-  return NextResponse.json(ok([]));
-});
+  const categories = await catalogService.getCategories();
 
-export const POST = handler(async () => {
-  return NextResponse.json(ok({ todo: "create-category" }), { status: 201 });
+  return NextResponse.json(ok(categories));
 });
