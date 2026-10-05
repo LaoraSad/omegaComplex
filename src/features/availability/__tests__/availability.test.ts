@@ -1,1 +1,3 @@
-// TODO(availability): tests del módulo
+import { describe } from "vitest";
+
+describe.todo("tests del módulo availability (pendiente)");

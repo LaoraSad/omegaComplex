@@ -1,3 +1,3 @@
-// TODO(T16): tests de integración (reservas, pagos, acceso).
-// Sugerencia: Vitest + Next test utils.
-export {};
+import { describe } from "vitest";
+
+describe.todo("tests del módulo integración (pendiente)");
