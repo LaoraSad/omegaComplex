@@ -1,0 +1,50 @@
+/* Estilos de las vistas importadas de OMGA (piscinas360).
+ *
+ * Este archivo NO reimporta Tailwind a proposito: el entrypoint global sigue
+ * siendo src/app/globals.css. Un `@theme` en un CSS secundario no registra
+ * utilities en Tailwind v4, asi que la animacion de barrido se declara aqui
+ * como clase normal. Todo lo demas queda encapsulado en .piscinas-shell para
+ * no pisar los estilos globales de omegaComplex.
+ */
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Barrido horizontal del panorama al pasar el cursor (reemplaza animate-pan-x). */
+@keyframes pano-pan-x {
+  from {
+    object-position: 0% 50%;
+  }
+  to {
+    object-position: 100% 50%;
+  }
+}
+
+.pano-pan {
+  animation: none;
+}
+
+.group:hover .pano-pan {
+  animation: pano-pan-x 15s linear infinite alternate;
+}
+
+.piscinas-shell {
+  --color-vinotinto: #7a1f3d;
+  --color-vinotinto-hover: #631730;
+  --color-dorado: #c8a96b;
+  --color-fondo: #f5f5f5;
+  --color-texto-main: #1f1f1f;
+  --color-texto-muted: #6b7280;
+  --color-borde: #e5e7eb;
+
+  background-color: var(--color-fondo);
+  color: var(--color-texto-main);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .group:hover .pano-pan {
+    animation: none;
+  }
+}
