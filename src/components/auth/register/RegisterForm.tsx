@@ -77,7 +77,11 @@ function validate(values: RegisterFormValues): RegisterErrors {
   return errors;
 }
 
-export function RegisterForm() {
+interface RegisterFormProps {
+  onSwitchToLogin?: () => void;
+}
+
+export function RegisterForm({ onSwitchToLogin }: RegisterFormProps = {}) {
   const router = useRouter();
   const [values, setValues] = useState(initialValues);
   const [errors, setErrors] = useState<RegisterErrors>({});
@@ -222,9 +226,19 @@ export function RegisterForm() {
       </AuthButton>
       <p className="auth-form-footer">
         ¿Ya tienes una cuenta?{" "}
-        <Link className="auth-link" href="/login">
-          Inicia sesión
-        </Link>
+        {onSwitchToLogin ? (
+          <button
+            type="button"
+            className="auth-link auth-link--btn"
+            onClick={onSwitchToLogin}
+          >
+            Inicia sesión
+          </button>
+        ) : (
+          <Link className="auth-link" href="/login">
+            Inicia sesión
+          </Link>
+        )}
       </p>
     </form>
   );
