@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { AuthError } from "@/components/auth/AuthError";
 import { AuthInput } from "@/components/auth/AuthInput";
 import { PasswordInput } from "@/components/auth/PasswordInput";
-import { SocialLoginButton } from "@/components/auth/SocialLoginButton";
-import { getAuthErrorMessage, login, loginWithGoogle } from "@/lib/api/auth";
+import { getAuthErrorMessage, login } from "@/lib/api/auth";
 
 type LoginFormValues = {
   email: string;
@@ -37,11 +37,18 @@ function validate(values: LoginFormValues): LoginFormErrors {
   return errors;
 }
 
+function homeForRole(role: string): string {
+  if (role === "admin") return "/dashboard";
+  if (role === "employee") return "/validar";
+  return "/piscinas/inicio";
+}
+
 export function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [values, setValues] = useState<LoginFormValues>(initialValues);
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   function updateField(field: keyof LoginFormValues, value: string) {
@@ -52,7 +59,6 @@ export function LoginForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    setSuccess("");
 
     const nextErrors = validate(values);
     setErrors(nextErrors);
@@ -63,8 +69,14 @@ export function LoginForm() {
 
     setLoading(true);
     try {
-      await login({ email: values.email.trim(), password: values.password });
-      setSuccess("Inicio de sesión correcto.");
+      const user = await login({ email: values.email.trim(), password: values.password });
+      const next = searchParams.get("next");
+      const destination =
+        next && next.startsWith("/") && !next.startsWith("//")
+          ? next
+          : homeForRole(user.role);
+      router.push(destination);
+      router.refresh();
     } catch (caughtError: unknown) {
       setError(getAuthErrorMessage(caughtError, "No se pudo iniciar sesión. Intenta de nuevo."));
     } finally {
@@ -72,25 +84,9 @@ export function LoginForm() {
     }
   }
 
-  async function handleGoogleLogin() {
-    setError("");
-    try {
-      await loginWithGoogle();
-    } catch (caughtError: unknown) {
-      setError(
-        getAuthErrorMessage(caughtError, "La integración con Google aún no está configurada."),
-      );
-    }
-  }
-
   return (
     <form className="auth-form" noValidate onSubmit={handleSubmit}>
       {error ? <AuthError>{error}</AuthError> : null}
-      {success ? (
-        <p className="auth-success" role="status">
-          {success}
-        </p>
-      ) : null}
 
       <AuthInput
         autoComplete="email"
@@ -125,12 +121,6 @@ export function LoginForm() {
       <AuthButton disabled={loading} loading={loading} type="submit">
         Iniciar sesión
       </AuthButton>
-
-      <div aria-hidden="true" className="auth-divider">
-        o continúa con
-      </div>
-
-      <SocialLoginButton disabled={loading} onClick={handleGoogleLogin} />
 
       <p className="auth-form-footer">
         ¿No tienes una cuenta? <Link className="auth-link" href="/register">Regístrate</Link>

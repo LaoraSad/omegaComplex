@@ -15,8 +15,8 @@ export default async function VerifyEmailPage({ searchParams }: VerifyEmailPageP
 
   return (
     <AuthLayout
-      description="Confirma tu correo para completar el proceso de registro."
-      eyebrow="Un paso más"
+      description="Tu cuenta ya está activa. La verificación por correo estará disponible próximamente."
+      eyebrow="Cuenta activa"
       title="Verifica tu correo"
     >
       <VerifyEmailPanel email={email} />

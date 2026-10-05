@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { LoginForm } from "@/components/auth/login/LoginForm";
 
@@ -13,7 +14,9 @@ export default function LoginPage() {
       eyebrow="Qué bueno tenerte de vuelta"
       title="Inicia sesión"
     >
-      <LoginForm />
+      <Suspense>
+        <LoginForm />
+      </Suspense>
     </AuthLayout>
   );
 }

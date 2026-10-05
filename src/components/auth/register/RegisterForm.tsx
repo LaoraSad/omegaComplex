@@ -115,7 +115,9 @@ export function RegisterForm() {
         phone: data.phone.trim(),
         email: data.email.trim(),
       });
-      router.push(`/verify-email?email=${encodeURIComponent(values.email.trim())}`);
+      // El registro deja la sesión activa de inmediato.
+      router.push("/piscinas/inicio");
+      router.refresh();
     } catch (caughtError: unknown) {
       setServerError(
         getAuthErrorMessage(caughtError, "No se pudo completar el registro. Intenta de nuevo."),
@@ -212,8 +214,8 @@ export function RegisterForm() {
         value={values.confirmPassword}
       />
       <p className="auth-hint">
-        Tu documento debe estar asociado a una sola cuenta. Verificaremos los datos con el servicio
-        de la plataforma.
+        Tu documento debe estar asociado a una sola cuenta. Al registrarte tu sesión
+        quedará activa de inmediato.
       </p>
       <AuthButton loading={loading} type="submit">
         Crear cuenta

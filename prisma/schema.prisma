@@ -45,10 +45,11 @@ model User {
 }
 
 model Customer {
-  id       String  @id @default(uuid()) @db.Uuid
-  userId   String  @unique @db.Uuid
-  document String?
-  address  String?
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @unique @db.Uuid
+  document  String?   @unique
+  birthDate DateTime? @db.Date
+  address   String?
 
   user         User          @relation(fields: [userId], references: [id])
   reservations Reservation[]
