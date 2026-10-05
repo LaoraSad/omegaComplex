@@ -43,7 +43,11 @@ function homeForRole(role: string): string {
   return "/piscinas/inicio";
 }
 
-export function LoginForm() {
+interface LoginFormProps {
+  onSwitchToRegister?: () => void;
+}
+
+export function LoginForm({ onSwitchToRegister }: LoginFormProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [values, setValues] = useState<LoginFormValues>(initialValues);
@@ -123,7 +127,20 @@ export function LoginForm() {
       </AuthButton>
 
       <p className="auth-form-footer">
-        ¿No tienes una cuenta? <Link className="auth-link" href="/register">Regístrate</Link>
+        ¿No tienes una cuenta?{" "}
+        {onSwitchToRegister ? (
+          <button
+            type="button"
+            className="auth-link auth-link--btn"
+            onClick={onSwitchToRegister}
+          >
+            Regístrate
+          </button>
+        ) : (
+          <Link className="auth-link" href="/register">
+            Regístrate
+          </Link>
+        )}
       </p>
     </form>
   );

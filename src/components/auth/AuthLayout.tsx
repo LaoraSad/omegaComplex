@@ -1,13 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Waves, Trophy, Flame, Dumbbell, Sparkles, ShieldCheck } from "lucide-react";
+import { AuthSwitchCard } from "./AuthSwitchCard";
+
+import { LightningDivider } from "./LightningDivider";
 
 interface AuthLayoutProps {
-  children: ReactNode;
-  description: string;
+  children?: ReactNode;
+  description?: string;
   eyebrow?: string;
-  title: string;
+  title?: string;
   brandVideoSrc?: string;
+  useSwitchCard?: boolean;
+  initialMode?: "login" | "register";
 }
 
 function Wordmark() {
@@ -27,10 +33,12 @@ function Wordmark() {
 
 export function AuthLayout({
   children,
-  description,
-  eyebrow = "Omega Complex",
-  title,
-  brandVideoSrc,
+  description = "Ingresa con tu correo y contraseña para continuar.",
+  eyebrow = "Complejo Deportivo Omega",
+  title = "Inicia sesión",
+  brandVideoSrc = "/video_login6b39a628.mp4",
+  useSwitchCard = false,
+  initialMode = "login",
 }: AuthLayoutProps) {
   return (
     <div className="auth-shell">
@@ -55,38 +63,77 @@ export function AuthLayout({
             <div aria-hidden="true" className="auth-brand-overlay" />
           </>
         ) : null}
+
+        <LightningDivider />
+
+        <div className="auth-brand-top">
+          <div className="auth-brand-badge">
+            <ShieldCheck className="auth-badge-icon" size={15} />
+            <span>COMPLEJO DEPORTIVO DE ALTO NIVEL</span>
+          </div>
+        </div>
+
         <div className="auth-brand-content">
-          <p className="auth-brand-kicker">Entrena. Disfruta. Evoluciona.</p>
-          <h1>Tu próximo nivel empieza aquí.</h1>
-          <p>
-            Un espacio para moverte, conectar y disfrutar de cada momento en Omega Complex.
+          <p className="auth-brand-kicker">ENTRENA • COMPITE • EVOLUCIONA</p>
+          <h1 className="auth-brand-title">
+            Tu próximo nivel <br />
+            <span className="auth-title-accent">empieza aquí.</span>
+          </h1>
+          <p className="auth-brand-subtitle">
+            Instalaciones profesionales, piscinas climatizadas, canchas de pádel, fútbol y
+            espacios diseñados para tu máximo rendimiento deportivo.
           </p>
-          <ul className="auth-brand-points" aria-label="Beneficios de Omega Complex">
-            <li>Natación</li>
-            <li>Running</li>
-            <li>Basket</li>
-            <li>Wellness</li>
+
+          <ul className="auth-brand-points" aria-label="Instalaciones de Omega Complex">
+            <li>
+              <Waves className="auth-point-icon" size={16} />
+              <span>Natación Olímpica</span>
+            </li>
+            <li>
+              <Trophy className="auth-point-icon" size={16} />
+              <span>Pádel & Tenis</span>
+            </li>
+            <li>
+              <Flame className="auth-point-icon" size={16} />
+              <span>Canchas Sintéticas</span>
+            </li>
+            <li>
+              <Dumbbell className="auth-point-icon" size={16} />
+              <span>Gimnasio Pro</span>
+            </li>
+            <li>
+              <Sparkles className="auth-point-icon" size={16} />
+              <span>Spa & Hidroterapia</span>
+            </li>
           </ul>
         </div>
 
-        <footer className="auth-brand-footer">Una experiencia hecha para ti.</footer>
+        <footer className="auth-brand-footer">
+          <span>Omega Complex © 2026</span>
+          <span className="auth-footer-divider">•</span>
+          <span>Experiencia deportiva integral</span>
+        </footer>
       </aside>
 
       <main className="auth-main">
-        <section aria-labelledby="auth-title" className="auth-card">
-          <div className="auth-mobile-brand">
-            <Wordmark />
-          </div>
-          <div className="auth-form-brand">
-            <Wordmark />
-          </div>
-          {eyebrow ? <p className="auth-kicker">{eyebrow}</p> : null}
-          <h2 className="auth-heading" id="auth-title">
-            {title}
-          </h2>
-          <p className="auth-description">{description}</p>
-          {children}
-        </section>
+        {useSwitchCard ? (
+          <AuthSwitchCard initialMode={initialMode} />
+        ) : (
+          <section aria-labelledby="auth-title" className="auth-card">
+            <div className="auth-mobile-brand">
+              <Wordmark />
+            </div>
+            <div className="auth-form-brand">
+              <Wordmark />
+            </div>
+            {eyebrow ? <p className="auth-kicker">{eyebrow}</p> : null}
+            <h2 className="auth-heading" id="auth-title">
+              {title}
+            </h2>
+            <p className="auth-description">{description}</p>
+            {children}
+          </section>
+        )}
       </main>
     </div>
   );

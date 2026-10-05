@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AuthLayout } from "@/components/auth/AuthLayout";
-import { LoginForm } from "@/components/auth/login/LoginForm";
 
 export const metadata: Metadata = {
   title: "Iniciar sesión",
@@ -9,15 +8,12 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <AuthLayout
-      brandVideoSrc="/video_login6b39a628.mp4"
-      description="Ingresa con tu correo y contraseña para continuar."
-      eyebrow="Qué bueno tenerte de vuelta"
-      title="Inicia sesión"
-    >
-      <Suspense>
-        <LoginForm />
-      </Suspense>
-    </AuthLayout>
+    <Suspense>
+      <AuthLayout
+        brandVideoSrc="/video_login6b39a628.mp4"
+        initialMode="login"
+        useSwitchCard
+      />
+    </Suspense>
   );
 }
