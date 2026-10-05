@@ -28,10 +28,10 @@ cookie `HttpOnly` (`session`, 7 días).
 - El registro crea `User` + `Customer` (documento único, fecha de nacimiento)
   en una transacción, normaliza el correo (trim + minúsculas) y deja la sesión
   activa de inmediato (redirige a `/piscinas/inicio`).
-- El login redirige por rol (`admin` → `/dashboard`, `employee` → `/validar`,
+- El login redirige por rol (`admin` → `/piscinas/dashboard`, `employee` → `/validar`,
   `user` → `/piscinas/inicio`) y respeta `?next=` para volver a la ruta pedida.
-- El `middleware` exige sesión en `/dashboard`, `/reservas` y `/validar`;
-  `/dashboard` es solo `admin` y `/validar` es `admin`/`employee`.
+- El `middleware` exige sesión en `/piscinas/dashboard`, `/reservas` y `/validar`;
+  `/piscinas/dashboard` es solo `admin` y `/validar` es `admin`/`employee`.
 - `/api/auth/forgot-password`, `/reset-password` y `/resend-verification`
   responden `501 NOT_IMPLEMENTED` hasta contar con proveedor de correo
   (`src/shared/lib/mailer.ts`). La verificación de correo no bloquea el acceso.
