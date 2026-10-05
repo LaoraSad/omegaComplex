@@ -292,9 +292,9 @@ Omega Complex implementa autenticación propia con `bcryptjs` para contraseñas 
 
 | Rol           | Área                   | Ruta de entrada       |
 | ------------- | ---------------------- | --------------------- |
-| Usuario       | Cliente                | `/piscinas/inicio`    |
+| Usuario       | Cliente                | `/inicio`             |
 | Empleado      | Validación de acceso   | `/validar`            |
-| Administrador | Administración         | `/piscinas/dashboard` |
+| Administrador | Administración         | `/dashboard`          |
 
 ### Reservas
 

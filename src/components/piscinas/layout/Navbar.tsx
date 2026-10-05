@@ -77,7 +77,7 @@ export default function Navbar({ initialUser }: NavbarProps) {
     <nav className="fixed top-0 inset-x-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#E5E7EB] shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         {/* Logo / Nombre */}
-        <Link href="/piscinas/inicio" className="flex items-center gap-3 group">
+        <Link href="/inicio" className="flex items-center gap-3 group">
           <div className="w-10 h-10 rounded-xl bg-[#7A1F3D] text-white flex items-center justify-center font-black text-xl shadow-xs tracking-tighter group-hover:bg-[#631730] transition-colors">
             Ω
           </div>
@@ -94,9 +94,9 @@ export default function Navbar({ initialUser }: NavbarProps) {
         {/* Enlaces Desktop */}
         <div className="hidden md:flex items-center gap-8">
           <Link
-            href="/piscinas/inicio"
+            href="/inicio"
             className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
-              isActive('/piscinas/inicio')
+              isActive('/inicio')
                 ? 'text-[#7A1F3D] border-b-2 border-[#7A1F3D] pb-1'
                 : 'text-[#6B7280] hover:text-[#1F1F1F]'
             }`}
@@ -127,9 +127,9 @@ export default function Navbar({ initialUser }: NavbarProps) {
           </Link>
           {user?.role === 'admin' && (
             <Link
-              href="/piscinas/dashboard"
+              href="/dashboard"
               className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
-                isActive('/piscinas/dashboard')
+                isActive('/dashboard')
                   ? 'text-[#7A1F3D] border-b-2 border-[#7A1F3D] pb-1'
                   : 'text-[#6B7280] hover:text-[#1F1F1F]'
               }`}
@@ -230,9 +230,9 @@ export default function Navbar({ initialUser }: NavbarProps) {
         <div className="md:hidden border-t border-[#E5E7EB] bg-white px-5 py-6 space-y-4 shadow-xl">
           <div className="flex flex-col space-y-3 font-semibold text-[#1F1F1F]">
             <Link
-              href="/piscinas/inicio"
+              href="/inicio"
               onClick={() => setMobileMenuOpen(false)}
-              className={`p-2.5 rounded-lg flex items-center gap-2.5 ${isActive('/piscinas/inicio') ? 'bg-[#7A1F3D]/10 text-[#7A1F3D]' : 'hover:bg-[#F5F5F5]'}`}
+              className={`p-2.5 rounded-lg flex items-center gap-2.5 ${isActive('/inicio') ? 'bg-[#7A1F3D]/10 text-[#7A1F3D]' : 'hover:bg-[#F5F5F5]'}`}
             >
               <span>Inicio</span>
             </Link>
@@ -254,9 +254,9 @@ export default function Navbar({ initialUser }: NavbarProps) {
             </Link>
             {user?.role === 'admin' && (
               <Link
-                href="/piscinas/dashboard"
+                href="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`p-2.5 rounded-lg flex items-center gap-2.5 ${isActive('/piscinas/dashboard') ? 'bg-[#7A1F3D]/10 text-[#7A1F3D]' : 'hover:bg-[#F5F5F5]'}`}
+                className={`p-2.5 rounded-lg flex items-center gap-2.5 ${isActive('/dashboard') ? 'bg-[#7A1F3D]/10 text-[#7A1F3D]' : 'hover:bg-[#F5F5F5]'}`}
               >
                 <LayoutDashboard className="w-4 h-4 text-[#7A1F3D]" />
                 <span>Dashboard</span>
