@@ -4,7 +4,7 @@ import { ok } from "@/shared/http/api-response";
 import { catalogService } from "@/features/catalog/catalog.service";
 
 export const GET = handler(async () => {
-  const categories = await catalogService.getCategories();
+  const services = await catalogService.getServices();
 
-  return NextResponse.json(ok(categories));
+  return NextResponse.json(ok(services));
 });
