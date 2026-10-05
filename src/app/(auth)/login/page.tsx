@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 export default function LoginPage() {
   return (
     <AuthLayout
+      brandVideoSrc="/video_login6b39a628.mp4"
       description="Ingresa con tu correo y contraseña para continuar."
       eyebrow="Qué bueno tenerte de vuelta"
       title="Inicia sesión"
