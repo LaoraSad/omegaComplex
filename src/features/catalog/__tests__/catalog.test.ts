@@ -1,1 +1,3 @@
-// TODO(catalog): tests del módulo
+import { describe } from "vitest";
+
+describe.todo("tests del módulo catalog (pendiente)");

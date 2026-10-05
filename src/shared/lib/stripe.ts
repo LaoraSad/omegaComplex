@@ -1,6 +1,14 @@
-// Cliente Stripe.
-// TODO(Dev3): inicializar con stripe SDK cuando se instale.
-// import Stripe from "stripe";
-// import { env } from "./env";
-// export const stripe = new Stripe(env.STRIPE_SECRET_KEY);
-export const stripe = null as unknown;
+// Cliente Stripe (solo servidor).
+// Se inicializa de forma perezosa para no exigir claves en build/test.
+import Stripe from "stripe";
+
+import { env } from "./env";
+
+let cached: Stripe | null = null;
+
+export function getStripe(): Stripe {
+  if (!cached) {
+    cached = new Stripe(env.STRIPE_SECRET_KEY);
+  }
+  return cached;
+}
