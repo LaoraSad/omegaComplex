@@ -1,143 +1,145 @@
-# Omega Complex
+<div align="center">
 
-<p align="center">
-  <img src="./docs/assets/omega-complex-logo.svg" width="180" alt="Omega Complex" />
-</p>
+<img src="./docs/assets/banner.svg" alt="Omega Complex" width="100%" />
 
-<p align="center">
-  <strong>Plataforma web para la gestión, reserva y control de acceso de un complejo deportivo y recreativo.</strong>
-</p>
+<br />
+<br />
 
-<p align="center">
-  <a href="#características">Características</a>
-  ·
-  <a href="#arquitectura">Arquitectura</a>
-  ·
-  <a href="#stack-tecnológico">Stack</a>
-  ·
-  <a href="#instalación">Instalación</a>
-  ·
-  <a href="#desarrollo">Desarrollo</a>
-</p>
+[![Inicio](https://img.shields.io/badge/Inicio-7A1F3D?style=for-the-badge)](#visión-general)
+[![Experiencia](https://img.shields.io/badge/Experiencia-7A1F3D?style=for-the-badge)](#experiencia-de-reserva)
+[![Arquitectura](https://img.shields.io/badge/Arquitectura-7A1F3D?style=for-the-badge)](#arquitectura)
+[![API](https://img.shields.io/badge/API-7A1F3D?style=for-the-badge)](#referencia-api)
+[![Stack](https://img.shields.io/badge/Stack-7A1F3D?style=for-the-badge)](#stack-tecnológico)
+[![Instalación](https://img.shields.io/badge/Instalación-C8A96B?style=for-the-badge&labelColor=C8A96B&color=C8A96B)](#instalación)
+[![Desarrollo](https://img.shields.io/badge/Desarrollo-C8A96B?style=for-the-badge&labelColor=C8A96B&color=C8A96B)](#desarrollo)
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Next.js-App%20Router-000000?style=flat-square&logo=next.js&logoColor=white" />
-  <img src="https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react&logoColor=black" />
-  <img src="https://img.shields.io/badge/TypeScript-Strict-3178C6?style=flat-square&logo=typescript&logoColor=white" />
-  <img src="https://img.shields.io/badge/Tailwind-v4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" />
-  <img src="https://img.shields.io/badge/Prisma-6.19-2D3748?style=flat-square&logo=prisma&logoColor=white" />
-  <img src="https://img.shields.io/badge/PostgreSQL-Supabase-4169E1?style=flat-square&logo=postgresql&logoColor=white" />
-</p>
+<br />
 
----
+![Next.js](https://img.shields.io/badge/Next.js-App_Router-1F1F1F?style=flat-square&logo=next.js&logoColor=white)
+![React](https://img.shields.io/badge/React-19.2-1F1F1F?style=flat-square&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-Strict-1F1F1F?style=flat-square&logo=typescript&logoColor=3178C6)
+![Tailwind](https://img.shields.io/badge/Tailwind-v4-1F1F1F?style=flat-square&logo=tailwindcss&logoColor=06B6D4)
+![Prisma](https://img.shields.io/badge/Prisma-6.19-1F1F1F?style=flat-square&logo=prisma&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-1F1F1F?style=flat-square&logo=postgresql&logoColor=4169E1)
+![Stripe](https://img.shields.io/badge/Stripe-Payments-1F1F1F?style=flat-square&logo=stripe&logoColor=635BFF)
 
-## Sobre el proyecto
+</div>
 
-**Omega Complex** es una aplicación web orientada a digitalizar la experiencia de un complejo deportivo y recreativo.
+<br />
 
-La plataforma conecta en un mismo ecosistema:
+<img src="./docs/assets/divider.svg" width="100%" alt="" />
 
-* Catálogo de servicios e instalaciones.
-* Consulta de disponibilidad.
-* Reservas por fecha y horario.
-* Pagos en línea.
-* Generación y validación de códigos QR.
-* Control de acceso.
-* Gestión administrativa.
-* Gestión de usuarios, servicios, horarios y reservas.
+## Visión general
 
-El objetivo principal es construir una experiencia donde el usuario pueda pasar de consultar un servicio a completar su reserva con la menor fricción posible.
+**Omega Complex** digitaliza la experiencia completa de un complejo deportivo y recreativo: desde consultar un servicio hasta cruzar la puerta con un código QR validado.
 
----
+El objetivo es que el usuario complete su reserva con la menor fricción posible, mientras el equipo operativo controla accesos, horarios y capacidad desde un único lugar.
 
-## Experiencia del usuario
+<table>
+<tr>
+<td width="33%" valign="top">
+
+### Cliente
+
+Explora servicios, consulta disponibilidad en tiempo real, reserva por fecha y horario, paga en línea y recibe su código QR de acceso.
+
+</td>
+<td width="33%" valign="top">
+
+### Empleado
+
+Escanea el QR en la entrada y valida en segundos la reserva, el horario y el uso previo del código.
+
+</td>
+<td width="33%" valign="top">
+
+### Administrador
+
+Gestiona servicios, instalaciones, horarios, reservas y empleados desde un panel centralizado.
+
+</td>
+</tr>
+</table>
+
+<img src="./docs/assets/divider.svg" width="100%" alt="" />
+
+## Experiencia de reserva
+
+El recorrido completo, de la consulta al acceso:
+
+<div align="center">
+<img src="./docs/assets/flow.svg" alt="Flujo de reserva: servicio, disponibilidad, reserva, pago, confirmación y acceso" width="100%" />
+</div>
+
+<br />
+
+La disponibilidad y el estado definitivo de cada reserva son responsabilidad exclusiva del backend. El navegador nunca decide si una reserva queda confirmada.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#7A1F3D','primaryTextColor':'#F5F5F5','primaryBorderColor':'#7A1F3D','lineColor':'#C8A96B','secondaryColor':'#C8A96B','tertiaryColor':'#F5F5F5'}}}%%
 flowchart LR
-    A[Inicio] --> B[Servicios]
-    B --> C[Detalle]
-    C --> D[Disponibilidad]
-    D --> E[Reserva]
-    E --> F[Pago]
-    F --> G[Confirmación]
-    G --> H[QR]
-    H --> I[Acceso]
+    S[Servicio] --> F[Fecha y horario]
+    F --> I[Información de reserva]
+    I --> B[Bloqueo temporal<br/>10 minutos]
+    B --> P{Pago}
+    P -->|Rechazado| L[Liberar disponibilidad]
+    P -->|Confirmado| R[Reserva confirmada]
+    R --> Q[Código QR]
 
     classDef primary fill:#7A1F3D,color:#fff,stroke:#7A1F3D;
     classDef accent fill:#C8A96B,color:#1F1F1F,stroke:#C8A96B;
-
-    class A,B,C,D,E primary;
-    class F,G,H,I accent;
+    class S,F,I,B,P primary;
+    class L,R,Q accent;
 ```
 
-### Flujo de reserva
+<img src="./docs/assets/divider.svg" width="100%" alt="" />
 
-La experiencia de reserva sigue un flujo controlado:
+## Funcionalidades
 
-```text
-Servicio
-   │
-   ▼
-Fecha y horario
-   │
-   ▼
-Información de reserva
-   │
-   ▼
-Bloqueo temporal — 10 minutos
-   │
-   ▼
-Pago
-   │
-   ├──────── Pago rechazado ────────► Liberar disponibilidad
-   │
-   ▼
-Pago confirmado
-   │
-   ▼
-Reserva confirmada
-   │
-   ▼
-Código QR
-```
+<details open>
+<summary><strong>Cliente</strong></summary>
 
-La disponibilidad y el estado definitivo de una reserva son responsabilidad del backend.
+<br />
 
----
-
-# Características
-
-## Cliente
-
-| Funcionalidad              |     Estado    |
-| -------------------------- | :-----------: |
-| Registro                   |   Disponible  |
-| Inicio de sesión           |   Disponible  |
+| Funcionalidad              | Estado        |
+| -------------------------- | ------------- |
+| Registro                   | **Disponible** |
+| Inicio de sesión           | **Disponible** |
+| Consulta de servicios      | **Disponible** |
+| Consulta de disponibilidad | **Disponible** |
+| Perfil                     | **Disponible** |
 | Recuperación de contraseña | En desarrollo |
 | Verificación de correo     | En desarrollo |
-| Consulta de servicios      |   Disponible  |
-| Consulta de disponibilidad |   Disponible  |
 | Reservas                   | En desarrollo |
 | Pagos                      | En desarrollo |
 | Código QR                  | En desarrollo |
 | Mis reservas               | En desarrollo |
 | Historial de reservas      | En desarrollo |
-| Perfil                     |   Disponible  |
 
-## Empleado
+</details>
 
-| Funcionalidad         |     Estado    |
-| --------------------- | :-----------: |
-| Autenticación por rol |   Disponible  |
+<details>
+<summary><strong>Empleado</strong></summary>
+
+<br />
+
+| Funcionalidad         | Estado        |
+| --------------------- | ------------- |
+| Autenticación por rol | **Disponible** |
 | Escaneo de QR         | En desarrollo |
 | Validación de reserva | En desarrollo |
 | Validación de horario | En desarrollo |
 | Registro de acceso    | En desarrollo |
 
-## Administrador
+</details>
 
-| Funcionalidad            |     Estado    |
-| ------------------------ | :-----------: |
+<details>
+<summary><strong>Administrador</strong></summary>
+
+<br />
+
+| Funcionalidad            | Estado        |
+| ------------------------ | ------------- |
 | Dashboard                | En desarrollo |
 | Gestión de servicios     | En desarrollo |
 | Gestión de instalaciones | En desarrollo |
@@ -146,307 +148,174 @@ La disponibilidad y el estado definitivo de una reserva son responsabilidad del 
 | Gestión de empleados     | En desarrollo |
 | Información operativa    | En desarrollo |
 
----
+</details>
 
-# Arquitectura
+<br />
 
-Omega Complex utiliza una arquitectura organizada por dominios mediante **vertical slices**.
+### Estado del desarrollo
+
+<div align="center">
+<img src="./docs/assets/progress.svg" alt="Estado del desarrollo por módulo" width="100%" />
+</div>
+
+<sub>Los porcentajes son una representación del avance actual y se actualizan conforme progresa la implementación.</sub>
+
+<img src="./docs/assets/divider.svg" width="100%" alt="" />
+
+## Arquitectura
+
+Omega Complex se organiza por dominios mediante **vertical slices**. Cada feature contiene su propia lógica, validación y acceso a datos.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#7A1F3D','primaryTextColor':'#F5F5F5','primaryBorderColor':'#7A1F3D','lineColor':'#C8A96B'}}}%%
 flowchart TB
-
-    UI["Next.js / React"]
-
-    UI --> Components["Components"]
-    UI --> Routes["App Router"]
-
+    UI["Next.js / React"] --> Routes["App Router"]
     Routes --> API["Route Handlers"]
 
-    API --> Features["Features"]
+    subgraph Features["Features por dominio"]
+        direction LR
+        Auth["Auth"]
+        Catalog["Catalog"]
+        Availability["Availability"]
+        Reservations["Reservations"]
+        Payments["Payments"]
+        Access["Access"]
+        Schedules["Schedules"]
+        Admin["Admin"]
+    end
 
-    Features --> Auth["Auth"]
-    Features --> Catalog["Catalog"]
-    Features --> Availability["Availability"]
-    Features --> Reservations["Reservations"]
-    Features --> Payments["Payments"]
-    Features --> Access["Access"]
-    Features --> Schedules["Schedules"]
-    Features --> Admin["Admin"]
-
-    Auth --> Services["Services"]
-    Catalog --> Services
-    Availability --> Services
-    Reservations --> Services
-    Payments --> Services
-    Access --> Services
-    Schedules --> Services
-    Admin --> Services
-
+    API --> Features
+    Features --> Services["Services"]
     Services --> Repositories["Repositories"]
     Repositories --> Prisma["Prisma"]
-    Prisma --> Database[("PostgreSQL")]
+    Prisma --> DB[("PostgreSQL")]
 
     classDef main fill:#7A1F3D,color:#fff,stroke:#7A1F3D;
     classDef accent fill:#C8A96B,color:#1F1F1F,stroke:#C8A96B;
     classDef neutral fill:#F5F5F5,color:#1F1F1F,stroke:#E5E7EB;
-
     class UI,Routes,API main;
-    class Features,Services,Repositories accent;
-    class Prisma,Database neutral;
+    class Services,Repositories accent;
+    class Prisma,DB neutral;
 ```
 
 ### Principio de separación
 
-```text
-Presentation
-     │
-     ▼
-Route Handler
-     │
-     ▼
-Feature Service
-     │
-     ▼
-Repository
-     │
-     ▼
-Prisma
-     │
-     ▼
-PostgreSQL
-```
+| Capa              | Responsabilidad                                         |
+| ----------------- | ------------------------------------------------------- |
+| Presentation      | Páginas y componentes. Sin lógica de negocio compleja.  |
+| Route Handler     | Entrada HTTP, validación y respuesta.                   |
+| Feature Service   | Reglas de negocio del dominio.                          |
+| Repository        | Acceso a datos.                                         |
+| Prisma            | ORM y consultas. Nunca se invoca desde la UI.           |
+| PostgreSQL        | Persistencia.                                           |
 
-Cada capa tiene una responsabilidad específica.
+### Comunicación HTTP
 
-Las páginas y componentes no deben contener lógica de negocio compleja ni acceder directamente a Prisma.
-
----
-
-# Estructura
-
-```text
-src/
-│
-├── app/
-│   ├── (auth)/
-│   │   ├── forgot-password/
-│   │   ├── login/
-│   │   ├── register/
-│   │   ├── reset-password/
-│   │   └── verify-email/
-│   │
-│   ├── (customer)/
-│   │   └── reservas/
-│   │
-│   ├── (employee)/
-│   │   └── validar/
-│   │
-│   ├── (piscinas)/
-│   │   ├── informacion/
-│   │   ├── mis-reservas/
-│   │   ├── perfil/
-│   │   ├── piscinas/
-│   │   ├── servicios/
-│   │   └── tour/
-│   │
-│   ├── (public)/
-│   │
-│   └── api/
-│       ├── access/
-│       ├── auth/
-│       ├── availability/
-│       ├── categories/
-│       ├── facilities/
-│       ├── payments/
-│       ├── pools/
-│       └── reservations/
-│
-├── components/
-│   ├── auth/
-│   ├── piscinas/
-│   └── ui/
-│
-├── features/
-│   ├── access/
-│   ├── admin/
-│   ├── auth/
-│   ├── availability/
-│   ├── catalog/
-│   ├── payments/
-│   ├── reservations/
-│   └── schedules/
-│
-├── lib/
-│   ├── api/
-│   └── piscinas/
-│
-├── shared/
-│   ├── auth/
-│   ├── http/
-│   ├── lib/
-│   └── ui/
-│
-├── types/
-│   ├── auth.ts
-│   └── piscinas/
-│
-└── middleware.ts
-```
-
----
-
-# Stack tecnológico
-
-| Categoría      | Tecnología             |
-| -------------- | ---------------------- |
-| Framework      | Next.js App Router     |
-| Frontend       | React 19.2             |
-| Lenguaje       | TypeScript 5 — strict  |
-| Styling        | Tailwind CSS v4        |
-| UI             | shadcn/ui              |
-| Iconografía    | Lucide React           |
-| Animaciones    | Motion                 |
-| Formularios    | React Hook Form        |
-| Validación     | Zod                    |
-| Cliente HTTP   | Axios                  |
-| Estado global  | Zustand                |
-| Fechas         | date-fns               |
-| Calendario     | React Day Picker       |
-| Notificaciones | Sonner                 |
-| QR             | qrcode.react           |
-| Gráficas       | Recharts               |
-| Backend        | Next.js Route Handlers |
-| ORM            | Prisma 6.19            |
-| Database       | PostgreSQL / Supabase  |
-| Auth           | jose + bcryptjs        |
-| Payments       | Stripe                 |
-| Unit testing   | Vitest                 |
-| E2E            | Playwright             |
-
----
-
-# Comunicación HTTP
-
-El proyecto utiliza **Axios** como cliente HTTP.
-
-No se utiliza TanStack Query inicialmente.
-
-La comunicación sigue una estructura sencilla:
+El proyecto usa **Axios** como cliente HTTP y no incorpora TanStack Query en esta etapa. Si más adelante aparecen necesidades de caché, revalidación, polling o sincronización avanzada de server state, se evaluará una herramienta especializada.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#7A1F3D','primaryTextColor':'#F5F5F5','lineColor':'#C8A96B'}}}%%
 flowchart LR
-    Component["React Component"]
-    Axios["Axios"]
-    API["/api/*"]
-    Service["Feature Service"]
-    Repository["Repository"]
-    DB[("PostgreSQL")]
-
-    Component --> Axios
-    Axios --> API
-    API --> Service
-    Service --> Repository
-    Repository --> DB
-
+    Component["React Component"] --> Axios --> API["/api/*"] --> Service["Feature Service"] --> Repository --> DB[("PostgreSQL")]
     classDef primary fill:#7A1F3D,color:#fff,stroke:#7A1F3D;
     classDef accent fill:#C8A96B,color:#1F1F1F,stroke:#C8A96B;
-
     class Component,Axios,API primary;
     class Service,Repository accent;
 ```
 
-Esto mantiene la comunicación con el backend simple y coherente con la arquitectura actual.
+<details>
+<summary><strong>Estructura del proyecto</strong></summary>
 
-Si posteriormente aparecen necesidades importantes de caché, revalidación, polling o sincronización avanzada de server state, se podrá evaluar la incorporación de una herramienta especializada.
-
----
-
-# Autenticación
-
-Omega Complex implementa autenticación propia.
-
-### Tecnologías
-
-* `bcryptjs` para contraseñas.
-* `jose` para JWT.
-* Cookies `HttpOnly`.
-* `SameSite=Lax`.
-* JWT con duración de 7 días.
-* Middleware para protección de rutas.
-* Autorización basada en roles.
-
-### Roles
-
-```mermaid
-flowchart LR
-    User["user"]
-    Employee["employee"]
-    Admin["admin"]
-
-    User --> CustomerArea["Área cliente"]
-    Employee --> EmployeeArea["Validación de acceso"]
-    Admin --> AdminArea["Administración"]
-
-    classDef primary fill:#7A1F3D,color:#fff,stroke:#7A1F3D;
-    classDef accent fill:#C8A96B,color:#1F1F1F,stroke:#C8A96B;
-
-    class User,Employee,Admin primary;
-    class CustomerArea,EmployeeArea,AdminArea accent;
-```
-
-### Rutas principales
-
-| Rol           | Ruta                  |
-| ------------- | --------------------- |
-| Usuario       | `/piscinas/inicio`    |
-| Empleado      | `/validar`            |
-| Administrador | `/piscinas/dashboard` |
-
----
-
-# Reservas
-
-Las reservas dependen de múltiples variables:
+<br />
 
 ```text
-Servicio
-   +
-Fecha
-   +
-Horario
-   +
-Capacidad
-   +
-Reservas existentes
-   +
-Bloqueos temporales
-   +
-Estado de la reserva
-   ↓
-Disponibilidad
+src/
+├── app/
+│   ├── (auth)/          forgot-password, login, register, reset-password, verify-email
+│   ├── (customer)/      reservas
+│   ├── (employee)/      validar
+│   ├── (piscinas)/      informacion, mis-reservas, perfil, piscinas, servicios, tour
+│   ├── (public)/
+│   └── api/             access, auth, availability, categories, facilities, payments, pools, reservations
+│
+├── components/          auth, piscinas, ui
+├── features/            access, admin, auth, availability, catalog, payments, reservations, schedules
+├── lib/                 api, piscinas
+├── shared/              auth, http, lib, ui
+├── types/               auth.ts, piscinas
+└── middleware.ts
 ```
 
-### Reglas
+</details>
+
+<img src="./docs/assets/divider.svg" width="100%" alt="" />
+
+## Stack tecnológico
+
+<div align="center">
+
+<img src="https://skillicons.dev/icons?i=nextjs,react,ts,tailwind,prisma,postgres,supabase,vitest,playwright,docker&perline=10" alt="Tecnologías principales" />
+
+</div>
+
+<br />
+
+| Categoría      | Tecnología                          |
+| -------------- | ----------------------------------- |
+| Framework      | Next.js App Router                  |
+| Frontend       | React 19.2                          |
+| Lenguaje       | TypeScript 5, modo estricto         |
+| Estilos        | Tailwind CSS v4, shadcn/ui          |
+| Iconografía    | Lucide React                        |
+| Animaciones    | Motion                              |
+| Formularios    | React Hook Form, Zod                |
+| Cliente HTTP   | Axios                               |
+| Estado global  | Zustand                             |
+| Fechas         | date-fns, React Day Picker          |
+| Notificaciones | Sonner                              |
+| QR             | qrcode.react                        |
+| Gráficas       | Recharts                            |
+| Backend        | Next.js Route Handlers              |
+| ORM            | Prisma 6.19                         |
+| Base de datos  | PostgreSQL / Supabase               |
+| Autenticación  | jose, bcryptjs                      |
+| Pagos          | Stripe                              |
+| Pruebas        | Vitest, Playwright                  |
+
+<img src="./docs/assets/divider.svg" width="100%" alt="" />
+
+## Dominio
+
+### Autenticación y roles
+
+Omega Complex implementa autenticación propia con `bcryptjs` para contraseñas y `jose` para JWT de 7 días, guardados en cookies `HttpOnly` con `SameSite=Lax`. Un middleware protege las rutas y aplica autorización por rol.
+
+| Rol           | Área                   | Ruta de entrada       |
+| ------------- | ---------------------- | --------------------- |
+| Usuario       | Cliente                | `/piscinas/inicio`    |
+| Empleado      | Validación de acceso   | `/validar`            |
+| Administrador | Administración         | `/piscinas/dashboard` |
+
+### Reservas
+
+La disponibilidad de un servicio es el resultado de combinar servicio, fecha, horario, capacidad, reservas existentes, bloqueos temporales y estado de cada reserva.
 
 | Regla                | Valor         |
 | -------------------- | ------------- |
 | Anticipación máxima  | 3 meses       |
-| Horario              | 08:00 – 17:00 |
+| Horario              | 08:00 a 17:00 |
 | Mantenimiento        | Lunes         |
 | Duración del bloqueo | 10 minutos    |
 | Cobro                | Por hora      |
 
-Si un lunes es festivo, el mantenimiento se desplaza al martes.
+> Si un lunes es festivo, el mantenimiento se desplaza al martes.
 
----
+### Pagos
 
-# Pagos
-
-Stripe será utilizado como proveedor de pagos.
-
-El estado de una reserva no se confirma únicamente por el retorno del navegador después del checkout.
+Stripe es el proveedor de pagos. El estado de una reserva **no** se confirma por el retorno del navegador tras el checkout: **el webhook es la fuente de verdad**.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'actorBkg':'#7A1F3D','actorTextColor':'#F5F5F5','actorBorder':'#7A1F3D','signalColor':'#7A1F3D','noteBkgColor':'#C8A96B'}}}%%
 sequenceDiagram
     participant C as Cliente
     participant A as API
@@ -456,168 +325,143 @@ sequenceDiagram
     C->>A: Crear reserva temporal
     A->>DB: Crear bloqueo
     A-->>C: Sesión de pago
-
     C->>S: Completar pago
     S-->>C: Resultado del checkout
-
     S->>A: Webhook
     A->>DB: Actualizar Payment
     A->>DB: Confirmar reserva
-
     DB-->>C: Estado confirmado
 ```
 
-El webhook constituye la fuente de verdad para la confirmación del pago.
+### Control de acceso
 
----
-
-# Control de acceso
-
-El empleado puede validar una entrada mediante QR.
+El empleado valida cada entrada escaneando el QR. La validación comprueba la existencia del código, la reserva asociada, su estado confirmado, la fecha, la hora y el uso previo.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#7A1F3D','primaryTextColor':'#F5F5F5','lineColor':'#C8A96B'}}}%%
 flowchart TD
-    Scan["Escanear QR"]
-    ValidQR{"QR válido?"}
-    Reservation{"Reserva confirmada?"}
-    Time{"Fecha y horario válidos?"}
-    Used{"QR ya utilizado?"}
-    Allow["Permitir acceso"]
-    Reject["Rechazar acceso"]
-
-    Scan --> ValidQR
-
+    Scan["Escanear QR"] --> ValidQR{"QR válido?"}
     ValidQR -->|No| Reject
-    ValidQR -->|Sí| Reservation
-
+    ValidQR -->|Sí| Reservation{"Reserva confirmada?"}
     Reservation -->|No| Reject
-    Reservation -->|Sí| Time
-
+    Reservation -->|Sí| Time{"Fecha y horario válidos?"}
     Time -->|No| Reject
-    Time -->|Sí| Used
-
-    Used -->|Sí| Reject
-    Used -->|No| Allow
+    Time -->|Sí| Used{"QR ya utilizado?"}
+    Used -->|Sí| Reject["Rechazar acceso"]
+    Used -->|No| Allow["Permitir acceso"]
 
     classDef primary fill:#7A1F3D,color:#fff,stroke:#7A1F3D;
     classDef accent fill:#C8A96B,color:#1F1F1F,stroke:#C8A96B;
-
     class Scan,Allow primary;
     class Reject accent;
 ```
 
-La validación considera:
+<img src="./docs/assets/divider.svg" width="100%" alt="" />
 
-* Existencia del QR.
-* Reserva asociada.
-* Estado confirmado.
-* Fecha.
-* Hora.
-* Uso previo del QR.
+## Referencia API
 
----
+Base: mismo origen, prefijo `/api`. Todas las respuestas usan el formato `{ "data": T | null, "error": { "code", "message" } | null }`. La sesión viaja en cookie `HttpOnly` (`credentials: "include"` en el cliente).
 
-# Diseño
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/api/auth/register` | Crea `User` + `Customer`, deja sesión activa (`201`) |
+| POST | `/api/auth/login` | Inicia sesión (`200`) |
+| POST | `/api/auth/logout` | Cierra sesión e invalida la cookie |
+| GET | `/api/auth/me` | Usuario actual (`401` sin sesión) |
+| POST | `/api/auth/forgot-password` | `501`: pendiente de proveedor de correo |
+| POST | `/api/auth/reset-password` | `501`: pendiente de proveedor de correo |
+| POST | `/api/auth/resend-verification` | `501`: la verificación no bloquea el acceso |
+| GET · POST | `/api/categories` | Lista y crea categorías |
+| GET · POST | `/api/facilities` | Lista y crea instalaciones |
+| GET · PATCH · DELETE | `/api/facilities/[id]` | Detalle, actualización y borrado |
+| GET | `/api/availability` | Disponibilidad por servicio y fecha |
+| GET | `/api/pools` · `/api/pools/[id]` | Catálogo de piscinas (datos locales) |
+| GET · POST | `/api/reservations` | Lista y crea reservas |
+| GET · DELETE | `/api/reservations/[id]` | Detalle y cancelación |
+| POST | `/api/payments/webhook` | Webhook de Stripe (fuente de verdad del pago) |
+| POST | `/api/access/validate` | Validación de QR en puerta |
 
-La identidad visual utiliza una combinación de:
+Códigos: `200` OK · `201` creado · `400` validación · `401` no autenticado · `403` rol insuficiente · `404` no encontrado · `409` conflicto (email/documento duplicado) · `501` no implementado · `500` error interno.
 
-```text
-Primary
-#7A1F3D
+### Modelo de datos
 
-Background
-#F5F5F5
+Fuente de verdad: `prisma/schema.prisma` (PostgreSQL). Resumen por dominio:
 
-Text
-#1F1F1F
+| Dominio | Modelos |
+|---|---|
+| Identidad | `Role`, `User`, `Customer` (documento único, fecha de nacimiento), `Employee`, `OAuthAccount`, `EmailVerification`, `PasswordReset` |
+| Catálogo | `Category`, `Service`, `ServiceSchedule`, `ServiceClosure`, `ServiceSlot` (cupos y bloqueos por franja) |
+| Reservas | `Reservation` (estado, canal, cantidad, total), `ReservationSlot`, `ReservationHold` (bloqueo temporal con expiración) |
+| Pagos | `Payment` (método, estado, ids de Stripe), `StripeEvent` (idempotencia por `eventId`) |
+| Acceso | `QrToken` (hash único, estado), `Access` (resultado, motivo, empleado, brazalete) |
 
-Secondary
-#6B7280
+<img src="./docs/assets/divider.svg" width="100%" alt="" />
 
-Border
-#E5E7EB
+## Identidad visual
 
-Accent
-#C8A96B
-```
+La interfaz busca una estética deportiva, moderna, elegante y profesional. El dorado funciona únicamente como acento.
 
-La interfaz busca una estética deportiva, moderna, elegante y profesional.
+<table>
+<tr>
+<td align="center" width="16.6%"><img src="https://placehold.co/96x96/7A1F3D/7A1F3D.png" alt="Primary" /><br /><strong>Primary</strong><br /><code>#7A1F3D</code></td>
+<td align="center" width="16.6%"><img src="https://placehold.co/96x96/C8A96B/C8A96B.png" alt="Accent" /><br /><strong>Accent</strong><br /><code>#C8A96B</code></td>
+<td align="center" width="16.6%"><img src="https://placehold.co/96x96/F5F5F5/F5F5F5.png" alt="Background" /><br /><strong>Background</strong><br /><code>#F5F5F5</code></td>
+<td align="center" width="16.6%"><img src="https://placehold.co/96x96/1F1F1F/1F1F1F.png" alt="Text" /><br /><strong>Text</strong><br /><code>#1F1F1F</code></td>
+<td align="center" width="16.6%"><img src="https://placehold.co/96x96/6B7280/6B7280.png" alt="Secondary" /><br /><strong>Secondary</strong><br /><code>#6B7280</code></td>
+<td align="center" width="16.6%"><img src="https://placehold.co/96x96/E5E7EB/E5E7EB.png" alt="Border" /><br /><strong>Border</strong><br /><code>#E5E7EB</code></td>
+</tr>
+</table>
 
-El color dorado funciona únicamente como elemento de acento.
+<img src="./docs/assets/divider.svg" width="100%" alt="" />
 
----
+## Instalación
 
-# Instalación
-
-## Requisitos
-
-* Node.js
-* npm
-* PostgreSQL o Supabase
-
-## Clonar
+**Requisitos:** Node.js, npm y una base de datos PostgreSQL o Supabase.
 
 ```bash
+# 1. Clonar
 git clone <REPOSITORY_URL>
 cd omega-complex
-```
 
-## Instalar dependencias
-
-```bash
+# 2. Instalar dependencias
 npm install
-```
 
-## Variables de entorno
-
-```bash
+# 3. Configurar variables de entorno
 cp .env.example .env
-```
 
-Configurar:
-
-```env
-DATABASE_URL="postgresql://..."
-JWT_SECRET="..."
-```
-
-Las variables adicionales de Stripe y administración deben configurarse según el entorno.
-
-## Migraciones
-
-```bash
+# 4. Migrar y poblar la base de datos
 npx prisma migrate dev
-```
-
-## Seed
-
-```bash
 npx prisma db seed
-```
 
-## Ejecutar
-
-```bash
+# 5. Ejecutar
 npm run dev
 ```
 
-Aplicación:
+La aplicación queda disponible en `http://localhost:3000`.
 
-```text
-http://localhost:3000
-```
+<details>
+<summary><strong>Variables de entorno</strong></summary>
 
----
+<br />
 
-# API
+| Variable                | Descripción                               |
+| ----------------------- | ----------------------------------------- |
+| `DATABASE_URL`          | Conexión PostgreSQL                       |
+| `JWT_SECRET`            | Secreto utilizado para firmar JWT         |
+| `STRIPE_SECRET_KEY`     | Clave privada de Stripe                   |
+| `STRIPE_WEBHOOK_SECRET` | Firma del webhook                         |
+| `ADMIN_*`               | Variables relacionadas con administración |
 
-La API forma parte del mismo proyecto Next.js.
+Los valores reales nunca deben almacenarse en el repositorio.
 
-```text
-src/app/api/
-```
+</details>
 
-Principales endpoints:
+<details>
+<summary><strong>API</strong></summary>
+
+<br />
+
+La API forma parte del mismo proyecto Next.js, en `src/app/api/`. No se requiere un backend externo ni `NEXT_PUBLIC_API_URL`.
 
 ```text
 /api/auth/*
@@ -630,194 +474,49 @@ Principales endpoints:
 /api/payments/webhook
 ```
 
-No se requiere un backend externo ni `NEXT_PUBLIC_API_URL`.
+</details>
 
----
+<details>
+<summary><strong>Docker</strong></summary>
 
-# Validación
+<br />
 
-Antes de realizar un commit importante:
-
-```bash
-npm run lint
-npm run build
-npm test
-npm run test:e2e
-```
-
-### Tests
-
-```text
-Vitest
-  │
-  ├── Services
-  ├── Schemas
-  └── Business logic
-
-Playwright
-  │
-  ├── Authentication
-  ├── Reservations
-  ├── Payments
-  └── Access
-```
-
----
-
-# Variables de entorno
-
-| Variable                | Descripción                               |
-| ----------------------- | ----------------------------------------- |
-| `DATABASE_URL`          | Conexión PostgreSQL                       |
-| `JWT_SECRET`            | Secreto utilizado para firmar JWT         |
-| `STRIPE_SECRET_KEY`     | Clave privada de Stripe                   |
-| `STRIPE_WEBHOOK_SECRET` | Firma del webhook                         |
-| `ADMIN_*`               | Variables relacionadas con administración |
-
-Los valores reales nunca deben almacenarse en el repositorio.
-
----
-
-# Docker
-
-La aplicación utiliza una estrategia multistage:
+La aplicación usa una estrategia multistage. La imagen de producción corre con un usuario no privilegiado y expone el puerto `3000`.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#7A1F3D','primaryTextColor':'#F5F5F5','lineColor':'#C8A96B'}}}%%
 flowchart LR
-    Dependencies["Dependencies"] --> Builder["Builder"]
-    Builder --> Runner["Production Runner"]
-
+    Dependencies --> Builder --> Runner["Production Runner"]
     classDef primary fill:#7A1F3D,color:#fff,stroke:#7A1F3D;
     classDef accent fill:#C8A96B,color:#1F1F1F,stroke:#C8A96B;
-
     class Dependencies,Builder primary;
     class Runner accent;
 ```
 
-La imagen de producción utiliza un usuario no privilegiado y expone el puerto `3000`.
+</details>
 
----
+<img src="./docs/assets/divider.svg" width="100%" alt="" />
 
-# Estado del proyecto
+## Desarrollo
 
-```text
-Core
-████████████████████████████████████████ 100%
-
-Authentication
-██████████████████████████████████░░░░░░  85%
-
-Catalog
-████████████████████████████████████░░░░  90%
-
-Reservations
-████████████████████████░░░░░░░░░░░░░░░░  60%
-
-Payments
-██████████████████░░░░░░░░░░░░░░░░░░░░░░  45%
-
-Access
-████████████████████░░░░░░░░░░░░░░░░░░░░  55%
-
-Admin
-████████████████░░░░░░░░░░░░░░░░░░░░░░░░  40%
-```
-
-> Los porcentajes anteriores son una representación visual del estado actual del desarrollo y deben actualizarse conforme avance la implementación.
-
----
-
-# Roadmap
+### Flujo para una nueva funcionalidad
 
 ```mermaid
-timeline
-    title Omega Complex
-
-    section Foundation
-        Arquitectura : Next.js
-                       Prisma
-                       PostgreSQL
-        Authentication : JWT
-                         Roles
-                         Middleware
-
-    section Core
-        Catalog : Servicios
-                  Instalaciones
-        Availability : Horarios
-                       Capacidad
-
-    section Reservations
-        Reservation flow : Disponibilidad
-                           Bloqueo temporal
-                           Confirmación
-
-    section Payments
-        Stripe : Checkout
-                 Webhooks
-
-    section Access
-        QR : Generación
-             Validación
-             Registro
-
-    section Administration
-        Dashboard : Gestión
-                    Reportes
-                    Operación
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#7A1F3D','primaryTextColor':'#F5F5F5','lineColor':'#C8A96B'}}}%%
+flowchart LR
+    A[Requerimiento] --> B[Analizar dominio] --> C[Tipos] --> D[Validación Zod] --> E[Service] --> F[Repository]
+    F --> G[API] --> H[UI con Axios] --> I[Loading, error, success] --> J[Tests] --> K[Lint y build]
+    classDef primary fill:#7A1F3D,color:#fff,stroke:#7A1F3D;
+    classDef accent fill:#C8A96B,color:#1F1F1F,stroke:#C8A96B;
+    class A,B,C,D,E,F primary;
+    class G,H,I,J,K accent;
 ```
 
----
+### Convenciones
 
-# Alcance del MVP
-
-### Incluido
-
-* Autenticación.
-* Roles.
-* Catálogo.
-* Servicios.
-* Instalaciones.
-* Disponibilidad.
-* Reservas.
-* Pagos.
-* QR.
-* Control de acceso.
-* Gestión administrativa.
-
-### Fuera del MVP
-
-* Membresías.
-* Suscripciones.
-* Puntos.
-* Marketplace.
-* Reconocimiento facial.
-* Hardware de acceso.
-* Aplicación móvil nativa.
-* Modo offline.
-* Múltiples sedes.
-* Facturación electrónica.
-* WhatsApp.
-
----
-
-# Convenciones
-
-## Código
-
-El proyecto utiliza TypeScript estricto.
-
-Se debe evitar:
-
-```typescript
-any
-```
-
-Las nuevas funcionalidades deben respetar la arquitectura existente.
-
-## Nuevas features
-
-Cuando una funcionalidad pertenece a un dominio existente, debe incorporarse dentro de su feature correspondiente.
+* TypeScript estricto. Evitar `any`.
+* Si una funcionalidad pertenece a un dominio existente, se incorpora dentro de su feature. No se crean capas paralelas.
+* Antes de crear un componente: revisar los existentes, evaluar si se puede reutilizar, extenderlo si corresponde y crear uno nuevo solo con una responsabilidad clara.
 
 ```text
 features/
@@ -830,93 +529,125 @@ features/
     └── index.ts
 ```
 
-No crear capas paralelas si la funcionalidad ya tiene un lugar dentro de la arquitectura.
+### Validación antes de un commit importante
 
-## Componentes
-
-Antes de crear un componente nuevo:
-
-1. Revisar componentes existentes.
-2. Determinar si puede reutilizarse.
-3. Extenderlo si corresponde.
-4. Crear uno nuevo únicamente cuando tenga una responsabilidad clara.
-
----
-
-# Desarrollo
-
-El flujo recomendado para una nueva funcionalidad es:
-
-```text
-Requerimiento
-      │
-      ▼
-Analizar dominio
-      │
-      ▼
-Definir tipos
-      │
-      ▼
-Definir validación
-      │
-      ▼
-Implementar Service
-      │
-      ▼
-Implementar Repository
-      │
-      ▼
-Crear / actualizar API
-      │
-      ▼
-Conectar UI con Axios
-      │
-      ▼
-Estados de loading / error / success
-      │
-      ▼
-Tests
-      │
-      ▼
-Lint + Build
+```bash
+npm run lint
+npm run build
+npm test
+npm run test:e2e
 ```
 
----
+| Herramienta | Cobertura                               |
+| ----------- | --------------------------------------- |
+| Vitest      | Services, schemas y lógica de negocio   |
+| Playwright  | Autenticación, reservas, pagos y acceso |
 
-# Seguridad
+<img src="./docs/assets/divider.svg" width="100%" alt="" />
 
-Actualmente se utilizan:
+## Seguridad
 
-* Hash de contraseñas mediante `bcryptjs`.
-* JWT mediante `jose`.
-* Cookies `HttpOnly`.
-* `SameSite=Lax`.
-* Validación mediante Zod.
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**Implementado**
+
+* Hash de contraseñas con `bcryptjs`.
+* JWT con `jose`.
+* Cookies `HttpOnly` y `SameSite=Lax`.
+* Validación con Zod.
 * Middleware de autorización.
 * Control de acceso basado en roles.
 * Variables sensibles mediante `.env`.
 
-Antes de producción se recomienda completar:
+</td>
+<td width="50%" valign="top">
+
+**Pendiente antes de producción**
 
 * Rate limiting.
 * Hardening de autenticación.
 * Proveedor de correo transaccional.
-* Recuperación de contraseña.
-* Verificación de correo.
+* Recuperación de contraseña y verificación de correo.
 * Configuración definitiva de Stripe.
 * Pruebas E2E de flujos críticos.
 * Observabilidad y logging.
 
----
+</td>
+</tr>
+</table>
 
-# Licencia
+<img src="./docs/assets/divider.svg" width="100%" alt="" />
+
+## Roadmap
+
+```mermaid
+%%{init: {'theme':'base','themeVariables':{'cScale0':'#7A1F3D','cScale1':'#C8A96B','cScale2':'#7A1F3D','cScale3':'#C8A96B','cScale4':'#7A1F3D','cScale5':'#C8A96B','cScaleLabel0':'#F5F5F5','cScaleLabel1':'#1F1F1F','cScaleLabel2':'#F5F5F5','cScaleLabel3':'#1F1F1F','cScaleLabel4':'#F5F5F5','cScaleLabel5':'#1F1F1F'}}}%%
+timeline
+    title Omega Complex
+    section Foundation
+        Arquitectura : Next.js : Prisma : PostgreSQL
+        Authentication : JWT : Roles : Middleware
+    section Core
+        Catalog : Servicios : Instalaciones
+        Availability : Horarios : Capacidad
+    section Reservations
+        Reservation flow : Disponibilidad : Bloqueo temporal : Confirmación
+    section Payments
+        Stripe : Checkout : Webhooks
+    section Access
+        QR : Generación : Validación : Registro
+    section Administration
+        Dashboard : Gestión : Reportes : Operación
+```
+
+### Alcance del MVP
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**Incluido**
+
+* Autenticación y roles.
+* Catálogo, servicios e instalaciones.
+* Disponibilidad.
+* Reservas y pagos.
+* QR y control de acceso.
+* Gestión administrativa.
+
+</td>
+<td width="50%" valign="top">
+
+**Fuera del MVP**
+
+* Membresías y suscripciones.
+* Puntos y marketplace.
+* Reconocimiento facial.
+* Hardware de acceso.
+* Aplicación móvil nativa.
+* Modo offline.
+* Múltiples sedes.
+* Facturación electrónica.
+* WhatsApp.
+
+</td>
+</tr>
+</table>
+
+<img src="./docs/assets/divider.svg" width="100%" alt="" />
+
+## Licencia
 
 Este proyecto es de uso privado y forma parte del desarrollo de **Omega Complex**.
 
----
+<br />
 
-<p align="center">
-  <strong>Omega Complex</strong>
-  <br />
-  Plataforma digital para una experiencia deportiva más simple, conectada y eficiente.
-</p>
+<div align="center">
+
+**Omega Complex**
+
+Plataforma digital para una experiencia deportiva más simple, conectada y eficiente.
+
+</div>
