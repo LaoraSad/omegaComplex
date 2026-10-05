@@ -27,11 +27,15 @@ export default function Navbar({ initialUser }: NavbarProps) {
   const [user, setUser] = useState<AuthUser | null>(initialUser);
   const [prevInitialUser, setPrevInitialUser] = useState<AuthUser | null>(initialUser);
   const [loggingOut, setLoggingOut] = useState(false);
+  // true cuando ya se sabe si hay sesion o no. Evita mostrar "Iniciar sesion"
+  // un instante mientras se verifica la sesion vigente.
+  const [sessionChecked, setSessionChecked] = useState(initialUser !== null);
 
   // Sincroniza si el layout entrega un usuario distinto (p. ej. tras login).
   if (initialUser !== prevInitialUser) {
     setPrevInitialUser(initialUser);
     setUser(initialUser);
+    setSessionChecked(true);
   }
 
   // Respaldo: si el layout se renderizó sin sesión (navegación cliente),
@@ -41,12 +45,16 @@ export default function Navbar({ initialUser }: NavbarProps) {
     let cancelled = false;
     me().then(
       (current) => {
-        if (!cancelled) setUser(current);
+        if (cancelled) return;
+        setUser(current);
+        setSessionChecked(true);
       },
       (error: unknown) => {
-        if (!cancelled && error instanceof AuthApiError && error.status === 401) {
+        if (cancelled) return;
+        if (error instanceof AuthApiError && error.status === 401) {
           setUser(null);
         }
+        setSessionChecked(true);
       },
     );
     return () => {
@@ -55,6 +63,7 @@ export default function Navbar({ initialUser }: NavbarProps) {
   }, [initialUser]);
 
   const isAuthenticated = user !== null;
+  const isResolvingSession = !sessionChecked && user === null;
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -127,9 +136,9 @@ export default function Navbar({ initialUser }: NavbarProps) {
           </Link>
           {user?.role === 'admin' && (
             <Link
-              href="/piscinas/dashboard"
+              href="/admin"
               className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
-                isActive('/piscinas/dashboard')
+                isActive('/admin')
                   ? 'text-[#7A1F3D] border-b-2 border-[#7A1F3D] pb-1'
                   : 'text-[#6B7280] hover:text-[#1F1F1F]'
               }`}
@@ -170,41 +179,51 @@ export default function Navbar({ initialUser }: NavbarProps) {
 
         {/* Acciones de Autenticación Desktop */}
         <div className="hidden md:flex items-center gap-4">
-          {isAuthenticated && user ? (
+          {isResolvingSession ? (
             <span
-              className="text-[11px] font-semibold text-[#1F1F1F] bg-[#F5F5F5] px-3.5 py-1.5 rounded-full border border-[#E5E7EB] flex items-center gap-1.5"
-              title={user.email}
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>Hola, {user.firstName}</span>
-            </span>
-          ) : null}
-
-          {!isAuthenticated ? (
-            <>
-              <Link
-                href="/login"
-                className="text-sm font-semibold text-[#1F1F1F] hover:text-[#7A1F3D] px-3 py-2 transition-colors cursor-pointer"
-              >
-                Iniciar sesión
-              </Link>
-              <Link
-                href="/register"
-                className="text-sm font-semibold bg-[#7A1F3D] hover:bg-[#631730] text-white px-5 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 flex items-center gap-1.5"
-              >
-                <Sparkles className="w-4 h-4 text-[#C8A96B]" />
-                <span>Registrarse</span>
-              </Link>
-            </>
+              role="status"
+              aria-label="Verificando sesión"
+              className="inline-block h-9 w-44 animate-pulse rounded-xl bg-[#EFECEB]"
+            />
           ) : (
-            <button
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="text-sm font-semibold text-[#6B7280] hover:text-[#7A1F3D] px-4 py-2 rounded-xl border border-[#E5E7EB] hover:border-[#7A1F3D] transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>{loggingOut ? 'Cerrando…' : 'Cerrar sesión'}</span>
-            </button>
+            <>
+              {isAuthenticated && user ? (
+                <span
+                  className="text-[11px] font-semibold text-[#1F1F1F] bg-[#F5F5F5] px-3.5 py-1.5 rounded-full border border-[#E5E7EB] flex items-center gap-1.5"
+                  title={user.email}
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>Hola, {user.firstName}</span>
+                </span>
+              ) : null}
+
+              {!isAuthenticated ? (
+                <>
+                  <Link
+                    href="/login"
+                    className="text-sm font-semibold text-[#1F1F1F] hover:text-[#7A1F3D] px-3 py-2 transition-colors cursor-pointer"
+                  >
+                    Iniciar sesión
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="text-sm font-semibold bg-[#7A1F3D] hover:bg-[#631730] text-white px-5 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 flex items-center gap-1.5"
+                  >
+                    <Sparkles className="w-4 h-4 text-[#C8A96B]" />
+                    <span>Registrarse</span>
+                  </Link>
+                </>
+              ) : (
+                <button
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="text-sm font-semibold text-[#6B7280] hover:text-[#7A1F3D] px-4 py-2 rounded-xl border border-[#E5E7EB] hover:border-[#7A1F3D] transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>{loggingOut ? 'Cerrando…' : 'Cerrar sesión'}</span>
+                </button>
+              )}
+            </>
           )}
         </div>
 
@@ -254,9 +273,9 @@ export default function Navbar({ initialUser }: NavbarProps) {
             </Link>
             {user?.role === 'admin' && (
               <Link
-                href="/piscinas/dashboard"
+                href="/admin"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`p-2.5 rounded-lg flex items-center gap-2.5 ${isActive('/piscinas/dashboard') ? 'bg-[#7A1F3D]/10 text-[#7A1F3D]' : 'hover:bg-[#F5F5F5]'}`}
+                className={`p-2.5 rounded-lg flex items-center gap-2.5 ${isActive('/admin') ? 'bg-[#7A1F3D]/10 text-[#7A1F3D]' : 'hover:bg-[#F5F5F5]'}`}
               >
                 <LayoutDashboard className="w-4 h-4 text-[#7A1F3D]" />
                 <span>Dashboard</span>
@@ -286,7 +305,13 @@ export default function Navbar({ initialUser }: NavbarProps) {
           </div>
 
           <div className="pt-4 border-t border-[#E5E7EB] flex flex-col gap-2.5">
-            {!isAuthenticated ? (
+            {isResolvingSession ? (
+              <span
+                role="status"
+                aria-label="Verificando sesión"
+                className="block h-11 w-full animate-pulse rounded-xl bg-[#EFECEB]"
+              />
+            ) : !isAuthenticated ? (
               <>
                 <Link
                   href="/login"

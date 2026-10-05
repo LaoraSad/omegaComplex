@@ -1,20 +1,34 @@
-'use client';
+import type { Metadata } from "next";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { ArrowLeft, Lock, Mail, Phone, ShieldCheck, UserRound } from "lucide-react";
+import { findSessionUserById } from "@/features/auth/auth.repository";
+import { getSession } from "@/shared/auth/session";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { Lock, CheckCircle2, ArrowLeft, Phone, Mail, Key } from 'lucide-react';
+export const metadata: Metadata = {
+  title: "Mi perfil",
+};
 
-export default function ProfilePage() {
-  const [phone, setPhone] = useState('310 123 4567');
-  const [email, setEmail] = useState('cliente@ejemplo.com');
-  const [password, setPassword] = useState('••••••••••••');
-  const [isSaved, setIsSaved] = useState(false);
+const ROLE_LABEL: Record<string, string> = {
+  admin: "Administrador",
+  employee: "Empleado",
+  user: "Cliente",
+};
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
-  };
+function initials(firstName: string, lastName: string): string {
+  return `${firstName.trim().charAt(0)}${lastName.trim().charAt(0)}`.toUpperCase();
+}
+
+// Muestra UNICAMENTE la informacion del usuario autenticado en la sesion.
+// Sin datos fijos, sin mocks, sin guardado ficticio.
+export default async function ProfilePage() {
+  const session = await getSession();
+  if (!session) redirect("/login?next=/perfil");
+
+  const user = await findSessionUserById(session.userId);
+  if (!user) redirect("/login?next=/perfil");
+
+  const roleLabel = ROLE_LABEL[user.role] ?? "Cliente";
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
@@ -24,142 +38,108 @@ export default function ProfilePage() {
           Configuración de Cuenta
         </span>
         <h1 className="text-3xl font-black text-[#1F1F1F] tracking-tight">
-          Perfil del Cliente
+          Perfil del {roleLabel}
         </h1>
         <p className="text-sm text-[#6B7280]">
-          Consulta tus datos de identificación y actualiza tu información de contacto autorizada.
+          Información de tu cuenta en Omega Complex, tal como está registrada en el sistema.
         </p>
       </div>
 
-      <form onSubmit={handleSave} className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E5E7EB] shadow-xs space-y-6">
-        {/* Notificación de guardado */}
-        {isSaved && (
-          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>Tus datos de contacto han sido actualizados correctamente.</span>
+      <section
+        aria-label="Datos de tu cuenta"
+        className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E5E7EB] shadow-xs space-y-6"
+      >
+        {/* Identidad */}
+        <div className="flex items-center gap-4 pb-6 border-b border-[#E5E7EB]">
+          <span
+            aria-hidden="true"
+            className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[#7A1F3D] text-lg font-bold text-white"
+          >
+            {initials(user.firstName, user.lastName)}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-lg font-extrabold text-[#1F1F1F]">
+              {user.firstName} {user.lastName}
+            </p>
+            <p className="truncate text-sm text-[#6B7280]">{user.email}</p>
+            <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-[#7A1F3D]/10 px-2.5 py-0.5 text-[11px] font-bold text-[#7A1F3D]">
+              <ShieldCheck className="h-3 w-3" />
+              {roleLabel}
+            </p>
           </div>
-        )}
+        </div>
 
-        {/* Sección: Datos no editables */}
+        {/* Datos de identificación */}
         <div className="space-y-4">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[#6B7280] pb-2 border-b border-[#E5E7EB] flex items-center gap-1.5">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[#6B7280] pb-2 border-b border-[#E5E7EB] flex items-center gap-1.5">
             <Lock className="w-3.5 h-3.5" />
             <span>Datos de Identificación (No modificables)</span>
-          </h3>
+          </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-[#6B7280] mb-1">Nombre</label>
-              <input
-                type="text"
-                value="Carlos Andrés"
-                disabled
-                className="w-full px-3.5 py-2.5 bg-[#F5F5F5] border border-[#E5E7EB] rounded-xl text-sm font-bold text-[#1F1F1F] cursor-not-allowed opacity-80"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-[#6B7280] mb-1">Apellido</label>
-              <input
-                type="text"
-                value="Rodríguez Gómez"
-                disabled
-                className="w-full px-3.5 py-2.5 bg-[#F5F5F5] border border-[#E5E7EB] rounded-xl text-sm font-bold text-[#1F1F1F] cursor-not-allowed opacity-80"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-[#6B7280] mb-1">
-                Documento de Identidad (Bloqueado)
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value="CC 1.020.304.506"
-                  disabled
-                  className="w-full px-3.5 py-2.5 bg-[#F5F5F5] border border-[#E5E7EB] rounded-xl text-sm font-bold text-[#1F1F1F] cursor-not-allowed opacity-80"
-                />
-                <Lock className="w-3.5 h-3.5 absolute right-3.5 top-3.5 text-[#6B7280]" />
-              </div>
-              <p className="text-[10px] text-[#6B7280] mt-1">
-                El número de documento no puede ser modificado por seguridad.
+              <p className="block text-xs font-semibold text-[#6B7280] mb-1">Nombre</p>
+              <p className="w-full px-3.5 py-2.5 bg-[#F5F5F5] border border-[#E5E7EB] rounded-xl text-sm font-bold text-[#1F1F1F]">
+                {user.firstName}
               </p>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#6B7280] mb-1">Fecha de Nacimiento</label>
-              <input
-                type="text"
-                value="14 / 08 / 1995"
-                disabled
-                className="w-full px-3.5 py-2.5 bg-[#F5F5F5] border border-[#E5E7EB] rounded-xl text-sm font-bold text-[#1F1F1F] cursor-not-allowed opacity-80"
-              />
+              <p className="block text-xs font-semibold text-[#6B7280] mb-1">Apellido</p>
+              <p className="w-full px-3.5 py-2.5 bg-[#F5F5F5] border border-[#E5E7EB] rounded-xl text-sm font-bold text-[#1F1F1F]">
+                {user.lastName}
+              </p>
             </div>
           </div>
-        </div>
 
-        {/* Sección: Datos modificables */}
-        <div className="space-y-4 pt-4 border-t border-[#E5E7EB]">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[#7A1F3D] pb-2 border-b border-[#E5E7EB]">
-            Datos de Contacto y Seguridad (Modificables)
-          </h3>
-
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-[#1F1F1F] mb-1 flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-[#7A1F3D]" />
-                <span>Teléfono móvil de contacto</span>
-              </label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white border border-[#E5E7EB] rounded-xl text-sm text-[#1F1F1F] focus:outline-none focus:border-[#7A1F3D]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#1F1F1F] mb-1 flex items-center gap-1.5">
+              <p className="text-xs font-bold text-[#1F1F1F] mb-1 flex items-center gap-1.5">
                 <Mail className="w-3.5 h-3.5 text-[#7A1F3D]" />
-                <span>Correo electrónico (Para recepción de códigos QR)</span>
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white border border-[#E5E7EB] rounded-xl text-sm text-[#1F1F1F] focus:outline-none focus:border-[#7A1F3D]"
-              />
+                <span>Correo electrónico</span>
+              </p>
+              <p className="w-full truncate px-3.5 py-2.5 bg-[#F5F5F5] border border-[#E5E7EB] rounded-xl text-sm font-bold text-[#1F1F1F]">
+                {user.email}
+              </p>
+              <p className="text-[10px] text-[#6B7280] mt-1">
+                Aquí recibes los códigos QR de tus reservas.
+              </p>
             </div>
-
             <div>
-              <label className="block text-xs font-bold text-[#1F1F1F] mb-1 flex items-center gap-1.5">
-                <Key className="w-3.5 h-3.5 text-[#7A1F3D]" />
-                <span>Contraseña de acceso</span>
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white border border-[#E5E7EB] rounded-xl text-sm text-[#1F1F1F] focus:outline-none focus:border-[#7A1F3D]"
-              />
+              <p className="text-xs font-bold text-[#1F1F1F] mb-1 flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-[#7A1F3D]" />
+                <span>Teléfono de contacto</span>
+              </p>
+              <p className="w-full px-3.5 py-2.5 bg-[#F5F5F5] border border-[#E5E7EB] rounded-xl text-sm font-bold text-[#1F1F1F]">
+                {user.phone ?? "Sin registrar"}
+              </p>
             </div>
           </div>
+
+          <p className="text-[11px] leading-relaxed text-[#6B7280] flex items-start gap-1.5 rounded-xl bg-[#F5F5F5] border border-[#E5E7EB] px-3.5 py-2.5">
+            <UserRound className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            <span>
+              Por seguridad, los datos de identificación no se pueden modificar desde esta vista.
+              El documento y la fecha de nacimiento no se muestran en tu sesión actual.
+            </span>
+          </p>
         </div>
 
-        {/* Botones de acción */}
-        <div className="pt-4 flex items-center justify-between">
+        {/* Acciones */}
+        <div className="pt-4 flex items-center justify-between border-t border-[#E5E7EB]">
           <Link href="/mis-reservas" className="text-xs font-bold text-[#6B7280] hover:text-[#7A1F3D] flex items-center gap-1">
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Ir a mis reservas</span>
           </Link>
-          <button
-            type="submit"
-            className="px-6 py-3 rounded-xl bg-[#7A1F3D] hover:bg-[#631730] text-white text-xs font-bold shadow-xs transition-all active:scale-95 cursor-pointer"
-          >
-            Guardar cambios
-          </button>
+          {user.role === "admin" ? (
+            <Link
+              href="/admin"
+              className="px-6 py-3 rounded-xl bg-[#7A1F3D] hover:bg-[#631730] text-white text-xs font-bold shadow-xs transition-all"
+            >
+              Ir al panel
+            </Link>
+          ) : null}
         </div>
-      </form>
+      </section>
     </div>
   );
 }
