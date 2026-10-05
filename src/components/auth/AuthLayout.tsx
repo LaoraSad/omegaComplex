@@ -7,6 +7,7 @@ interface AuthLayoutProps {
   description: string;
   eyebrow?: string;
   title: string;
+  brandVideoSrc?: string;
 }
 
 function Wordmark() {
@@ -29,10 +30,31 @@ export function AuthLayout({
   description,
   eyebrow = "Omega Complex",
   title,
+  brandVideoSrc,
 }: AuthLayoutProps) {
   return (
     <div className="auth-shell">
-      <aside aria-label="Omega Complex" className="auth-brand-panel">
+      <aside
+        aria-label="Omega Complex"
+        className={`auth-brand-panel${brandVideoSrc ? " auth-brand-panel--video" : ""}`}
+      >
+        {brandVideoSrc ? (
+          <>
+            <video
+              aria-hidden="true"
+              autoPlay
+              className="auth-brand-video"
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              tabIndex={-1}
+            >
+              <source src={brandVideoSrc} type="video/mp4" />
+            </video>
+            <div aria-hidden="true" className="auth-brand-overlay" />
+          </>
+        ) : null}
         <div className="auth-brand-content">
           <p className="auth-brand-kicker">Entrena. Disfruta. Evoluciona.</p>
           <h1>Tu próximo nivel empieza aquí.</h1>
