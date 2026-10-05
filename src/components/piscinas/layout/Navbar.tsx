@@ -125,17 +125,19 @@ export default function Navbar({ initialUser }: NavbarProps) {
             <Info className="w-4 h-4 opacity-70" />
             <span>Información</span>
           </Link>
-          <Link
-            href="/piscinas/dashboard"
-            className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
-              isActive('/piscinas/dashboard')
-                ? 'text-[#7A1F3D] border-b-2 border-[#7A1F3D] pb-1'
-                : 'text-[#6B7280] hover:text-[#1F1F1F]'
-            }`}
-          >
-            <LayoutDashboard className="w-4 h-4 opacity-70" />
-            <span>Dashboard</span>
-          </Link>
+          {user?.role === 'admin' && (
+            <Link
+              href="/piscinas/dashboard"
+              className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
+                isActive('/piscinas/dashboard')
+                  ? 'text-[#7A1F3D] border-b-2 border-[#7A1F3D] pb-1'
+                  : 'text-[#6B7280] hover:text-[#1F1F1F]'
+              }`}
+            >
+              <LayoutDashboard className="w-4 h-4 opacity-70" />
+              <span>Dashboard</span>
+            </Link>
+          )}
 
           {/* Enlaces específicos de Usuario Autenticado */}
           {isAuthenticated && (
@@ -250,14 +252,16 @@ export default function Navbar({ initialUser }: NavbarProps) {
               <Info className="w-4 h-4 text-[#7A1F3D]" />
               <span>Información del complejo</span>
             </Link>
-            <Link
-              href="/piscinas/dashboard"
-              onClick={() => setMobileMenuOpen(false)}
-              className={`p-2.5 rounded-lg flex items-center gap-2.5 ${isActive('/piscinas/dashboard') ? 'bg-[#7A1F3D]/10 text-[#7A1F3D]' : 'hover:bg-[#F5F5F5]'}`}
-            >
-              <LayoutDashboard className="w-4 h-4 text-[#7A1F3D]" />
-              <span>Dashboard</span>
-            </Link>
+            {user?.role === 'admin' && (
+              <Link
+                href="/piscinas/dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`p-2.5 rounded-lg flex items-center gap-2.5 ${isActive('/piscinas/dashboard') ? 'bg-[#7A1F3D]/10 text-[#7A1F3D]' : 'hover:bg-[#F5F5F5]'}`}
+              >
+                <LayoutDashboard className="w-4 h-4 text-[#7A1F3D]" />
+                <span>Dashboard</span>
+              </Link>
+            )}
 
             {isAuthenticated && (
               <>
