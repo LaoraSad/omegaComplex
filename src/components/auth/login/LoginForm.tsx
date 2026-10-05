@@ -38,9 +38,9 @@ function validate(values: LoginFormValues): LoginFormErrors {
 }
 
 function homeForRole(role: string): string {
-  if (role === "admin") return "/piscinas/dashboard";
+  if (role === "admin") return "/dashboard";
   if (role === "employee") return "/validar";
-  return "/piscinas/inicio";
+  return "/inicio";
 }
 
 interface LoginFormProps {

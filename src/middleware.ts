@@ -47,7 +47,17 @@ export async function middleware(req: NextRequest) {
     return loginRedirect(req);
   }
 
-  if (pathname.startsWith("/piscinas/dashboard") && role !== "admin") {
+  if (pathname.startsWith("/piscinas/dashboard")) {
+    if (role !== "admin") {
+      return NextResponse.redirect(new URL("/", req.url));
+    }
+
+    const url = req.nextUrl.clone();
+    url.pathname = pathname.replace("/piscinas/dashboard", "/dashboard");
+    return NextResponse.redirect(url);
+  }
+
+  if (pathname.startsWith("/dashboard") && role !== "admin") {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
@@ -64,5 +74,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/piscinas/dashboard/:path*", "/reservas/:path*", "/validar/:path*"],
+  matcher: ["/dashboard/:path*", "/piscinas/dashboard/:path*", "/reservas/:path*", "/validar/:path*"],
 };
