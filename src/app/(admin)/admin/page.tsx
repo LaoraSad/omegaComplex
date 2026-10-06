@@ -2,13 +2,16 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  ArrowRight,
+  Activity,
+  ArrowUpRight,
   CalendarDays,
-  ChevronRight,
+  CheckCircle2,
   CircleDollarSign,
+  Clock3,
   Inbox,
   QrCode,
   ScanLine,
+  Users,
   Waves,
 } from "lucide-react";
 import { EmptyState } from "@/components/admin/EmptyState";
@@ -18,10 +21,8 @@ import {
   formatNumber,
   formatTime,
   fullName,
-  initials,
 } from "@/components/admin/format";
 import { servicePhoto } from "@/components/admin/service-image";
-import type { ServiceRow } from "@/features/admin/admin.types";
 import { getDashboardOverview, listServices } from "@/features/admin/admin.repository";
 
 export const metadata: Metadata = { title: "Panel" };
@@ -30,8 +31,8 @@ function InstVisual({ name }: { name: string }) {
   const photo = servicePhoto(name);
   if (!photo) {
     return (
-      <span aria-hidden="true" className="ainst-fallback">
-        {name.trim().charAt(0).toUpperCase()}
+      <span aria-hidden="true" className="opdash-image-fallback">
+        <Waves className="h-8 w-8" strokeWidth={1.5} />
       </span>
     );
   }
@@ -50,23 +51,13 @@ function InstVisual({ name }: { name: string }) {
 function InstOcc({ used, total, compact }: { used: number; total: number; compact?: boolean }) {
   const percent = total > 0 ? Math.round((used / total) * 100) : null;
   if (percent === null) return null;
-  if (compact) {
-    return (
-      <>
-        <span className="ainst-card2-meta block">Hoy {percent}% ocupado</span>
-        <span className="ainst-track" aria-hidden="true">
-          <span style={{ width: `${Math.min(percent, 100)}%` }} />
-        </span>
-      </>
-    );
-  }
   return (
-    <span className="ainst-occ">
-      <span className="ainst-occ-top">
-        <span>Ocupación de hoy</span>
+    <span className={`opdash-occupancy${compact ? " is-compact" : ""}`}>
+      <span className="opdash-occupancy-label">
+        <span>{compact ? "Ocupación hoy" : "Ocupación de hoy"}</span>
         <strong>{percent}%</strong>
       </span>
-      <span className="ainst-track" aria-hidden="true">
+      <span className="opdash-occupancy-track" aria-hidden="true">
         <span style={{ width: `${Math.min(percent, 100)}%` }} />
       </span>
     </span>
@@ -85,9 +76,6 @@ export default async function AdminDashboardPage() {
   const occupancyPercent = data.occupancyToday
     ? Math.round((data.occupancyToday.used / Math.max(data.occupancyToday.total, 1)) * 100)
     : null;
-  const confirmedShare =
-    data.totalReservations > 0 ? Math.round((confirmed / data.totalReservations) * 100) : 0;
-
   const attention: Array<{ label: string; detail: string; count: number; href: string; tone: string }> = [];
   if (pendingOnly > 0) {
     attention.push({
@@ -127,26 +115,11 @@ export default async function AdminDashboardPage() {
   }
 
   const occupancyById = new Map(data.occupancyByService.map((s) => [s.serviceId, s]));
-  const featured: ServiceRow | null = services[0] ?? null;
-  const rest = services.slice(1, 6);
+  const featured = services.find((service) => servicePhoto(service.name)) ?? services[0] ?? null;
+  const serviceTiles = services.filter((service) => service.id !== featured?.id).slice(0, 4);
   const featuredOcc = featured ? occupancyById.get(featured.id) : undefined;
-
-  const activity = [
-    ...data.recentAccesses.map((a) => ({
-      id: `a-${a.id}`,
-      time: a.accessedAt,
-      title: "Acceso registrado",
-      detail: `${fullName(a.qrToken.reservation.customer.user.firstName, a.qrToken.reservation.customer.user.lastName)} · ${a.qrToken.reservation.service.name}`,
-    })),
-    ...data.recentReservations.map((r) => ({
-      id: `r-${r.id}`,
-      time: r.createdAt,
-      title: r.status === "confirmed" ? "Reserva confirmada" : "Reserva registrada",
-      detail: `${fullName(r.customer.user.firstName, r.customer.user.lastName)} · ${r.service.name}`,
-    })),
-  ]
-    .sort((x, y) => +new Date(y.time) - +new Date(x.time))
-    .slice(0, 7);
+  const maxDailyReservations = Math.max(1, ...data.dailySeries.map((day) => day.total));
+  const reservationsLast14Days = data.dailySeries.reduce((sum, day) => sum + day.total, 0);
 
   return (
     <div className="dash-stack">
@@ -172,351 +145,264 @@ export default async function AdminDashboardPage() {
         </div>
       </section>
 
-      {/* El cuerpo conserva el ancho de lectura; solo el hero es full-bleed. */}
-      <div className="dash-body">
-      {/* Métricas */}
-      <section aria-label="Métricas" className="akpi-grid">
-        <Link href="/admin/reservas" className="akpi-card">
-          <span className="akpi-top">
-            <span aria-hidden="true" className="akpi-disc is-rose">
-              <CalendarDays className="h-5 w-5" strokeWidth={1.9} />
-            </span>
-            <span className="akpi-main">
-              <span className="akpi-name block">Reservas registradas</span>
-              <span className="akpi-number block">{formatNumber(data.totalReservations)}</span>
-            </span>
-            <span aria-hidden="true" className="akpi-go">
-              <ChevronRight className="h-4 w-4" />
-            </span>
-          </span>
-          <span className="akpi-foot">
-            <span>
-              <strong>{formatNumber(confirmed)}</strong> confirmadas ·{" "}
-              <strong>{formatNumber(pendingOnly + processing)}</strong> por pagar
-            </span>
-          </span>
-          <span className="akpi-bar" aria-hidden="true">
-            <span style={{ width: `${confirmedShare}%` }} />
-          </span>
-        </Link>
-
-        <Link href="/admin/accesos" className="akpi-card">
-          <span className="akpi-top">
-            <span aria-hidden="true" className="akpi-disc is-blue">
-              <ScanLine className="h-5 w-5" strokeWidth={1.9} />
-            </span>
-            <span className="akpi-main">
-              <span className="akpi-name block">Accesos de hoy</span>
-              <span className="akpi-number block">{formatNumber(data.accessesToday)}</span>
-            </span>
-            <span aria-hidden="true" className="akpi-go">
-              <ChevronRight className="h-4 w-4" />
-            </span>
-          </span>
-          <span className="akpi-foot">
-            <span>
-              <strong>{formatNumber(data.accessesAllowedToday)}</strong> permitidos ·{" "}
-              <strong>{formatNumber(data.accessesDeniedToday)}</strong> denegados
-            </span>
-          </span>
-        </Link>
-
-        <Link href="/admin/servicios" className="akpi-card">
-          <span className="akpi-top">
-            <span aria-hidden="true" className="akpi-disc is-amber">
-              <Waves className="h-5 w-5" strokeWidth={1.9} />
-            </span>
-            <span className="akpi-main">
-              <span className="akpi-name block">Ocupación de hoy</span>
-              <span className="akpi-number block">
-                {occupancyPercent !== null ? `${occupancyPercent}%` : "—"}
-              </span>
-            </span>
-            <span aria-hidden="true" className="akpi-go">
-              <ChevronRight className="h-4 w-4" />
-            </span>
-          </span>
-          <span className="akpi-foot">
-            <span>
-              {data.occupancyToday ? (
-                <>
-                  <strong>{formatNumber(data.occupancyToday.used)}</strong> de{" "}
-                  <strong>{formatNumber(data.occupancyToday.total)}</strong> cupos en franja
-                </>
-              ) : (
-                "Sin franjas para hoy"
-              )}
-            </span>
-          </span>
-          {occupancyPercent !== null ? (
-            <span className="akpi-bar" aria-hidden="true">
-              <span style={{ width: `${Math.min(occupancyPercent, 100)}%` }} />
-            </span>
-          ) : null}
-        </Link>
-
-        <Link href="/admin/reportes" className="akpi-card">
-          <span className="akpi-top">
-            <span aria-hidden="true" className="akpi-disc is-emerald">
-              <CircleDollarSign className="h-5 w-5" strokeWidth={1.9} />
-            </span>
-            <span className="akpi-main">
-              <span className="akpi-name block">Ingresos</span>
-              <span className="akpi-number block" style={{ fontSize: "1.35rem", paddingTop: "0.25rem" }}>
-                {formatCOP(data.revenueCop)}
-              </span>
-            </span>
-            <span aria-hidden="true" className="akpi-go">
-              <ChevronRight className="h-4 w-4" />
-            </span>
-          </span>
-          <span className="akpi-foot">
-            <span>Pagos exitosos con tarjeta · COP</span>
-          </span>
-        </Link>
-      </section>
-
-      {/* Atención */}
-      {attention.length > 0 ? (
-        <section aria-label="Requiere atención">
-          <div className="asection-head">
-            <p className="asection-kicker">Operación</p>
+      <div className="dash-body opdash-body">
+        <header className="opdash-intro">
+          <div>
+            <p className="opdash-kicker">Omega Complex <span>·</span> Resumen de hoy</p>
+            <h2>El pulso del complejo</h2>
+            <p className="opdash-intro-copy">
+              Reservas, instalaciones y accesos en una sola vista.
+            </p>
           </div>
-          <h2 className="admin-section-title">Requiere atención</h2>
-          <ul className="mt-1">
-            {attention.map((item) => (
-              <li key={item.label}>
-                <Link href={item.href} className="aattention-row">
-                  <span aria-hidden="true" className={`aattention-dot is-${item.tone}`} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-bold text-[#211a1d]">{item.label}</span>
-                    <span className="block truncate text-xs text-[#6f625e]">{item.detail}</span>
-                  </span>
-                  <span className="anum text-lg font-extrabold text-[#211a1d]">
-                    {formatNumber(item.count)}
-                  </span>
-                  <ArrowRight className="h-4 w-4 shrink-0 text-[#a89c97]" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+          <Link href="/admin/reportes" className="opdash-report-link">
+            Explorar reportes <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+          </Link>
+        </header>
 
-      {/* Instalaciones: bloque principal a todo el ancho */}
-      <section aria-label="Instalaciones">
-          <div className="asection-head">
-            <p className="asection-kicker">Instalaciones</p>
-            <Link href="/admin/servicios" className="asection-link">
-              Ver servicios
+        <section aria-label="Resumen de indicadores" className="opdash-metrics">
+          <Link href="/admin/reservas" className="opdash-metric" data-tone="wine">
+            <span className="opdash-metric-top">
+              <span className="opdash-metric-icon"><CalendarDays className="h-5 w-5" /></span>
+              <ArrowUpRight aria-hidden="true" className="h-4 w-4 opdash-metric-link" />
+            </span>
+            <span className="opdash-metric-label">Reservas registradas</span>
+            <strong className="opdash-metric-value">{formatNumber(data.totalReservations)}</strong>
+            <span className="opdash-metric-note">
+              {formatNumber(confirmed)} confirmadas · {formatNumber(pendingOnly + processing)} por pagar
+            </span>
+          </Link>
+
+          <Link href="/admin/accesos" className="opdash-metric" data-tone="blue">
+            <span className="opdash-metric-top">
+              <span className="opdash-metric-icon"><ScanLine className="h-5 w-5" /></span>
+              <ArrowUpRight aria-hidden="true" className="h-4 w-4 opdash-metric-link" />
+            </span>
+            <span className="opdash-metric-label">Accesos de hoy</span>
+            <strong className="opdash-metric-value">{formatNumber(data.accessesToday)}</strong>
+            <span className="opdash-metric-note">
+              {formatNumber(data.accessesAllowedToday)} permitidos · {formatNumber(data.accessesDeniedToday)} denegados
+            </span>
+          </Link>
+
+          <Link href="/admin/servicios" className="opdash-metric" data-tone="aqua">
+            <span className="opdash-metric-top">
+              <span className="opdash-metric-icon"><Waves className="h-5 w-5" /></span>
+              <ArrowUpRight aria-hidden="true" className="h-4 w-4 opdash-metric-link" />
+            </span>
+            <span className="opdash-metric-label">Ocupación de hoy</span>
+            <strong className="opdash-metric-value">
+              {occupancyPercent !== null ? `${occupancyPercent}%` : "—"}
+            </strong>
+            <span className="opdash-metric-note">
+              {data.occupancyToday
+                ? `${formatNumber(data.occupancyToday.used)} de ${formatNumber(data.occupancyToday.total)} cupos`
+                : "Sin franjas programadas"}
+            </span>
+          </Link>
+
+          <Link href="/admin/reportes" className="opdash-metric" data-tone="gold">
+            <span className="opdash-metric-top">
+              <span className="opdash-metric-icon"><CircleDollarSign className="h-5 w-5" /></span>
+              <ArrowUpRight aria-hidden="true" className="h-4 w-4 opdash-metric-link" />
+            </span>
+            <span className="opdash-metric-label">Ingresos</span>
+            <strong className="opdash-metric-value is-currency">{formatCOP(data.revenueCop)}</strong>
+            <span className="opdash-metric-note">Pagos exitosos · COP</span>
+          </Link>
+        </section>
+
+        {attention.length > 0 ? (
+          <section aria-label="Pendientes operativos" className="opdash-attention">
+            <div className="opdash-attention-heading">
+              <span className="opdash-attention-icon"><Activity className="h-5 w-5" /></span>
+              <span>
+                <span className="opdash-attention-kicker">Seguimiento</span>
+                <strong>Requiere atención</strong>
+              </span>
+              <span className="opdash-attention-count">{attention.length}</span>
+            </div>
+            <ul className="opdash-alert-list">
+              {attention.map((item) => (
+                <li key={item.label}>
+                  <Link href={item.href} className="opdash-alert-link">
+                    <span className={`opdash-alert-count is-${item.tone}`}>{formatNumber(item.count)}</span>
+                    <span className="opdash-alert-copy">
+                      <strong>{item.label}</strong>
+                      <span>{item.detail}</span>
+                    </span>
+                    <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : (
+          <div className="opdash-clear-state">
+            <CheckCircle2 aria-hidden="true" className="h-5 w-5" />
+            <span><strong>Sin pendientes prioritarios</strong><span>La operación no requiere acciones urgentes.</span></span>
+          </div>
+        )}
+
+        <section aria-label="Ocupación por servicio" className="opdash-installations">
+          <div className="opdash-section-heading">
+            <div>
+              <p className="opdash-section-kicker">Dentro del complejo</p>
+              <h2>Ocupación por servicio</h2>
+              <p>Capacidad y reservas de las instalaciones para hoy.</p>
+            </div>
+            <Link href="/admin/servicios" className="opdash-section-link">
+              Ver instalaciones <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
             </Link>
           </div>
-          <h2 className="admin-section-title">Ocupación por servicio</h2>
-          <p className="admin-section-sub">Estado actual de las instalaciones.</p>
-          {services.length > 0 ? (
-            <>
-              {featured ? (
-                <Link href="/admin/servicios" className="ainst-feature">
-                  <span className="ainst-feature-photo">
-                    <InstVisual name={featured.name} />
+
+          {featured ? (
+            <div className="opdash-service-gallery">
+              <Link href="/admin/servicios" className="opdash-service-feature">
+                <span className="opdash-media-frame is-feature">
+                  <InstVisual name={featured.name} />
+                  <span className="opdash-media-category">{featured.category.name}</span>
+                  <span className="opdash-media-index">01</span>
+                </span>
+                <span className="opdash-feature-content">
+                  <span className="opdash-feature-kicker">Instalación destacada</span>
+                  <span className="opdash-feature-name">{featured.name}</span>
+                  <span className="opdash-feature-capacity">
+                    <Users aria-hidden="true" className="h-4 w-4" />
+                    Capacidad para {formatNumber(featured.capacity)} personas
                   </span>
-                  <span className="ainst-feature-body">
-                    <span className="ainst-feature-cat block">
-                      {featured.category.name} · Instalación principal
-                    </span>
-                    <span className="ainst-feature-name block">{featured.name}</span>
-                    <span className="ainst-feature-meta block">
-                      Capacidad: {formatNumber(featured.capacity)} personas
-                    </span>
-                    {featuredOcc ? (
-                      <InstOcc used={featuredOcc.used} total={featuredOcc.total} />
-                    ) : (
-                      <span className="ainst-feature-meta block">Sin franjas para hoy</span>
-                    )}
-                  </span>
-                </Link>
-              ) : null}
-              <ul className="ainst-subgrid">
-                {rest.map((s, i) => {
-                  const occ = occupancyById.get(s.id);
-                  const layout =
-                    i === rest.length - 1 && rest.length % 2 === 1
-                      ? "side"
-                      : i % 2 === 0
-                        ? "top"
-                        : "bottom";
+                  {featuredOcc ? (
+                    <InstOcc used={featuredOcc.used} total={featuredOcc.total} />
+                  ) : (
+                    <span className="opdash-no-schedule">Sin franjas programadas hoy</span>
+                  )}
+                  <span className="opdash-feature-action">Ver servicio <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></span>
+                </span>
+              </Link>
+
+              <div className="opdash-service-tiles">
+                {serviceTiles.map((service, index) => {
+                  const occupancy = occupancyById.get(service.id);
                   return (
-                    <li key={s.id}>
-                      <Link href="/admin/servicios" className="ainst-card2" data-layout={layout}>
-                        <span className="ainst-card2-photo">
-                          <InstVisual name={s.name} />
+                    <Link href="/admin/servicios" className="opdash-service-tile" key={service.id}>
+                      <span className="opdash-media-frame">
+                        <InstVisual name={service.name} />
+                        <span className="opdash-media-index">{String(index + 2).padStart(2, "0")}</span>
+                      </span>
+                      <span className="opdash-tile-content">
+                        <span className="opdash-tile-category">{service.category.name}</span>
+                        <span className="opdash-tile-name">{service.name}</span>
+                        <span className="opdash-tile-meta">
+                          {occupancy
+                            ? `${Math.round((occupancy.used / Math.max(occupancy.total, 1)) * 100)}% ocupado hoy`
+                            : `Capacidad ${formatNumber(service.capacity)} personas`}
                         </span>
-                        <span className="ainst-card2-body">
-                          <span className="ainst-card2-name block">{s.name}</span>
-                          <span className="ainst-card2-meta block">
-                            Capacidad: {formatNumber(s.capacity)} personas
-                          </span>
-                          {occ ? (
-                            <InstOcc used={occ.used} total={occ.total} compact />
-                          ) : (
-                            <span className="ainst-card2-meta block">Sin franjas para hoy</span>
-                          )}
-                        </span>
-                      </Link>
-                    </li>
+                      </span>
+                    </Link>
                   );
                 })}
-              </ul>
-            </>
+              </div>
+            </div>
           ) : (
-            <div className="mt-3 rounded-[14px] border border-dashed border-[#d8cfcc] px-4 py-6">
-              <EmptyState
-                title="Sin servicios configurados"
-                text="Cuando existan servicios en la base de datos aparecerán aquí."
-              />
+            <div className="opdash-empty-state">
+              <EmptyState title="Sin servicios configurados" text="Las instalaciones aparecerán aquí cuando estén disponibles." />
             </div>
           )}
-      </section>
+        </section>
 
-      {/* Reservas + actividad */}
-      <section aria-label="Reservas y actividad" className="dash-grid-main">
-        <div>
-          <div className="asection-head">
-            <p className="asection-kicker">Reservas</p>
-            <Link href="/admin/reservas" className="asection-link">
-              Ver todas
+        <section aria-label="Reservas y tendencia" className="opdash-lower-grid">
+          <div className="opdash-panel opdash-reservations-panel">
+            <div className="opdash-panel-heading">
+              <div>
+                <p className="opdash-section-kicker">Agenda</p>
+                <h2>Reservas recientes</h2>
+              </div>
+              <Link href="/admin/reservas" aria-label="Ver todas las reservas" className="opdash-icon-link">
+                <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+              </Link>
+            </div>
+            {data.recentReservations.length > 0 ? (
+              <ul className="opdash-reservation-list">
+                {data.recentReservations.slice(0, 5).map((reservation) => (
+                  <li key={reservation.id}>
+                    <Link href={`/admin/reservas/${reservation.id}`} className="opdash-reservation-row">
+                      <span className="opdash-reservation-time">
+                        <Clock3 aria-hidden="true" className="h-4 w-4" />
+                        {formatTime(reservation.startsAt)}
+                      </span>
+                      <span className="opdash-reservation-copy">
+                        <strong>{fullName(reservation.customer.user.firstName, reservation.customer.user.lastName)}</strong>
+                        <span>{reservation.service.name} · {reservation.quantity} {reservation.quantity === 1 ? "persona" : "personas"}</span>
+                      </span>
+                      <StatusBadge kind="reservation" value={reservation.status} />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <EmptyState icon={Inbox} title="No hay reservas recientes" text="Las reservas nuevas aparecerán aquí." />
+            )}
+          </div>
+
+          <div className="opdash-panel opdash-trend-panel">
+            <div className="opdash-panel-heading">
+              <div>
+                <p className="opdash-section-kicker">Últimas dos semanas</p>
+                <h2>Ritmo de reservas</h2>
+              </div>
+              <span className="opdash-trend-total">{formatNumber(reservationsLast14Days)}</span>
+            </div>
+            <p className="opdash-trend-caption">Reservas creadas por día</p>
+            <div className="opdash-chart" role="list" aria-label="Reservas creadas durante los últimos 14 días">
+              {data.dailySeries.map((day) => (
+                <span className="opdash-chart-day" role="listitem" key={day.date} title={`${day.label}: ${day.total} reservas`}>
+                  <span className="opdash-chart-track">
+                    <span
+                      className="opdash-chart-bar"
+                      style={{ height: `${day.total > 0 ? Math.max((day.total / maxDailyReservations) * 100, 8) : 3}%` }}
+                    />
+                  </span>
+                  <span className="opdash-chart-label">{day.label}</span>
+                </span>
+              ))}
+            </div>
+            <Link href="/admin/reportes" className="opdash-trend-link">
+              Abrir reportes <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
             </Link>
           </div>
-          <h2 className="admin-section-title">Reservas recientes</h2>
-          <p className="admin-section-sub">Últimas reservas del día.</p>
-          {data.recentReservations.length > 0 ? (
-            <ul className="atimeline mt-2">
-              {data.recentReservations.slice(0, 5).map((r) => (
-                <li key={r.id} className="atimeline-row">
-                  <Link href={`/admin/reservas/${r.id}`} className="atimeline-link">
-                    <span className="anum w-11 shrink-0 text-[0.8rem] font-bold text-[#211a1d]">
-                      {formatTime(r.startsAt)}
+        </section>
+
+        <section aria-label="Accesos recientes" className="opdash-panel opdash-access-panel">
+          <div className="opdash-panel-heading">
+            <div>
+              <p className="opdash-section-kicker">Control de ingreso</p>
+              <h2>Accesos recientes</h2>
+            </div>
+            <Link href="/admin/accesos" className="opdash-section-link">
+              Ver todos <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+            </Link>
+          </div>
+          {data.recentAccesses.length > 0 ? (
+            <ul className="opdash-access-list">
+              {data.recentAccesses.slice(0, 5).map((access) => (
+                <li key={access.id}>
+                  <Link href="/admin/accesos" className="opdash-access-row">
+                    <span className="opdash-access-time">{formatTime(access.accessedAt)}</span>
+                    <span className="opdash-access-copy">
+                      <strong>{fullName(access.qrToken.reservation.customer.user.firstName, access.qrToken.reservation.customer.user.lastName)}</strong>
+                      <span>{access.qrToken.reservation.service.name}</span>
                     </span>
-                    <span aria-hidden="true" className="atimeline-avatar">
-                      {initials(r.customer.user.firstName, r.customer.user.lastName)}
+                    <span className="opdash-access-employee">
+                      Validó {fullName(access.employee.user.firstName, access.employee.user.lastName)}
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-bold text-[#211a1d]">
-                        {fullName(r.customer.user.firstName, r.customer.user.lastName)}
-                      </span>
-                      <span className="block truncate text-xs text-[#6f625e]">
-                        {r.service.name} · {r.quantity} {r.quantity === 1 ? "persona" : "personas"}
-                      </span>
-                    </span>
-                    <StatusBadge kind="reservation" value={r.status} />
+                    <StatusBadge kind="access" value={access.result} />
                   </Link>
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="mt-3 rounded-[14px] border border-dashed border-[#d8cfcc] px-4 py-6">
-              <EmptyState
-                icon={Inbox}
-                title="No hay reservas recientes"
-                text="Las reservas nuevas de los clientes aparecerán aquí."
-              />
-            </div>
+            <EmptyState icon={QrCode} title="No hay accesos recientes" text="Cada QR validado aparecerá en esta lista." />
           )}
-        </div>
-
-        <div>
-          <div className="asection-head">
-            <p className="asection-kicker">Sistema</p>
-          </div>
-          <h2 className="admin-section-title">Actividad reciente</h2>
-          <p className="admin-section-sub">Últimas acciones en el sistema.</p>
-          {activity.length > 0 ? (
-            <ul className="afeed">
-              {activity.map((item) => (
-                <li key={item.id} className="afeed-row">
-                  <p className="afeed-time">{formatTime(item.time)}</p>
-                  <p className="afeed-title">{item.title}</p>
-                  <p className="afeed-detail">{item.detail}</p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="mt-3 rounded-[14px] border border-dashed border-[#d8cfcc] px-4 py-6">
-              <EmptyState
-                title="Sin actividad reciente"
-                text="La actividad real del sistema aparecerá aquí."
-              />
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Accesos a todo el ancho */}
-      <section aria-label="Accesos recientes" className="dash-gap-lg">
-        <div>
-          <div className="asection-head">
-            <p className="asection-kicker">Ingresos</p>
-            <Link href="/admin/accesos" className="asection-link">
-              Ver todos
-            </Link>
-          </div>
-          <h2 className="admin-section-title">Accesos recientes</h2>
-          <p className="admin-section-sub">Últimos registros de ingreso.</p>
-          {data.recentAccesses.length > 0 ? (
-            <div className="atable-wrap mt-3">
-              <table className="atable">
-                <thead>
-                  <tr>
-                    <th scope="col">Hora</th>
-                    <th scope="col">Cliente</th>
-                    <th scope="col">Servicio</th>
-                    <th scope="col">Empleado</th>
-                    <th scope="col">Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.recentAccesses.slice(0, 6).map((a) => (
-                    <tr key={a.id}>
-                      <td className="anum whitespace-nowrap text-[0.8rem] font-bold">
-                        {formatTime(a.accessedAt)}
-                      </td>
-                      <td>
-                        <span className="flex items-center gap-2">
-                          <span aria-hidden="true" className="atimeline-avatar" style={{ width: "1.9rem", height: "1.9rem", fontSize: "0.6rem" }}>
-                            {initials(
-                              a.qrToken.reservation.customer.user.firstName,
-                              a.qrToken.reservation.customer.user.lastName,
-                            )}
-                          </span>
-                          <span className="font-bold text-[#211a1d]">
-                            {fullName(
-                              a.qrToken.reservation.customer.user.firstName,
-                              a.qrToken.reservation.customer.user.lastName,
-                            )}
-                          </span>
-                        </span>
-                      </td>
-                      <td>{a.qrToken.reservation.service.name}</td>
-                      <td>{fullName(a.employee.user.firstName, a.employee.user.lastName)}</td>
-                      <td>
-                        <StatusBadge kind="access" value={a.result} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="mt-3 rounded-[14px] border border-dashed border-[#d8cfcc] px-4 py-6">
-              <EmptyState
-                icon={QrCode}
-                title="No hay accesos recientes"
-                text="Cada QR validado quedará registrado con fecha, hora y autorizador."
-              />
-            </div>
-          )}
-        </div>
-      </section>
+        </section>
       </div>
     </div>
   );
