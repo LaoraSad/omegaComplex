@@ -47,17 +47,16 @@ export async function middleware(req: NextRequest) {
     return loginRedirect(req);
   }
 
-  if (pathname.startsWith("/piscinas/dashboard")) {
-    if (role !== "admin") {
-      return NextResponse.redirect(new URL("/", req.url));
-    }
-
-    const url = req.nextUrl.clone();
-    url.pathname = pathname.replace("/piscinas/dashboard", "/dashboard");
-    return NextResponse.redirect(url);
+  if (pathname.startsWith("/admin") && role !== "admin") {
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
+  // Panel legacy de develop: sigue protegido aunque la vista viva en /admin.
   if (pathname.startsWith("/dashboard") && role !== "admin") {
+    return NextResponse.redirect(new URL("/", req.url));
+  }
+
+  if (pathname.startsWith("/piscinas/dashboard") && role !== "admin") {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
@@ -74,5 +73,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/piscinas/dashboard/:path*", "/reservas/:path*", "/validar/:path*"],
+  matcher: ["/admin/:path*", "/dashboard/:path*", "/piscinas/dashboard/:path*", "/reservas/:path*", "/validar/:path*"],
 };

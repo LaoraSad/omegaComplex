@@ -120,7 +120,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps = {}) {
         email: data.email.trim(),
       });
       // El registro deja la sesión activa de inmediato.
-      router.push("/inicio");
+      router.push("/");
       router.refresh();
     } catch (caughtError: unknown) {
       setServerError(

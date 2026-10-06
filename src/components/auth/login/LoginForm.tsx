@@ -38,9 +38,9 @@ function validate(values: LoginFormValues): LoginFormErrors {
 }
 
 function homeForRole(role: string): string {
-  if (role === "admin") return "/dashboard";
+  if (role === "admin") return "/admin";
   if (role === "employee") return "/validar";
-  return "/inicio";
+  return "/";
 }
 
 interface LoginFormProps {
@@ -137,9 +137,7 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps = {}) {
             Regístrate
           </button>
         ) : (
-          <Link className="auth-link" href="/register">
-            Regístrate
-          </Link>
+          <Link className="auth-link" href="/register">Regístrate</Link>
         )}
       </p>
     </form>
