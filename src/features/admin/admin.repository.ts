@@ -96,7 +96,7 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
               customer: {
                 include: { user: { select: { firstName: true, lastName: true } } },
               },
-              service: { select: { name: true } },
+              service: { select: { id: true, name: true } },
             },
           },
         },
@@ -306,6 +306,24 @@ export async function listServiceOptions(): Promise<Array<{ id: string; name: st
   });
 }
 
+export async function getServiceDetail(id: string): Promise<ServiceRow | null> {
+  const row = await db.service.findUnique({
+    where: { id },
+    include: {
+      category: { select: { name: true } },
+      serviceSchedules: { orderBy: { dayOfWeek: "asc" } },
+      _count: {
+        select: {
+          reservations: {
+            where: { startsAt: { gte: new Date() }, status: { in: ["confirmed", "pending_payment"] } },
+          },
+        },
+      },
+    },
+  });
+  return row as ServiceRow | null;
+}
+
 export async function listClosures(): Promise<ClosureRow[]> {
   const rows = await db.serviceClosure.findMany({
     orderBy: { dateFrom: "asc" },
@@ -413,7 +431,7 @@ export async function listAccesses(filters: AccessFilters): Promise<Paginated<Ac
                 customer: {
                   include: { user: { select: { firstName: true, lastName: true } } },
                 },
-                service: { select: { name: true } },
+                service: { select: { id: true, name: true } },
               },
             },
           },

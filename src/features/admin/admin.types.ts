@@ -58,7 +58,7 @@ export type AccessRow = Prisma.AccessGetPayload<{
                 user: { select: { firstName: true; lastName: true } };
               };
             };
-            service: { select: { name: true } };
+            service: { select: { id: true; name: true } };
           };
         };
       };
