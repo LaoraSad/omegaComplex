@@ -1,10 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Waves, Trophy, Flame, Dumbbell, Sparkles, ShieldCheck } from "lucide-react";
+import { Waves, Trophy, Flame, Dumbbell, Sparkles } from "lucide-react";
 import { AuthSwitchCard } from "./AuthSwitchCard";
-
-import { LightningDivider } from "./LightningDivider";
+import SectionDivider from "@/components/SectionDivider";
+import AmbientBubbles from "@/components/AmbientBubbles";
 
 interface AuthLayoutProps {
   children?: ReactNode;
@@ -22,10 +22,10 @@ function Wordmark() {
       <Image
         alt="Omega Complex"
         className="auth-logo-image"
-        height={180}
+        height={77}
         priority
-        src="/logo-fondo-blanco.jpeg"
-        width={260}
+        src="/Logo-blanco.png"
+        width={280}
       />
     </Link>
   );
@@ -64,14 +64,7 @@ export function AuthLayout({
           </>
         ) : null}
 
-        <LightningDivider />
-
-        <div className="auth-brand-top">
-          <div className="auth-brand-badge">
-            <ShieldCheck className="auth-badge-icon" size={15} />
-            <span>COMPLEJO DEPORTIVO DE ALTO NIVEL</span>
-          </div>
-        </div>
+        <SectionDivider orientation="vertical" className="auth-seam" />
 
         <div className="auth-brand-content">
           <p className="auth-brand-kicker">ENTRENA • COMPITE • EVOLUCIONA</p>
@@ -116,6 +109,7 @@ export function AuthLayout({
       </aside>
 
       <main className="auth-main">
+        <AmbientBubbles variant="wine" />
         {useSwitchCard ? (
           <AuthSwitchCard initialMode={initialMode} />
         ) : (

@@ -1,5 +1,5 @@
 import { Clock, QrCode, ClipboardList } from 'lucide-react';
-import AmbientBubbles from '@/components/public/landing/AmbientBubbles';
+import AmbientBubbles from '@/components/AmbientBubbles';
 
 export default function ComplexInfo() {
   return (

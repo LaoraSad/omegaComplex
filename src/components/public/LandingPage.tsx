@@ -4,8 +4,8 @@ import InstalacionesSection from '@/components/public/landing/InstalacionesSecti
 import HowItWorks from '@/components/public/landing/HowItWorks';
 import ComplexInfo from '@/components/public/landing/ComplexInfo';
 import CTASection from '@/components/public/landing/CTASection';
-import SectionDivider from '@/components/public/landing/SectionDivider';
-import { getFeaturedServices } from '@/lib/piscinas/api/services';
+import SectionDivider from '@/components/SectionDivider';
+import { getFeaturedServices } from '@/lib/storefront/api/services';
 
 export default async function LandingPage() {
   const featuredServices = await getFeaturedServices();

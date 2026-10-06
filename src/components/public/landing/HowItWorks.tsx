@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import AmbientBubbles from '@/components/public/landing/AmbientBubbles';
+import AmbientBubbles from '@/components/AmbientBubbles';
 
 const STEPS = [
   {

@@ -18,10 +18,10 @@ function Wordmark() {
       <Image
         alt="Omega Complex"
         className="auth-logo-image"
-        height={180}
+        height={77}
         priority
-        src="/logo-fondo-blanco.jpeg"
-        width={260}
+        src="/Logo-blanco.png"
+        width={280}
       />
     </Link>
   );
