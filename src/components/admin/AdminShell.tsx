@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ExternalLink, Menu, Search, X } from "lucide-react";
+import { CalendarDays, ExternalLink, Menu, Search, X } from "lucide-react";
 import { ADMIN_NAV } from "./admin-nav";
 import { formatTodayLong, initials } from "./format";
 import { LogoutButton } from "./LogoutButton";
@@ -28,6 +28,10 @@ function isActive(pathname: string, match: string): boolean {
 export function AdminShell({ user, children }: AdminShellProps) {
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
+  const activeSection = ADMIN_NAV.find((section) =>
+    section.items.some((item) => isActive(pathname, item.match)),
+  );
+  const activeItem = activeSection?.items.find((item) => isActive(pathname, item.match));
 
   useEffect(() => {
     document.body.style.overflow = navOpen ? "hidden" : "";
@@ -142,6 +146,15 @@ export function AdminShell({ user, children }: AdminShellProps) {
             >
               <Menu className="h-5 w-5" />
             </button>
+            <div className="admin-topbar-heading">
+              <span aria-hidden="true" className="admin-topbar-mark" />
+              <span className="admin-topbar-copy">
+                <span className="admin-topbar-eyebrow">
+                  Omega Complex · {activeSection?.title ?? "Administración"}
+                </span>
+                <span className="admin-topbar-title">{activeItem?.label ?? "Panel"}</span>
+              </span>
+            </div>
             <form action="/admin/reservas" method="GET" role="search" className="admin-topbar-search">
               <Search aria-hidden="true" className="h-4 w-4 shrink-0" />
               <input
@@ -153,10 +166,13 @@ export function AdminShell({ user, children }: AdminShellProps) {
               />
             </form>
             <div className="ml-auto flex items-center gap-2.5">
-              <span className="admin-topbar-date hidden md:inline">{formatTodayLong()}</span>
+              <span className="admin-topbar-date hidden md:flex">
+                <CalendarDays aria-hidden="true" className="h-4 w-4" />
+                {formatTodayLong()}
+              </span>
               <span
                 title={`${user.firstName} ${user.lastName} · Administrador`}
-                className="grid h-9 w-9 place-items-center rounded-full bg-[#7a1f3d] text-xs font-bold text-white"
+                className="admin-topbar-avatar"
               >
                 {initials(user.firstName, user.lastName)}
               </span>
