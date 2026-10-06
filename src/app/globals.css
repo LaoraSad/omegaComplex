@@ -48,8 +48,10 @@ input {
   -webkit-tap-highlight-color: transparent;
 }
 
-a {
-  color: inherit;
+@layer base {
+  a {
+    color: inherit;
+  }
 }
 
 :focus-visible {
