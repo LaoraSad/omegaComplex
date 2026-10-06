@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight, ArrowUpRight, Users } from 'lucide-react';
-import AmbientBubbles from '@/components/public/landing/AmbientBubbles';
-import type { Service } from '@/types/piscinas/omega';
+import AmbientBubbles from '@/components/AmbientBubbles';
+import type { Service } from '@/types/storefront/omega';
 
 interface Props {
   services: Service[];

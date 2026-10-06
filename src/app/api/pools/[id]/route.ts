@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { pools } from '@/lib/piscinas/pools-data';
+import { pools } from '@/lib/storefront/pools-data';
 
 // GET /api/pools/[id]  → piscina individual
 export async function GET(
