@@ -1,6 +1,8 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, ArrowUpRight, Users } from 'lucide-react';
 import AmbientBubbles from '@/components/AmbientBubbles';
+import { optimized360 } from '@/lib/storefront/optimized-360';
 import type { Service } from '@/types/storefront/omega';
 
 interface Props {
@@ -45,16 +47,21 @@ export default function InstalacionesSection({ services }: Props) {
 
         {/* Galería editorial: la fotografía es protagonista */}
         <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-          {items.map((s) => (
+          {items.map((s) => {
+            const blur = optimized360(s.image)?.blur;
+            return (
             <article key={s.id} className="omega-card omega-card-dark group relative overflow-hidden rounded-[6px]">
               <Link href={`/servicios/${s.id}`} aria-label={`Reservar ${s.name}`} className="block">
                 <div className="relative h-[320px] overflow-hidden sm:h-[340px]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={s.image}
                     alt={s.name}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
+                    quality={85}
+                    placeholder={blur ? 'blur' : undefined}
+                    blurDataURL={blur}
+                    className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
                   />
                   {/* overlay sutil inferior para legibilidad */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
@@ -83,7 +90,8 @@ export default function InstalacionesSection({ services }: Props) {
                 </div>
               </Link>
             </article>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

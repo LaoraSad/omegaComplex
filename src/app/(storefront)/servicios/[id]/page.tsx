@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { mockServices } from '@/lib/storefront/mock/services';
 import { getAvailabilityForDate, TimeSlotAvailability } from '@/lib/storefront/api/availability';
-import PanoramaClient from '@/components/tour/PanoramaClient';
+import PanoramaModal from '@/components/tour/PanoramaModal';
 import {
   ArrowLeft,
   Calendar,
@@ -20,7 +20,6 @@ import {
   Timer,
   ShieldCheck,
   CreditCard,
-  Maximize2,
 } from 'lucide-react';
 
 interface ServiceDetailPageProps {
@@ -162,20 +161,13 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                 </span>
                 <div className="flex items-center gap-3">
                   <span className="text-[11px] text-[#6B7280] hidden sm:inline">Gira o arrastra con el cursor</span>
-                  {service.tour360Id && (
-                    <Link
-                      href={`/tour/${service.tour360Id}`}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#7A1F3D] hover:text-[#5a162d] bg-[#7A1F3D]/5 hover:bg-[#7A1F3D]/10 px-2.5 py-1 rounded-lg transition-colors border border-[#7A1F3D]/15"
-                      title="Abrir recorrido interactivo dedicado"
-                    >
-                      <Maximize2 className="w-3.5 h-3.5" />
-                      <span>Tour dedicado</span>
-                    </Link>
-                  )}
                 </div>
               </div>
               <div className="w-full h-80 rounded-2xl overflow-hidden bg-black shadow-inner border border-[#E5E7EB]">
-                <PanoramaClient src={service.panoramaUrl} caption={service.name} />
+                <PanoramaModal src={service.panoramaUrl} title={service.name} trigger={
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={service.image} alt={service.name} className="w-full h-full object-cover" />
+                } />
               </div>
             </div>
 
@@ -534,6 +526,7 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                       className="p-4 rounded-2xl bg-[#F5F5F5] border border-[#E5E7EB] flex flex-col sm:flex-row items-center gap-4 text-left"
                     >
                       <div className="w-16 h-16 rounded-xl bg-white border border-[#E5E7EB] p-1 flex items-center justify-center shrink-0">
+                        {/* Intencionalmente <img>: URL externa + QR (no optimizar ni recomprimir). */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=OMEGA-${service.id}-${selectedDate}-${idx + 1}`}
