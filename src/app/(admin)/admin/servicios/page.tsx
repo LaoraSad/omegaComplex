@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Building2, Users } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Building2, Users } from "lucide-react";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { formatCOP, formatNumber } from "@/components/admin/format";
@@ -63,10 +63,18 @@ export default async function ServiciosPage() {
               {items.map((s) => {
                 const byDay = new Map(s.serviceSchedules.map((sc) => [sc.dayOfWeek, sc]));
                 return (
-                  <li key={s.id} className="acard acard-pad flex flex-col gap-3">
+                  <li
+                    key={s.id}
+                    id={`servicio-${s.id}`}
+                    className="acard acard-pad flex scroll-mt-24 flex-col gap-3"
+                  >
                     <div>
                       <p className="akpi-label" style={{ color: "#7a1f3d" }}>{s.category.name}</p>
-                      <h3 className="admin-section-title" style={{ marginTop: "0.2rem" }}>{s.name}</h3>
+                      <h3 className="admin-section-title" style={{ marginTop: "0.2rem" }}>
+                        <Link href={`/admin/servicios/${s.id}`} className="transition-colors hover:text-[#7a1f3d]">
+                          {s.name}
+                        </Link>
+                      </h3>
                       {s.description ? (
                         <p className="admin-section-sub" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                           {s.description}
@@ -114,6 +122,24 @@ export default async function ServiciosPage() {
                       ) : (
                         <p className="text-xs text-[#a89c97]">Sin horario configurado en el sistema.</p>
                       )}
+                    </div>
+                    <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-[#f0e9e6] pt-3">
+                      <Link
+                        href={`/admin/servicios/${s.id}`}
+                        className="abtn abtn-secondary flex-1"
+                        style={{ minHeight: "2.4rem" }}
+                      >
+                        Ver instalación
+                        <ArrowUpRight className="h-4 w-4" />
+                      </Link>
+                      <Link
+                        href={`/admin/reservas?servicio=${s.id}`}
+                        aria-label={`Ver reservas de ${s.name}`}
+                        className="abtn abtn-primary flex-1"
+                        style={{ minHeight: "2.4rem" }}
+                      >
+                        Reservas
+                      </Link>
                     </div>
                   </li>
                 );

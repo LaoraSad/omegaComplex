@@ -1656,7 +1656,7 @@ a.atimeline-link:hover {
   background: var(--admin-surface);
   color: inherit;
   text-decoration: none;
-  transition: transform 180ms ease, box-shadow 180ms ease, border-radius 220ms ease;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
 .opdash-metric[data-tone="blue"] {
@@ -1680,7 +1680,7 @@ a.atimeline-link:hover {
 
 .opdash-metric:hover {
   transform: translateY(-4px);
-  border-radius: 22px 8px 22px 8px;
+  border-color: #cfc2bd;
   box-shadow: 0 14px 28px rgb(42 24 31 / 8%);
 }
 
@@ -1950,16 +1950,17 @@ a.atimeline-link:hover {
   min-width: 0;
   overflow: hidden;
   aspect-ratio: 16 / 10;
-  border-radius: 16px 54px 16px 16px;
+  border-radius: 12px;
   background: #e8f1ed;
-  transition: border-radius 650ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  isolation: isolate;
+  text-decoration: none;
 }
 
 .opdash-media-frame.is-feature {
   height: 100%;
   min-height: 22rem;
   aspect-ratio: auto;
-  border-radius: 14px 80px 14px 14px;
+  border-radius: 12px;
 }
 
 .opdash-media-frame img {
@@ -1967,20 +1968,77 @@ a.atimeline-link:hover {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1), filter 500ms ease;
+  transform: scale(1.001);
+  transition: transform 520ms cubic-bezier(0.2, 0.7, 0.2, 1), filter 320ms ease;
 }
 
-.opdash-service-feature:hover .opdash-media-frame,
-.opdash-service-tile:hover .opdash-media-frame,
-.opdash-service-feature:focus-visible .opdash-media-frame,
-.opdash-service-tile:focus-visible .opdash-media-frame {
-  border-radius: 50%;
+/* Velo moderno: degradado inferior + CTA que emerge, sin morphing de bordes. */
+.opdash-media-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, transparent 52%, rgb(22 12 15 / 52%) 100%);
+  opacity: 0;
+  transition: opacity 320ms ease;
+  pointer-events: none;
+}
+
+.opdash-media-cta {
+  position: absolute;
+  z-index: 2;
+  left: 0.8rem;
+  bottom: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 999px;
+  padding: 0.42rem 0.75rem;
+  background: rgb(22 12 15 / 62%);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 300ms ease, transform 340ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  pointer-events: none;
+}
+
+.opdash-service-feature:hover .opdash-media-frame::after,
+.opdash-service-tile:hover .opdash-media-frame::after,
+.opdash-service-feature:focus-visible .opdash-media-frame::after,
+.opdash-service-tile:focus-visible .opdash-media-frame::after,
+.opdash-media-frame:hover::after,
+.opdash-media-frame:focus-visible::after {
+  opacity: 1;
+}
+
+.opdash-service-feature:hover .opdash-media-cta,
+.opdash-service-tile:hover .opdash-media-cta,
+.opdash-service-feature:focus-visible .opdash-media-cta,
+.opdash-service-tile:focus-visible .opdash-media-cta,
+.opdash-media-frame:hover .opdash-media-cta,
+.opdash-media-frame:focus-visible .opdash-media-cta {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .opdash-service-feature:hover .opdash-media-frame img,
-.opdash-service-tile:hover .opdash-media-frame img {
-  transform: scale(1.08);
-  filter: saturate(1.08);
+.opdash-service-tile:hover .opdash-media-frame img,
+.opdash-media-frame:hover img {
+  transform: scale(1.055);
+  filter: saturate(1.06) contrast(1.02);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .opdash-media-frame img,
+  .opdash-media-frame::after,
+  .opdash-media-cta {
+    transition: none;
+  }
 }
 
 .opdash-image-fallback {
@@ -2106,9 +2164,56 @@ a.atimeline-link:hover {
   font-size: 0.75rem;
 }
 
-.opdash-feature-action {
+.opdash-feature-name-link {
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+.opdash-feature-name-link:hover {
+  color: var(--admin-primary);
+}
+
+.opdash-feature-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
   margin-top: auto;
   padding-top: 1rem;
+}
+
+.opdash-feature-action.is-primary {
+  min-height: 2.5rem;
+  border-radius: 999px;
+  padding: 0 1rem;
+  background: var(--admin-primary);
+  color: #fff;
+  transition: background-color 180ms ease, transform 180ms ease;
+}
+
+.opdash-feature-action.is-primary:hover {
+  background: var(--admin-primary-hover);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.opdash-feature-action.is-ghost {
+  min-height: 2.5rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 999px;
+  padding: 0 1rem;
+  background: #fff;
+}
+
+.opdash-feature-action {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+/* Resaltado del destino cuando se llega desde el dashboard (anchor). */
+li[id^="servicio-"]:target {
+  border-color: var(--admin-primary);
+  box-shadow: 0 0 0 3px rgb(122 31 61 / 12%);
 }
 
 .opdash-service-tiles {
@@ -2297,12 +2402,12 @@ a.atimeline-link:hover {
   background: #347b95;
   transform-origin: bottom;
   animation: opdash-bar-rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  transition: filter 160ms ease, border-radius 180ms ease;
+  transition: filter 160ms ease, transform 180ms ease;
 }
 
 .opdash-chart-day:nth-child(3n) .opdash-chart-bar { background: #227c78; }
 .opdash-chart-day:nth-child(3n + 1) .opdash-chart-bar { background: var(--admin-primary); }
-.opdash-chart-day:hover .opdash-chart-bar { filter: brightness(1.2); border-radius: 50% 50% 2px 2px; }
+.opdash-chart-day:hover .opdash-chart-bar { filter: brightness(1.18); transform: scaleY(1.04); }
 
 .opdash-chart-label {
   overflow: hidden;

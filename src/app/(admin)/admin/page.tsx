@@ -257,15 +257,27 @@ export default async function AdminDashboardPage() {
 
           {featured ? (
             <div className="opdash-service-gallery">
-              <Link href="/admin/servicios" className="opdash-service-feature">
-                <span className="opdash-media-frame is-feature">
+              <article className="opdash-service-feature">
+                <Link
+                  href={`/admin/servicios/${featured.id}`}
+                  className="opdash-media-frame is-feature"
+                  aria-label={`Ver instalación ${featured.name}`}
+                >
                   <InstVisual name={featured.name} />
                   <span className="opdash-media-category">{featured.category.name}</span>
                   <span className="opdash-media-index">01</span>
-                </span>
+                  <span className="opdash-media-cta" aria-hidden="true">
+                    Ver instalación <ArrowUpRight className="h-4 w-4" />
+                  </span>
+                </Link>
                 <span className="opdash-feature-content">
                   <span className="opdash-feature-kicker">Instalación destacada</span>
-                  <span className="opdash-feature-name">{featured.name}</span>
+                  <Link
+                    href={`/admin/servicios/${featured.id}`}
+                    className="opdash-feature-name opdash-feature-name-link"
+                  >
+                    {featured.name}
+                  </Link>
                   <span className="opdash-feature-capacity">
                     <Users aria-hidden="true" className="h-4 w-4" />
                     Capacidad para {formatNumber(featured.capacity)} personas
@@ -275,18 +287,36 @@ export default async function AdminDashboardPage() {
                   ) : (
                     <span className="opdash-no-schedule">Sin franjas programadas hoy</span>
                   )}
-                  <span className="opdash-feature-action">Ver servicio <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></span>
+                  <span className="opdash-feature-actions">
+                    <Link href={`/admin/servicios/${featured.id}`} className="opdash-feature-action is-primary">
+                      Ver servicio <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+                    </Link>
+                    <Link
+                      href={`/admin/reservas?servicio=${featured.id}`}
+                      className="opdash-feature-action is-ghost"
+                    >
+                      Ver reservas
+                    </Link>
+                  </span>
                 </span>
-              </Link>
+              </article>
 
               <div className="opdash-service-tiles">
                 {serviceTiles.map((service, index) => {
                   const occupancy = occupancyById.get(service.id);
                   return (
-                    <Link href="/admin/servicios" className="opdash-service-tile" key={service.id}>
+                    <Link
+                      href={`/admin/servicios/${service.id}`}
+                      className="opdash-service-tile"
+                      key={service.id}
+                      aria-label={`Ver instalación ${service.name}`}
+                    >
                       <span className="opdash-media-frame">
                         <InstVisual name={service.name} />
                         <span className="opdash-media-index">{String(index + 2).padStart(2, "0")}</span>
+                        <span className="opdash-media-cta" aria-hidden="true">
+                          Ver <ArrowUpRight className="h-3.5 w-3.5" />
+                        </span>
                       </span>
                       <span className="opdash-tile-content">
                         <span className="opdash-tile-category">{service.category.name}</span>
@@ -385,7 +415,11 @@ export default async function AdminDashboardPage() {
             <ul className="opdash-access-list">
               {data.recentAccesses.slice(0, 5).map((access) => (
                 <li key={access.id}>
-                  <Link href="/admin/accesos" className="opdash-access-row">
+                  <Link
+                    href={`/admin/reservas/${access.qrToken.reservationId}`}
+                    className="opdash-access-row"
+                    aria-label={`Ver reserva de ${fullName(access.qrToken.reservation.customer.user.firstName, access.qrToken.reservation.customer.user.lastName)}`}
+                  >
                     <span className="opdash-access-time">{formatTime(access.accessedAt)}</span>
                     <span className="opdash-access-copy">
                       <strong>{fullName(access.qrToken.reservation.customer.user.firstName, access.qrToken.reservation.customer.user.lastName)}</strong>
