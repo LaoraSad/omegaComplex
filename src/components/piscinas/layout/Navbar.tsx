@@ -1,52 +1,53 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import {
-  Menu,
-  X,
-  User,
-  CalendarDays,
-  Info,
-  LogOut,
-  Sparkles,
-  Layers,
-  LayoutDashboard,
-} from 'lucide-react';
+import { Menu, X, LogOut, CalendarDays, User, LayoutDashboard } from 'lucide-react';
 import { AuthApiError, logout, me, type AuthUser } from '@/lib/api/auth';
 
 interface NavbarProps {
   initialUser: AuthUser | null;
 }
 
+const LINKS = [
+  { label: 'Inicio', href: '/#inicio' },
+  { label: 'Instalaciones', href: '/#instalaciones' },
+  { label: 'Reservas', href: '/#reservas' },
+  { label: 'Nosotros', href: '/#nosotros' },
+  { label: 'Contacto', href: '/#contacto' },
+];
+
 export default function Navbar({ initialUser }: NavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(initialUser);
-  const [prevInitialUser, setPrevInitialUser] = useState<AuthUser | null>(initialUser);
+  const [prevInitial, setPrevInitial] = useState(initialUser);
+  const [sessionChecked, setSessionChecked] = useState(initialUser !== null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
-  // Sincroniza si el layout entrega un usuario distinto (p. ej. tras login).
-  if (initialUser !== prevInitialUser) {
-    setPrevInitialUser(initialUser);
+  if (initialUser !== prevInitial) {
+    setPrevInitial(initialUser);
     setUser(initialUser);
+    setSessionChecked(true);
   }
 
-  // Respaldo: si el layout se renderizó sin sesión (navegación cliente),
-  // consulta la sesión vigente una sola vez al montar.
   useEffect(() => {
     if (initialUser) return;
     let cancelled = false;
     me().then(
       (current) => {
-        if (!cancelled) setUser(current);
+        if (cancelled) return;
+        setUser(current);
+        setSessionChecked(true);
       },
       (error: unknown) => {
-        if (!cancelled && error instanceof AuthApiError && error.status === 401) {
-          setUser(null);
-        }
+        if (cancelled) return;
+        if (error instanceof AuthApiError && error.status === 401) setUser(null);
+        setSessionChecked(true);
       },
     );
     return () => {
@@ -54,268 +55,207 @@ export default function Navbar({ initialUser }: NavbarProps) {
     };
   }, [initialUser]);
 
-  const isAuthenticated = user !== null;
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 32);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   async function handleLogout() {
     setLoggingOut(true);
     try {
       await logout();
     } catch {
-      // Aunque falle la red, se limpia el estado local y se redirige.
+      /* limpia estado local aunque falle la red */
     } finally {
       setUser(null);
-      setMobileMenuOpen(false);
+      setMobileOpen(false);
       setLoggingOut(false);
       router.push('/login');
       router.refresh();
     }
   }
 
-  const isActive = (path: string) => pathname === path;
+  const isHome = pathname === '/';
+  const solid = !isHome || scrolled || mobileOpen;
+  const isAuthenticated = user !== null;
+
+  const isActive = (href: string) => {
+    if (href.startsWith('/#')) return isHome;
+    return pathname === href;
+  };
 
   return (
-    <nav className="fixed top-0 inset-x-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#E5E7EB] shadow-xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        {/* Logo / Nombre */}
-        <Link href="/inicio" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-[#7A1F3D] text-white flex items-center justify-center font-black text-xl shadow-xs tracking-tighter group-hover:bg-[#631730] transition-colors">
-            Ω
-          </div>
-          <div className="flex flex-col">
-            <span className="font-extrabold text-xl tracking-tight text-[#1F1F1F] leading-none">
-              OMEGA <span className="text-[#7A1F3D]">COMPLEX</span>
-            </span>
-            <span className="text-[10px] uppercase font-bold tracking-widest text-[#C8A96B] mt-0.5">
-              Complejo Deportivo & Recreativo
-            </span>
-          </div>
+    <header
+      className={`fixed inset-x-0 top-0 z-[60] transition-all duration-300 ${
+        solid
+          ? 'bg-[#0e0b0d]/95 backdrop-blur-md border-b border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.35)]'
+          : 'bg-gradient-to-b from-black/85 via-black/55 to-black/5 border-b border-transparent'
+      }`}
+    >
+      <div className="mx-auto flex h-[88px] max-w-[1400px] items-center justify-between px-5 sm:px-8 lg:px-12">
+        {/* Logo real */}
+        <Link href="/" className="flex shrink-0 items-center" aria-label="Omega Complex - Inicio">
+          <Image
+            src="/Logo-blanco.png"
+            alt="Omega Complex"
+            width={280}
+            height={77}
+            priority
+            className="h-[52px] w-auto sm:h-[58px]"
+          />
         </Link>
 
-        {/* Enlaces Desktop */}
-        <div className="hidden md:flex items-center gap-8">
-          <Link
-            href="/inicio"
-            className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
-              isActive('/inicio')
-                ? 'text-[#7A1F3D] border-b-2 border-[#7A1F3D] pb-1'
-                : 'text-[#6B7280] hover:text-[#1F1F1F]'
-            }`}
-          >
-            <span>Inicio</span>
-          </Link>
-          <Link
-            href="/servicios"
-            className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
-              isActive('/servicios')
-                ? 'text-[#7A1F3D] border-b-2 border-[#7A1F3D] pb-1'
-                : 'text-[#6B7280] hover:text-[#1F1F1F]'
-            }`}
-          >
-            <Layers className="w-4 h-4 opacity-70" />
-            <span>Servicios</span>
-          </Link>
-          <Link
-            href="/informacion"
-            className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
-              isActive('/informacion')
-                ? 'text-[#7A1F3D] border-b-2 border-[#7A1F3D] pb-1'
-                : 'text-[#6B7280] hover:text-[#1F1F1F]'
-            }`}
-          >
-            <Info className="w-4 h-4 opacity-70" />
-            <span>Información</span>
-          </Link>
-          {user?.role === 'admin' && (
+        {/* Links desktop */}
+        <nav className="hidden items-center gap-7 lg:flex xl:gap-9" aria-label="Navegación principal">
+          {LINKS.map((l) => (
             <Link
-              href="/dashboard"
-              className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
-                isActive('/dashboard')
-                  ? 'text-[#7A1F3D] border-b-2 border-[#7A1F3D] pb-1'
-                  : 'text-[#6B7280] hover:text-[#1F1F1F]'
+              key={l.label}
+              href={l.href}
+              className={`relative text-[12px] font-semibold uppercase tracking-[0.14em] transition-colors [text-shadow:0_1px_12px_rgba(0,0,0,0.65)] ${
+                isActive(l.href) ? 'text-white' : 'text-white hover:text-white'
               }`}
             >
-              <LayoutDashboard className="w-4 h-4 opacity-70" />
-              <span>Dashboard</span>
+              {l.label}
+              {isActive(l.href) && l.label === 'Inicio' && (
+                <span className="absolute -bottom-[7px] left-0 h-[2px] w-full bg-[#e9c886]" />
+              )}
             </Link>
-          )}
+          ))}
+        </nav>
 
-          {/* Enlaces específicos de Usuario Autenticado */}
-          {isAuthenticated && (
+        {/* Acciones derecha */}
+        <div className="hidden items-center gap-3 lg:flex">
+          {!sessionChecked ? (
+            <span className="inline-block h-10 w-40 animate-pulse rounded-full bg-white/10" />
+          ) : isAuthenticated && user ? (
             <>
+              <span
+                className="max-w-[160px] truncate rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold text-white"
+                title={user.email}
+              >
+                Hola, {user.firstName}
+              </span>
               <Link
                 href="/mis-reservas"
-                className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
-                  isActive('/mis-reservas')
-                    ? 'text-[#7A1F3D] border-b-2 border-[#7A1F3D] pb-1'
-                    : 'text-[#6B7280] hover:text-[#1F1F1F]'
-                }`}
+                className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:text-white"
               >
-                <CalendarDays className="w-4 h-4 opacity-70" />
+                <CalendarDays className="h-4 w-4" />
                 <span>Mis reservas</span>
               </Link>
-              <Link
-                href="/perfil"
-                className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
-                  isActive('/perfil')
-                    ? 'text-[#7A1F3D] border-b-2 border-[#7A1F3D] pb-1'
-                    : 'text-[#6B7280] hover:text-[#1F1F1F]'
-                }`}
+              {user.role === 'admin' && (
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:text-white"
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span>Panel</span>
+                </Link>
+              )}
+              <button
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-white/20 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:border-white/50 hover:text-white disabled:opacity-60"
               >
-                <User className="w-4 h-4 opacity-70" />
-                <span>Perfil</span>
-              </Link>
-            </>
-          )}
-        </div>
-
-        {/* Acciones de Autenticación Desktop */}
-        <div className="hidden md:flex items-center gap-4">
-          {isAuthenticated && user ? (
-            <span
-              className="text-[11px] font-semibold text-[#1F1F1F] bg-[#F5F5F5] px-3.5 py-1.5 rounded-full border border-[#E5E7EB] flex items-center gap-1.5"
-              title={user.email}
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>Hola, {user.firstName}</span>
-            </span>
-          ) : null}
-
-          {!isAuthenticated ? (
-            <>
-              <Link
-                href="/login"
-                className="text-sm font-semibold text-[#1F1F1F] hover:text-[#7A1F3D] px-3 py-2 transition-colors cursor-pointer"
-              >
-                Iniciar sesión
-              </Link>
-              <Link
-                href="/register"
-                className="text-sm font-semibold bg-[#7A1F3D] hover:bg-[#631730] text-white px-5 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 flex items-center gap-1.5"
-              >
-                <Sparkles className="w-4 h-4 text-[#C8A96B]" />
-                <span>Registrarse</span>
-              </Link>
+                <LogOut className="h-3.5 w-3.5" />
+                <span>{loggingOut ? 'Saliendo…' : 'Salir'}</span>
+              </button>
             </>
           ) : (
-            <button
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="text-sm font-semibold text-[#6B7280] hover:text-[#7A1F3D] px-4 py-2 rounded-xl border border-[#E5E7EB] hover:border-[#7A1F3D] transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+            <Link
+              href="/login"
+              className="rounded-full bg-[#d9b56c] px-7 py-2.5 text-[12px] font-bold uppercase tracking-[0.14em] text-[#1d1214] transition-all hover:bg-[#e9c886]"
             >
-              <LogOut className="w-4 h-4" />
-              <span>{loggingOut ? 'Cerrando…' : 'Cerrar sesión'}</span>
-            </button>
+              Iniciar sesión
+            </Link>
           )}
         </div>
 
-        {/* Botón Hamburger Mobile */}
-        <div className="md:hidden flex items-center gap-2">
-          {isAuthenticated && user ? (
-            <span className="text-[11px] font-semibold text-[#1F1F1F] bg-[#F5F5F5] px-2.5 py-1 rounded-md border border-[#E5E7EB] max-w-28 truncate">
-              {user.firstName}
-            </span>
-          ) : null}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2.5 rounded-xl text-[#1F1F1F] hover:bg-[#F5F5F5] border border-[#E5E7EB]"
-            aria-label="Menú principal"
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
+        {/* Botón móvil */}
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="rounded-lg border border-white/20 p-2.5 text-white lg:hidden"
+          aria-label="Abrir menú"
+          aria-expanded={mobileOpen}
+        >
+          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
       </div>
 
-      {/* Menú Drawer Mobile */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t border-[#E5E7EB] bg-white px-5 py-6 space-y-4 shadow-xl">
-          <div className="flex flex-col space-y-3 font-semibold text-[#1F1F1F]">
-            <Link
-              href="/inicio"
-              onClick={() => setMobileMenuOpen(false)}
-              className={`p-2.5 rounded-lg flex items-center gap-2.5 ${isActive('/inicio') ? 'bg-[#7A1F3D]/10 text-[#7A1F3D]' : 'hover:bg-[#F5F5F5]'}`}
-            >
-              <span>Inicio</span>
-            </Link>
-            <Link
-              href="/servicios"
-              onClick={() => setMobileMenuOpen(false)}
-              className={`p-2.5 rounded-lg flex items-center gap-2.5 ${isActive('/servicios') ? 'bg-[#7A1F3D]/10 text-[#7A1F3D]' : 'hover:bg-[#F5F5F5]'}`}
-            >
-              <Layers className="w-4 h-4 text-[#7A1F3D]" />
-              <span>Servicios</span>
-            </Link>
-            <Link
-              href="/informacion"
-              onClick={() => setMobileMenuOpen(false)}
-              className={`p-2.5 rounded-lg flex items-center gap-2.5 ${isActive('/informacion') ? 'bg-[#7A1F3D]/10 text-[#7A1F3D]' : 'hover:bg-[#F5F5F5]'}`}
-            >
-              <Info className="w-4 h-4 text-[#7A1F3D]" />
-              <span>Información del complejo</span>
-            </Link>
-            {user?.role === 'admin' && (
+      {/* Drawer móvil */}
+      {mobileOpen && (
+        <div className="border-t border-white/10 bg-[#0e0b0d]/98 px-6 py-6 backdrop-blur-md lg:hidden">
+          <nav className="flex flex-col gap-1" aria-label="Menú móvil">
+            {LINKS.map((l) => (
               <Link
-                href="/dashboard"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`p-2.5 rounded-lg flex items-center gap-2.5 ${isActive('/dashboard') ? 'bg-[#7A1F3D]/10 text-[#7A1F3D]' : 'hover:bg-[#F5F5F5]'}`}
+                key={l.label}
+                href={l.href}
+                onClick={() => setMobileOpen(false)}
+                className="rounded-lg px-3 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-white/5 hover:text-white"
               >
-                <LayoutDashboard className="w-4 h-4 text-[#7A1F3D]" />
-                <span>Dashboard</span>
+                {l.label}
               </Link>
-            )}
-
-            {isAuthenticated && (
+            ))}
+            {isAuthenticated && user && (
               <>
                 <Link
                   href="/mis-reservas"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`p-2.5 rounded-lg flex items-center gap-2.5 ${isActive('/mis-reservas') ? 'bg-[#7A1F3D]/10 text-[#7A1F3D]' : 'hover:bg-[#F5F5F5]'}`}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 rounded-lg px-3 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white hover:bg-white/5"
                 >
-                  <CalendarDays className="w-4 h-4 text-[#7A1F3D]" />
+                  <CalendarDays className="h-4 w-4 text-[#d9b56c]" />
                   <span>Mis reservas y QR</span>
                 </Link>
                 <Link
                   href="/perfil"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`p-2.5 rounded-lg flex items-center gap-2.5 ${isActive('/perfil') ? 'bg-[#7A1F3D]/10 text-[#7A1F3D]' : 'hover:bg-[#F5F5F5]'}`}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 rounded-lg px-3 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white hover:bg-white/5"
                 >
-                  <User className="w-4 h-4 text-[#7A1F3D]" />
+                  <User className="h-4 w-4 text-[#d9b56c]" />
                   <span>Perfil</span>
                 </Link>
+                {user.role === 'admin' && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-2 rounded-lg px-3 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white hover:bg-white/5"
+                  >
+                    <LayoutDashboard className="h-4 w-4 text-[#d9b56c]" />
+                    <span>Panel admin</span>
+                  </Link>
+                )}
               </>
             )}
-          </div>
-
-          <div className="pt-4 border-t border-[#E5E7EB] flex flex-col gap-2.5">
-            {!isAuthenticated ? (
-              <>
-                <Link
-                  href="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full py-2.5 text-center font-semibold text-sm text-[#1F1F1F] bg-[#F5F5F5] rounded-xl block"
-                >
-                  Iniciar sesión
-                </Link>
-                <Link
-                  href="/register"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full py-2.5 text-center font-semibold text-sm bg-[#7A1F3D] text-white rounded-xl shadow-xs block"
-                >
-                  Registrarse
-                </Link>
-              </>
+          </nav>
+          <div className="mt-5 border-t border-white/10 pt-5">
+            {!sessionChecked ? (
+              <span className="block h-12 w-full animate-pulse rounded-xl bg-white/10" />
+            ) : !isAuthenticated ? (
+              <Link
+                href="/login"
+                onClick={() => setMobileOpen(false)}
+                className="block rounded-full bg-[#d9b56c] py-3.5 text-center text-sm font-bold uppercase tracking-[0.14em] text-[#1d1214]"
+              >
+                Iniciar sesión
+              </Link>
             ) : (
               <button
                 onClick={handleLogout}
                 disabled={loggingOut}
-                className="w-full py-2.5 text-center font-semibold text-sm text-[#7A1F3D] border border-[#7A1F3D] rounded-xl flex items-center justify-center gap-1.5 disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-white/25 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white disabled:opacity-60"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="h-4 w-4" />
                 <span>{loggingOut ? 'Cerrando…' : 'Cerrar sesión'}</span>
               </button>
             )}
           </div>
         </div>
       )}
-    </nav>
+    </header>
   );
 }

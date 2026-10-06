@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
-export default function LegacyHomePage() {
-  redirect('/inicio');
+export default function PiscinasInicioRedirect() {
+  redirect('/');
 }

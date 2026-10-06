@@ -1,5 +1,7 @@
-import DashboardPage from '../piscinas/dashboard/page';
+import { redirect } from "next/navigation";
 
-export default function AdminDashboardRoute() {
-  return <DashboardPage />;
+// La vista de administración vive ahora en /admin.
+// Se conserva esta ruta como redirección para no romper enlaces existentes.
+export default function LegacyDashboardPage() {
+  redirect("/admin");
 }
