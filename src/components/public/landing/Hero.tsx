@@ -71,14 +71,14 @@ export default function Hero() {
             <div className="omega-fade-up mt-8 flex flex-col gap-4 sm:flex-row sm:items-center" style={{ animationDelay: '260ms' }}>
               <Link
                 href="/servicios"
-                className="group inline-flex items-center justify-center gap-2.5 rounded-[4px] bg-[#7a1f3d] px-8 py-3.5 text-[12px] font-bold uppercase tracking-[0.16em] text-white transition-colors hover:bg-[#631730]"
+                className="group inline-flex items-center justify-center gap-2.5 rounded-[4px] bg-[#7a1f3d] px-8 py-3.5 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_14px_36px_rgba(122,31,61,0.38)] transition-colors hover:bg-[#8f2547]"
               >
                 <span>Reserva ahora</span>
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
               <Link
                 href="#instalaciones"
-                className="inline-flex items-center justify-center rounded-[4px] border border-white/60 px-8 py-3.5 text-[12px] font-bold uppercase tracking-[0.16em] text-white transition-colors hover:border-white hover:bg-white/10"
+                className="inline-flex items-center justify-center rounded-[4px] border border-white/25 px-8 py-3.5 text-[12px] font-bold uppercase tracking-[0.16em] text-white backdrop-blur-sm transition-colors hover:border-[#e3bd74] hover:text-[#e3bd74]"
               >
                 Conoce nuestro complejo
               </Link>
