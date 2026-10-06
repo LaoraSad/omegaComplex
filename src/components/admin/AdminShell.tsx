@@ -122,7 +122,7 @@ export function AdminShell({ user, children }: AdminShellProps) {
             </span>
             <LogoutButton />
           </div>
-          <Link href="/piscinas/inicio" className="admin-site-link">
+          <Link href="/" className="admin-site-link">
             <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.9} />
             <span>Ver sitio público</span>
           </Link>

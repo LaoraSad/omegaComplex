@@ -116,7 +116,7 @@ export function RegisterForm() {
         email: data.email.trim(),
       });
       // El registro deja la sesión activa de inmediato.
-      router.push("/piscinas/inicio");
+      router.push("/");
       router.refresh();
     } catch (caughtError: unknown) {
       setServerError(

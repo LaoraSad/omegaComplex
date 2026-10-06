@@ -41,7 +41,7 @@ export default async function TourPage({
       {/* Back */}
       <div className="max-w-6xl mx-auto px-4 pt-8 pb-4">
         <Link
-          href="/piscinas/inicio"
+          href="/"
           className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-rose-300 transition-colors"
         >
           ← Volver a la galería
