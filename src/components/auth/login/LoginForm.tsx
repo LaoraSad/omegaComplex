@@ -40,7 +40,7 @@ function validate(values: LoginFormValues): LoginFormErrors {
 function homeForRole(role: string): string {
   if (role === "admin") return "/admin";
   if (role === "employee") return "/validar";
-  return "/piscinas/inicio";
+  return "/";
 }
 
 export function LoginForm() {
