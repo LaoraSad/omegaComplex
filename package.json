@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "optimize:360": "node scripts/optimize-360.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "npm run build && playwright test"
@@ -34,6 +35,7 @@
     "react-dom": "19.2.8",
     "react-hook-form": "^7.89.0",
     "recharts": "^3.10.1",
+    "sharp": "^0.35.5",
     "sonner": "^2.0.8",
     "stripe": "^23.0.0",
     "tailwind-merge": "^3.7.0",

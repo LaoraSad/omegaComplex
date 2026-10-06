@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Maximize2, Minimize2 } from 'lucide-react';
+import NextImage from 'next/image';
+import { optimized360 } from '@/lib/storefront/optimized-360';
 
 interface Props { src: string; autoRotate?: boolean; caption?: string; hideHud?: boolean; }
 
 const VERT = `attribute vec2 p;void main(){gl_Position=vec4(p,0,1);}`;
 const FRAG = `precision highp float;
-uniform sampler2D tex;uniform vec2 res;uniform float yaw,pitch,fov;
+uniform sampler2D tex;uniform vec2 res;uniform float yaw,pitch,fov;uniform float srgbOut;
 #define PI 3.14159265
 void main(){
   float asp=res.x/res.y,th=tan(fov*.5*PI/180.);
@@ -20,7 +21,11 @@ void main(){
   float lon=atan(ray.x,ray.z),lat=asin(clamp(ray.y,-1.,1.));
   float u=fract(lon/(2.*PI)+.5);
   float v=clamp(.5-lat/PI,0.,1.);
-  gl_FragColor=texture2D(tex,vec2(u,v));
+  vec3 c=texture2D(tex,vec2(u,v)).rgb;
+  // Si la textura se decodificó a lineal (sRGB), hay que volver a gamma
+  // al escribir al canvas; si no, todo se vería oscuro.
+  if(srgbOut>.5){c=pow(c,vec3(.4545));}
+  gl_FragColor=vec4(c,1.);
 }`;
 
 export default function PanoramaViewer({ src, autoRotate = false, caption, hideHud = false }: Props) {
@@ -28,8 +33,10 @@ export default function PanoramaViewer({ src, autoRotate = false, caption, hideH
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgElRef  = useRef<HTMLImageElement>(null);
 
-  // Camera state
-  const cam   = useRef({ yaw: 0, pitch: 0, fov: 55 });
+  // Camera state.
+  // FOV estrecho por defecto: la proyección rectilínea estira los bordes
+  // (efecto ojo de pez) y el FOV amplio lo exagera. 42° se ve natural.
+  const cam   = useRef({ yaw: 0, pitch: 0, fov: 42 });
   const drag  = useRef({ on: false, lx: 0, ly: 0 });
   const rafId = useRef(0);
 
@@ -37,13 +44,13 @@ export default function PanoramaViewer({ src, autoRotate = false, caption, hideH
   const glRef   = useRef<WebGLRenderingContext | null>(null);
   const progRef = useRef<WebGLProgram | null>(null);
   const texRef  = useRef<WebGLTexture | null>(null);   // ← was missing before
+  const srgbRef = useRef(false); // true si la textura decodifica sRGB a lineal
 
   const [mode, setMode]         = useState<'loading'|'webgl'|'css'|'error'>('loading');
   const modeRef                 = useRef<'loading'|'webgl'|'css'|'error'>('loading');
   const [isPlaying, setIsPlaying] = useState(autoRotate);
   const playRef = useRef(autoRotate);
   const [isDragging, setIsDragging] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   /* ── WebGL draw ───────────────────────────────────────────────────── */
   const drawGL = useCallback(() => {
@@ -62,6 +69,7 @@ export default function PanoramaViewer({ src, autoRotate = false, caption, hideH
     g.uniform1f(g.getUniformLocation(pr, 'yaw'),   cam.current.yaw   * Math.PI / 180);
     g.uniform1f(g.getUniformLocation(pr, 'pitch'), cam.current.pitch * Math.PI / 180);
     g.uniform1f(g.getUniformLocation(pr, 'fov'),   cam.current.fov);
+    g.uniform1f(g.getUniformLocation(pr, 'srgbOut'), srgbRef.current ? 1 : 0);
     g.drawArrays(g.TRIANGLE_STRIP, 0, 4);
   }, []);
 
@@ -100,7 +108,12 @@ export default function PanoramaViewer({ src, autoRotate = false, caption, hideH
     // Same-origin: do NOT set crossOrigin (avoids CORS preflight issues)
     img.onload = () => {
       const cv = canvasRef.current;
-      const g  = cv?.getContext('webgl', { antialias: true, alpha: false }) ?? null;
+      // WebGL2 primero: permite mipmaps + anisotropía en texturas NPOT
+      // (casi todos los JPEG 360 lo son). Si no hay, se degrada a WebGL1.
+      const g2 = cv?.getContext('webgl2', { antialias: true, alpha: false, depth: false, stencil: false, powerPreference: 'high-performance' }) as WebGLRenderingContext | null;
+      const g1 = !g2 ? (cv?.getContext('webgl', { antialias: true, alpha: false, depth: false, stencil: false, powerPreference: 'high-performance' }) ?? null) : null;
+      const g = g2 ?? g1;
+      const isWebGL2 = g2 !== null;
 
       if (g) {
         try {
@@ -123,17 +136,54 @@ export default function PanoramaViewer({ src, autoRotate = false, caption, hideH
           g.enableVertexAttribArray(aLoc);
           g.vertexAttribPointer(aLoc, 2, g.FLOAT, false, 0, 0);
 
-          // Upload texture
+          // Upload texture.
+          // sRGB primero: sin decodificación sRGB los medios tonos se ven
+          // lavados frente al <img> (que sí gestiona color). WebGL2 lo trae
+          // nativo; en WebGL1 se usa la extensión, y si no existe se degrada
+          // al RGB clásico sin romper nada.
           const tx = g.createTexture()!;
           g.bindTexture(g.TEXTURE_2D, tx);
           g.pixelStorei(g.UNPACK_FLIP_Y_WEBGL, 0);
-          g.texImage2D(g.TEXTURE_2D, 0, g.RGB, g.RGB, g.UNSIGNED_BYTE, img);
-          // NPOT textures (most JPEGs) require LINEAR + CLAMP_TO_EDGE in WebGL1
-          // Using MIPMAP or REPEAT on NPOT = silent black texture
-          g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR);
-          g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.LINEAR);
+          let internalFormat: number = g.RGB;
+          let srgbDecode = false;
+          if (isWebGL2 && 'SRGB8_ALPHA8' in g) {
+            internalFormat = (g as WebGL2RenderingContext).SRGB8_ALPHA8;
+            srgbDecode = true;
+          } else {
+            const srgbExt = g.getExtension('EXT_sRGB');
+            if (srgbExt && 'SRGB_ALPHA_EXT' in srgbExt) {
+              internalFormat = (srgbExt as { SRGB_ALPHA_EXT: number }).SRGB_ALPHA_EXT;
+              srgbDecode = true;
+            }
+          }
+          srgbRef.current = srgbDecode;
+          g.texImage2D(g.TEXTURE_2D, 0, internalFormat, g.RGB, g.UNSIGNED_BYTE, img);
+          if (isWebGL2) {
+            // Trilineal: nítido a cualquier zoom/distancia, sin shimmer.
+            g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR_MIPMAP_LINEAR);
+            g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.LINEAR);
+            g.generateMipmap(g.TEXTURE_2D);
+          } else {
+            // WebGL1 + NPOT: sin mipmaps (quedaría en negro). Se mantiene LINEAR.
+            g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR);
+            g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.LINEAR);
+          }
           g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_S, g.CLAMP_TO_EDGE);
           g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_T, g.CLAMP_TO_EDGE);
+          // Anisotropía: recupera detalle en los bordes en ángulo rasante,
+          // justo donde el ojo de pez más se nota. Topa en 8x por rendimiento.
+          const anisoExt = g.getExtension('EXT_texture_filter_anisotropic');
+          if (anisoExt) {
+            const max = g.getParameter(anisoExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT) as number;
+            g.texParameterf(
+              g.TEXTURE_2D,
+              anisoExt.TEXTURE_MAX_ANISOTROPY_EXT,
+              Math.min(8, typeof max === 'number' ? max : 1),
+            );
+          }
+          // Si la subida falló en silencio (textura incompleta = canvas negro),
+          // se fuerza el fallback CSS que sí muestra la imagen plana.
+          if (g.getError() !== g.NO_ERROR) throw new Error('texture upload failed');
 
           // Save to refs so drawGL can access them
           glRef.current   = g;
@@ -153,8 +203,29 @@ export default function PanoramaViewer({ src, autoRotate = false, caption, hideH
       }
     };
 
-    img.onerror = () => { modeRef.current = 'error'; setMode('error'); };
-    img.src = src;
+    // Cadena de fuentes: viewer (alta fidelidad) → AVIF → WebP → JPG original.
+    // El manifiesto es unión de literales: se lee con forma laxa.
+    const entry = optimized360(src) as
+      | { avif?: string; webp?: string; viewer?: string; jpg?: string }
+      | null;
+    const candidates = entry
+      ? [entry.viewer, entry.avif, entry.webp, entry.jpg ?? src].filter(
+          (u): u is string => !!u,
+        )
+      : [src];
+    let attempt = 0;
+
+    img.onerror = () => {
+      attempt += 1;
+      const next = candidates[attempt];
+      if (attempt < candidates.length && next) {
+        img.src = next;
+        return;
+      }
+      console.warn('[PanoramaViewer] no se pudo cargar:', src, '(se probó:', candidates.join(', '), ')');
+      modeRef.current = 'error'; setMode('error');
+    };
+    img.src = candidates[0] ?? src;
 
     return () => cancelAnimationFrame(rafId.current);
   }, [src, tick]);
@@ -196,134 +267,52 @@ export default function PanoramaViewer({ src, autoRotate = false, caption, hideH
   }, []);
 
   const togglePlay = () => { const n = !playRef.current; playRef.current = n; setIsPlaying(n); };
-  const zoom = (d: number) => { cam.current.fov = Math.max(30, Math.min(110, cam.current.fov + d)); };
+  // Zoom contenido (35–85°): más allá el ojo de pez y el blur dominan la imagen.
+  const zoom = (d: number) => { cam.current.fov = Math.max(35, Math.min(85, cam.current.fov + d)); };
 
-  /* ── Fullscreen toggle ────────────────────────────────────────────── */
-  const toggleFullscreen = useCallback(() => {
-    const el = wrapRef.current as (HTMLDivElement & {
-      webkitRequestFullscreen?: () => Promise<void>;
-      mozRequestFullScreen?: () => Promise<void>;
-      msRequestFullscreen?: () => Promise<void>;
-    }) | null;
-
-    if (!el) return;
-
-    const doc = document as Document & {
-      webkitFullscreenElement?: Element;
-      mozFullScreenElement?: Element;
-      msFullscreenElement?: Element;
-      webkitExitFullscreen?: () => Promise<void>;
-      mozCancelFullScreen?: () => Promise<void>;
-      msExitFullscreen?: () => Promise<void>;
+  /* ── Rueda del ratón: listener nativo no-pasivo (React los pone pasivos
+     y preventDefault ahí solo genera el warning sin bloquear el scroll). ── */
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const onWheelNative = (e: WheelEvent) => {
+      e.preventDefault();
+      zoom(e.deltaY * 0.05);
     };
-
-    const isFull = !!(
-      doc.fullscreenElement ||
-      doc.webkitFullscreenElement ||
-      doc.mozFullScreenElement ||
-      doc.msFullscreenElement
-    );
-
-    if (!isFull) {
-      if (el.requestFullscreen) {
-        el.requestFullscreen().catch(() => {});
-      } else if (el.webkitRequestFullscreen) {
-        el.webkitRequestFullscreen();
-      } else if (el.mozRequestFullScreen) {
-        el.mozRequestFullScreen();
-      } else if (el.msRequestFullscreen) {
-        el.msRequestFullscreen();
-      }
-    } else {
-      if (doc.exitFullscreen) {
-        doc.exitFullscreen().catch(() => {});
-      } else if (doc.webkitExitFullscreen) {
-        doc.webkitExitFullscreen();
-      } else if (doc.mozCancelFullScreen) {
-        doc.mozCancelFullScreen();
-      } else if (doc.msExitFullscreen) {
-        doc.msExitFullscreen();
-      }
-    }
+    wrap.addEventListener('wheel', onWheelNative, { passive: false });
+    return () => wrap.removeEventListener('wheel', onWheelNative);
   }, []);
 
-  useEffect(() => {
-    const doc = document as Document & {
-      webkitFullscreenElement?: Element;
-      mozFullScreenElement?: Element;
-      msFullscreenElement?: Element;
-    };
 
-    const handleFullscreenChange = () => {
-      const activeEl =
-        doc.fullscreenElement ||
-        doc.webkitFullscreenElement ||
-        doc.mozFullScreenElement ||
-        doc.msFullscreenElement;
-      const active = activeEl === wrapRef.current;
-      setIsFullscreen(active);
 
-      const cv = canvasRef.current;
-      const wrap = wrapRef.current;
-      if (cv && wrap) {
-        const dpr = window.devicePixelRatio || 1;
-        cv.width = Math.round(wrap.offsetWidth * dpr);
-        cv.height = Math.round(wrap.offsetHeight * dpr);
-        if (modeRef.current === 'webgl') {
-          drawGL();
-        }
-      }
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
-    };
-  }, [drawGL]);
-
-  // Tecla F o f para pantalla completa
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        (e.key === 'f' || e.key === 'F') &&
-        !['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)
-      ) {
-        if (
-          wrapRef.current &&
-          (document.fullscreenElement === wrapRef.current || wrapRef.current.matches(':hover'))
-        ) {
-          e.preventDefault();
-          toggleFullscreen();
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleFullscreen]);
 
   /* ── JSX ──────────────────────────────────────────────────────────── */
+  const poster = optimized360(src);
+  const posterBlur = poster?.blur;
   return (
     <div
       ref={wrapRef}
-      className={`relative w-full h-full ${
-        isFullscreen ? 'rounded-none' : 'rounded-xl'
-      } overflow-hidden bg-[#050a14] select-none`}
+      className={`relative w-full h-full rounded-xl overflow-hidden bg-[#050a14] select-none`}
       style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none' }}
       onMouseDown={e => pDown(e.clientX, e.clientY)}
       onTouchStart={e => pDown(e.touches[0].clientX, e.touches[0].clientY)}
-      onTouchMove={e => { e.preventDefault(); pMove(e.touches[0].clientX, e.touches[0].clientY); }}
+      onTouchMove={e => pMove(e.touches[0].clientX, e.touches[0].clientY)}
       onTouchEnd={() => { drag.current.on = false; setIsDragging(false); }}
       onTouchCancel={() => { drag.current.on = false; setIsDragging(false); }}
-      onWheel={e => { e.preventDefault(); zoom(e.deltaY * 0.05); }}
-      onDoubleClick={toggleFullscreen}
-    >
+          >
+      {/* Póster plano: garantiza imagen visible mientras carga o si WebGL falla.
+          En modo css el <img> de abajo ya la muestra, así que no se duplica. */}
+      {(mode === 'loading' || mode === 'error') && (
+        <NextImage
+          src={src}
+          alt="Vista previa 360°"
+          fill
+          sizes="(max-width: 768px) 100vw, 50vw"
+          placeholder={posterBlur ? 'blur' : undefined}
+          blurDataURL={posterBlur}
+          className="object-cover"
+        />
+      )}
       {/* WebGL canvas */}
       <canvas
         ref={canvasRef}
@@ -372,9 +361,7 @@ export default function PanoramaViewer({ src, autoRotate = false, caption, hideH
           <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm rounded-full px-4 py-1.5 text-xs text-white/70 flex items-center gap-2 whitespace-nowrap z-20">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span>
-              {isFullscreen
-                ? 'Pantalla Completa · Doble clic o Esc para salir'
-                : `${mode === 'webgl' ? '360° WebGL HD' : '360° Panorama'} · Arrastra · Scroll zoom`}
+              {`${mode === 'webgl' ? '360° WebGL HD' : '360° Panorama'} · Arrastra · Scroll zoom`}
             </span>
           </div>
           <div
@@ -405,28 +392,6 @@ export default function PanoramaViewer({ src, autoRotate = false, caption, hideH
               title="Alejar (Zoom −)"
             >
               🔍−</button>
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              className={`pointer-events-auto backdrop-blur-sm border rounded-lg px-3 py-1.5 text-xs flex items-center gap-1.5 font-semibold transition-all cursor-pointer shadow-md ${
-                isFullscreen
-                  ? 'bg-rose-500/30 border-rose-400/50 text-rose-200 hover:bg-rose-500/40'
-                  : 'bg-black/75 border-white/25 text-white hover:bg-white/20 hover:border-white/40'
-              }`}
-              title={isFullscreen ? 'Salir de pantalla completa (Esc o F)' : 'Ver en pantalla completa (Doble clic o F)'}
-            >
-              {isFullscreen ? (
-                <>
-                  <Minimize2 className="w-3.5 h-3.5 text-rose-300" />
-                  <span>Salir</span>
-                </>
-              ) : (
-                <>
-                  <Maximize2 className="w-3.5 h-3.5 text-rose-300" />
-                  <span>Pantalla completa</span>
-                </>
-              )}
-            </button>
           </div>
         </>
       )}

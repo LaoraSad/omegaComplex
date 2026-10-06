@@ -1,8 +1,10 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
+import { optimized360 } from '@/lib/storefront/optimized-360';
 
 /* Imágenes reales del proyecto (public/360). La primera es la protagonista. */
 const SLIDES = [
@@ -25,20 +27,28 @@ export default function Hero() {
     <section id="inicio" className="omega-hero relative -mt-20 flex min-h-[100svh] items-center overflow-hidden bg-[#0e0b0d] pt-20">
       {/* Fondo: slides reales con transición suave */}
       <div className="absolute inset-0" aria-hidden="true">
-        {SLIDES.map((s, i) => (
+        {SLIDES.map((s, i) => {
+          const blur = optimized360(s.src)?.blur;
+          return (
           <div
             key={s.src}
             className={`absolute inset-0 transition-opacity duration-[1200ms] ease-out ${i === active ? 'opacity-100' : 'opacity-0'}`}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={s.src}
-              alt=""
-              className={`h-full w-full object-cover ${i === active ? 'omega-kenburns' : ''}`}
-              loading={i === 0 ? 'eager' : 'lazy'}
+              alt={s.alt}
+              fill
+              sizes="100vw"
+              quality={85}
+              priority={i === 0}
+              fetchPriority={i === 0 ? 'high' : 'auto'}
+              placeholder={blur ? 'blur' : undefined}
+              blurDataURL={blur}
+              className={`object-cover ${i === active ? 'omega-kenburns' : ''}`}
             />
           </div>
-        ))}
+          );
+        })}
         {/* Overlay oscuro MUY sutil solo para legibilidad */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/62 via-black/28 to-black/10" />
         {/* Velo superior para garantizar la legibilidad de la navbar */}

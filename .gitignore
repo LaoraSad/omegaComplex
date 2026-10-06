@@ -26,6 +26,9 @@
 .DS_Store
 *.pem
 
+# derivados generados (se regeneran con `npm run optimize:360`, también en Docker)
+/public/360/opt/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
