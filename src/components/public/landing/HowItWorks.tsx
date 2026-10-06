@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import AmbientBubbles from '@/components/public/landing/AmbientBubbles';
 
 const STEPS = [
   {
@@ -26,41 +27,43 @@ const STEPS = [
 
 export default function HowItWorks() {
   return (
-    <section id="reservas" className="scroll-mt-20 border-t border-[#e7dfdd] bg-white py-16 sm:py-20">
-      <div className="mx-auto max-w-[1400px] px-5 sm:px-8 lg:px-12">
+    <section id="reservas" className="omega-dark-section-2 relative scroll-mt-20 overflow-hidden py-16 sm:py-20">
+      <div aria-hidden="true" className="omega-cta-glow" />
+      <AmbientBubbles variant="wine" />
+      <div className="relative mx-auto max-w-[1400px] px-5 sm:px-8 lg:px-12">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#b98a3c]">
+            <p className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#e3bd74]">
               <span>Reservas</span>
-              <span className="inline-block h-px w-14 bg-[#b98a3c]/60" />
+              <span className="inline-block h-px w-14 bg-[#e3bd74]/50" />
             </p>
-            <h2 className="mt-3 text-[30px] font-black uppercase leading-[1.05] tracking-tight text-[#161214] sm:text-4xl">
+            <h2 className="mt-3 text-[30px] font-black uppercase leading-[1.05] tracking-tight text-white sm:text-4xl">
               Reserva en 4 pasos
             </h2>
-            <p className="mt-3 max-w-[520px] text-[14px] leading-relaxed text-[#5c565a]">
+            <p className="mt-3 max-w-[520px] text-[14px] leading-relaxed text-white/60">
               Rápido, transparente y 100% digital. Tu ingreso al complejo es con código QR.
             </p>
           </div>
           <Link
             href="/servicios"
-            className="group inline-flex w-fit items-center gap-2.5 rounded-[4px] bg-[#7a1f3d] px-7 py-3.5 text-[12px] font-bold uppercase tracking-[0.16em] text-white transition-colors hover:bg-[#631730]"
+            className="group inline-flex w-fit items-center gap-2.5 rounded-[4px] bg-[#7a1f3d] px-7 py-3.5 text-[12px] font-bold uppercase tracking-[0.16em] text-white transition-colors hover:bg-[#8f2547]"
           >
             <span>Reservar ahora</span>
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
         </div>
 
-        <ol className="mt-10 grid grid-cols-1 gap-0 border-t border-[#e7dfdd] sm:grid-cols-2 lg:grid-cols-4">
+        <ol className="mt-10 grid grid-cols-1 gap-0 border-t border-white/10 sm:grid-cols-2 lg:grid-cols-4">
           {STEPS.map((s) => (
             <li
               key={s.n}
-              className="omega-reveal border-b border-[#e7dfdd] py-8 pr-8 sm:border-r sm:pl-8 sm:first:pl-0 lg:border-b-0"
+              className="omega-reveal border-b border-white/10 py-8 pr-8 sm:border-r sm:pl-8 sm:first:pl-0 lg:border-b-0 sm:last:border-r-0 lg:[&:nth-child(2)]:border-r"
             >
-              <span className="text-[13px] font-bold tracking-[0.2em] text-[#7a1f3d]">{s.n}</span>
-              <h3 className="mt-3 text-[16px] font-extrabold uppercase tracking-wide text-[#161214]">
+              <span className="text-[13px] font-bold tracking-[0.2em] text-[#e3bd74]">{s.n}</span>
+              <h3 className="mt-3 text-[16px] font-extrabold uppercase tracking-wide text-white">
                 {s.title}
               </h3>
-              <p className="mt-2 text-[13px] leading-relaxed text-[#5c565a]">{s.desc}</p>
+              <p className="mt-2 text-[13px] leading-relaxed text-white/60">{s.desc}</p>
             </li>
           ))}
         </ol>

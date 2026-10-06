@@ -13,7 +13,7 @@ export default async function PublicLayout({
   const user = session ? await findSessionUserById(session.userId) : null;
 
   return (
-    <div className="piscinas-shell flex min-h-screen flex-col bg-[#F5F5F5] text-[#1F1F1F] antialiased font-sans">
+    <div className="piscinas-shell flex min-h-screen flex-col bg-[#0e0b0d] text-[#f5f1ec] antialiased font-sans">
       <Navbar initialUser={user} />
       <main className="flex-1 pt-20">{children}</main>
       <Footer />
