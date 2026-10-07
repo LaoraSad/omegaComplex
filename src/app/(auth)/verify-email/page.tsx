@@ -7,19 +7,19 @@ export const metadata: Metadata = {
 };
 
 interface VerifyEmailPageProps {
-  searchParams: Promise<{ email?: string }>;
+  searchParams: Promise<{ email?: string; sent?: string }>;
 }
 
 export default async function VerifyEmailPage({ searchParams }: VerifyEmailPageProps) {
-  const { email = "" } = await searchParams;
+  const { email = "", sent } = await searchParams;
 
   return (
     <AuthLayout
-      description="Tu cuenta ya está activa. La verificación por correo estará disponible próximamente."
-      eyebrow="Cuenta activa"
-      title="Verifica tu correo"
+      description="Confirma tu dirección para activar tu cuenta Omega Complex."
+      eyebrow="Seguridad de cuenta"
+      title="Verifica tu correo electrónico"
     >
-      <VerifyEmailPanel email={email} />
+      <VerifyEmailPanel email={email} sent={sent === "true"} />
     </AuthLayout>
   );
 }
