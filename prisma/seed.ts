@@ -47,18 +47,10 @@ async function main() {
   // =========================
 
   const categories = [
-    {
-      name: "Piscinas",
-      description: "Servicios relacionados con las piscinas del complejo.",
-    },
-    {
-      name: "Deportes",
-      description: "Servicios y espacios deportivos del complejo.",
-    },
-    {
-      name: "Eventos",
-      description: "Espacios y servicios para eventos.",
-    },
+    { name: "Piscinas", slug: "piscinas" },
+    { name: "Canchas", slug: "canchas" },
+    { name: "Zonas húmedas", slug: "zonas-humedas" },
+    { name: "Gimnasio", slug: "gimnasio" },
   ];
 
   const createdCategories = [];
@@ -69,16 +61,23 @@ async function main() {
         name: category.name,
       },
       update: {
-        description: category.description,
+        slug: category.slug,
+        isActive: true,
       },
       create: {
         name: category.name,
-        description: category.description,
+        slug: category.slug,
+        isActive: true,
       },
     });
 
     createdCategories.push(createdCategory);
   }
+
+  await prisma.category.updateMany({
+    where: { name: { in: ["Deportes", "Eventos"] } },
+    data: { isActive: false },
+  });
 
   console.log("✅ Categorías creadas/verificadas");
 
@@ -90,15 +89,19 @@ async function main() {
     (category) => category.name === "Piscinas",
   );
 
-  const deportes = createdCategories.find(
-    (category) => category.name === "Deportes",
+  const canchas = createdCategories.find(
+    (category) => category.name === "Canchas",
   );
 
-  const eventos = createdCategories.find(
-    (category) => category.name === "Eventos",
+  const zonasHumedas = createdCategories.find(
+    (category) => category.name === "Zonas húmedas",
   );
 
-  if (!piscinas || !deportes || !eventos) {
+  const gimnasio = createdCategories.find(
+    (category) => category.name === "Gimnasio",
+  );
+
+  if (!piscinas || !canchas || !zonasHumedas || !gimnasio) {
     throw new Error("No se pudieron encontrar las categorías.");
   }
 
@@ -110,6 +113,7 @@ async function main() {
     // Piscinas
     {
       name: "Piscina infantil",
+      slug: "piscina-infantil",
       description: "Piscina destinada al uso infantil.",
       price: 8000,
       capacity: 100,
@@ -117,6 +121,7 @@ async function main() {
     },
     {
       name: "Piscina adultos 1",
+      slug: "piscina-adultos-1",
       description: "Piscina para adultos.",
       price: 12000,
       capacity: 100,
@@ -124,6 +129,7 @@ async function main() {
     },
     {
       name: "Piscina adultos 2",
+      slug: "piscina-adultos-2",
       description: "Piscina para adultos.",
       price: 10000,
       capacity: 30,
@@ -131,6 +137,7 @@ async function main() {
     },
     {
       name: "Piscina adultos 3",
+      slug: "piscina-adultos-3",
       description: "Piscina para adultos.",
       price: 10000,
       capacity: 30,
@@ -138,6 +145,7 @@ async function main() {
     },
     {
       name: "Piscina adultos 4",
+      slug: "piscina-adultos-4",
       description: "Piscina para adultos.",
       price: 9000,
       capacity: 20,
@@ -147,75 +155,85 @@ async function main() {
     // Deportes
     {
       name: "Gimnasio",
+      slug: "gimnasio",
       description: "Gimnasio del complejo.",
       price: 15000,
       capacity: 40,
-      categoryId: deportes.id,
+      categoryId: gimnasio.id,
     },
     {
       name: "Cancha de microfútbol 1",
+      slug: "cancha-microfutbol-1",
       description: "Cancha de microfútbol.",
       price: 60000,
       capacity: 14,
-      categoryId: deportes.id,
+      categoryId: canchas.id,
     },
     {
       name: "Cancha de microfútbol 2",
+      slug: "cancha-microfutbol-2",
       description: "Cancha de microfútbol.",
       price: 60000,
       capacity: 14,
-      categoryId: deportes.id,
+      categoryId: canchas.id,
     },
     {
       name: "Cancha de microfútbol 3",
+      slug: "cancha-microfutbol-3",
       description: "Cancha de microfútbol.",
       price: 60000,
       capacity: 14,
-      categoryId: deportes.id,
+      categoryId: canchas.id,
     },
     {
       name: "Cancha de microfútbol 4",
+      slug: "cancha-microfutbol-4",
       description: "Cancha de microfútbol.",
       price: 60000,
       capacity: 14,
-      categoryId: deportes.id,
+      categoryId: canchas.id,
     },
     {
       name: "Cancha de fútbol",
+      slug: "cancha-futbol",
       description: "Cancha de fútbol.",
       price: 100000,
       capacity: 22,
-      categoryId: deportes.id,
+      categoryId: canchas.id,
     },
     {
       name: "Polideportiva 1",
+      slug: "polideportiva-1",
       description: "Cancha polideportiva.",
       price: 50000,
       capacity: 12,
-      categoryId: deportes.id,
+      categoryId: canchas.id,
     },
     {
       name: "Polideportiva 2",
+      slug: "polideportiva-2",
       description: "Cancha polideportiva.",
       price: 50000,
       capacity: 12,
-      categoryId: deportes.id,
+      categoryId: canchas.id,
     },
 
-    // Bienestar dentro de Deportes por ahora
+    // Servicios de zonas húmedas
     {
       name: "Turco",
+      slug: "bano-turco",
       description: "Baño turco del complejo.",
       price: 12000,
       capacity: 30,
-      categoryId: deportes.id,
+      categoryId: zonasHumedas.id,
     },
     {
       name: "Sauna",
+      slug: "sauna",
       description: "Sauna del complejo.",
       price: 12000,
       capacity: 30,
-      categoryId: deportes.id,
+      categoryId: zonasHumedas.id,
     },
   ];
 
@@ -225,6 +243,7 @@ async function main() {
         name: service.name,
       },
       update: {
+        slug: service.slug,
         description: service.description,
         price: service.price,
         capacity: service.capacity,
@@ -232,6 +251,7 @@ async function main() {
       },
       create: {
         name: service.name,
+        slug: service.slug,
         description: service.description,
         price: service.price,
         capacity: service.capacity,

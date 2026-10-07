@@ -5,6 +5,7 @@ import {
   Layers,
   LayoutDashboard,
   QrCode,
+  Tags,
   UserCheck,
   Users,
   type LucideIcon,
@@ -53,6 +54,13 @@ export const ADMIN_NAV: AdminNavSection[] = [
   {
     title: "Catálogo",
     items: [
+      {
+        href: "/admin/categorias",
+        label: "Categorías",
+        description: "Organización del catálogo",
+        icon: Tags,
+        match: "^/admin/categorias",
+      },
       {
         href: "/admin/servicios",
         label: "Servicios",
