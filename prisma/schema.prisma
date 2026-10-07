@@ -67,6 +67,7 @@ model Service {
   id          String  @id @default(uuid()) @db.Uuid
   categoryId  String  @db.Uuid
   name        String  @unique
+  slug        String  @unique
   description String?
   price       Int
   capacity    Int

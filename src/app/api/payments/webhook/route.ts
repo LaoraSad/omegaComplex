@@ -1,8 +1,18 @@
-import { NextResponse } from "next/server";
-import { handler } from "@/shared/http/handler";
-import { ok } from "@/shared/http/api-response";
+import { NextRequest, NextResponse } from "next/server";
 
-// TODO(Dev3): webhook de Stripe (verificar firma con STRIPE_WEBHOOK_SECRET).
-export const POST = handler(async () => {
-  return NextResponse.json(ok({ received: true }));
+import { handleStripeWebhook } from "@/features/payments/payments.service";
+import { ok } from "@/shared/http/api-response";
+import { HttpError } from "@/shared/http/errors";
+import { handler } from "@/shared/http/handler";
+
+export const POST = handler(async (req: NextRequest) => {
+  const signature = req.headers.get("stripe-signature");
+  if (!signature) {
+    throw new HttpError(400, "MISSING_SIGNATURE", "Falta cabecera stripe-signature");
+  }
+
+  const payload = await req.text();
+  const result = await handleStripeWebhook(payload, signature);
+
+  return NextResponse.json(ok(result));
 });
