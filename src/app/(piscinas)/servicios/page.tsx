@@ -96,7 +96,7 @@ function ServicesContent() {
         </div>
 
         {/* Buscador de texto */}
-        <div className="relative min-w-[280px]">
+        <div className="relative min-w-70">
           <input
             type="text"
             placeholder="Buscar cancha, piscina..."

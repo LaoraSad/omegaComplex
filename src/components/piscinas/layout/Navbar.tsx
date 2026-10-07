@@ -63,7 +63,7 @@ export default function Navbar({ initialUser }: NavbarProps) {
   }, []);
 
   useEffect(() => {
-    setMobileOpen(false);
+    setTimeout(() => setMobileOpen(false), 0);
   }, [pathname]);
 
   async function handleLogout() {
