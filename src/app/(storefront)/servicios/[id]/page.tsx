@@ -1,12 +1,13 @@
 'use client';
 
 import { use, useEffect, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, CalendarClock, CreditCard, Users } from 'lucide-react';
+import { ArrowLeft, CalendarClock, Compass, CreditCard, Users } from 'lucide-react';
 import AmbientBubbles from '@/components/AmbientBubbles';
 import SectionDivider from '@/components/SectionDivider';
 import { servicePhoto } from '@/components/admin/service-image';
+import PanoramaModal from '@/components/tour/PanoramaModal';
+import PanningImage from '@/components/tour/PanningImage';
 import type { CatalogServiceRecord } from '@/features/catalog/catalog.types';
 
 interface ApiResult<T> {
@@ -54,7 +55,7 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
   const price = service
     ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(service.price)
     : '';
-  const image = service ? servicePhoto(service.name) : null;
+  const image = service ? servicePhoto(service.slug) : null;
 
   return (
     <div className="omega-dark-section relative min-h-screen overflow-hidden bg-[#0e0b0d] text-white">
@@ -75,9 +76,24 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]">
             <section className="space-y-6">
               <div className="overflow-hidden rounded-xl border border-white/10 bg-[#141013]">
-                <div className="relative h-64 bg-[#211a1d] sm:h-104">
-                  {image ? <Image src={image} alt={service.name} fill priority sizes="(max-width: 1024px) 100vw, 65vw" className="object-cover" /> : null}
+                <div className="relative h-80 overflow-hidden rounded-2xl border border-white/10 bg-black shadow-inner">
+                  {image ? (
+                    <PanoramaModal
+                      src={image}
+                      title={service.name}
+                      subtitle={service.category.name}
+                      trigger={<PanningImage src={image} alt={service.name} />}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-[#211a1d]" aria-hidden="true" />
+                  )}
                 </div>
+                {image ? (
+                  <div className="flex items-center gap-2 text-xs font-semibold text-white/55">
+                    <Compass className="h-4 w-4 text-[#e3bd74]" />
+                    <span>Inspecciona la imagen con el cursor o amplíala.</span>
+                  </div>
+                ) : null}
                 <div className="space-y-4 p-6 sm:p-8">
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#e3bd74]">{service.category.name}</p>
                   <h1 className="text-3xl font-black uppercase text-white sm:text-4xl">{service.name}</h1>

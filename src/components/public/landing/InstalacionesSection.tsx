@@ -48,7 +48,7 @@ export default function InstalacionesSection({ services }: Props) {
         {/* Galería editorial: la fotografía es protagonista */}
         <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {items.map((s) => {
-            const image = servicePhoto(s.name);
+            const image = servicePhoto(s.slug);
             return (
             <article key={s.id} className="omega-ring omega-ring-sm omega-card group">
               <div className="omega-ring-inner relative overflow-hidden">
