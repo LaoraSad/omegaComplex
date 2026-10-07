@@ -4,13 +4,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
-import { optimized360 } from '@/lib/storefront/optimized-360';
 
-/* Imágenes reales del proyecto (public/360). La primera es la protagonista. */
+/* Imágenes reales del proyecto (public/newassets + 360). La primera es la protagonista. */
 const SLIDES = [
-  { src: '/360/campo_futbol11.jpg', alt: 'Cancha de fútbol Omega Complex al atardecer' },
-  { src: '/360/microfutbol_cubierta.jpg', alt: 'Cancha de microfútbol cubierta' },
-  { src: '/360/wave_pool.jpg', alt: 'Piscina de olas Omega Complex' },
+  { src: '/newassets/futbol-11.png', alt: 'Cancha de fútbol Omega Complex al atardecer' },
+  { src: '/newassets/cubierta.png', alt: 'Cancha de microfútbol cubierta' },
+  { src: '/newassets/piscina-olas.png', alt: 'Piscina de olas Omega Complex' },
 ];
 
 export default function Hero() {
@@ -28,7 +27,6 @@ export default function Hero() {
       {/* Fondo: slides reales con transición suave */}
       <div className="absolute inset-0" aria-hidden="true">
         {SLIDES.map((s, i) => {
-          const blur = optimized360(s.src)?.blur;
           return (
           <div
             key={s.src}
@@ -42,8 +40,6 @@ export default function Hero() {
               quality={85}
               priority={i === 0}
               fetchPriority={i === 0 ? 'high' : 'auto'}
-              placeholder={blur ? 'blur' : undefined}
-              blurDataURL={blur}
               className={`object-cover ${i === active ? 'omega-kenburns' : ''}`}
             />
           </div>
