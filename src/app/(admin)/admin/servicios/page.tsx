@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Building2, Users } from "lucide-react";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { formatCOP, formatNumber } from "@/components/admin/format";
+import { servicePhoto } from "@/components/admin/service-image";
 import { listServices } from "@/features/admin/admin.repository";
+import AmbientBubbles from "@/components/AmbientBubbles";
+import SectionDivider from "@/components/SectionDivider";
 
 export const metadata: Metadata = { title: "Servicios" };
 
@@ -51,102 +55,145 @@ export default async function ServiciosPage() {
           />
         </div>
       ) : (
-        [...byCategory.entries()].map(([category, items]) => (
-          <section key={category} aria-label={category} className="space-y-3">
-            <div className="flex items-baseline justify-between">
-              <h2 className="admin-section-title">{category}</h2>
-              <span className="abadge abadge-slate">
-                {formatNumber(items.length)} {items.length === 1 ? "servicio" : "servicios"}
-              </span>
+        <div className="omega-dark-panel px-5 py-8 sm:px-8">
+          <div aria-hidden="true" className="omega-cta-glow" />
+          <AmbientBubbles variant="mixed" />
+          <div className="relative space-y-10">
+            <div className="space-y-2">
+              <p className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#e3bd74]">
+                <span>Nuestras instalaciones</span>
+                <span className="inline-block h-px w-14 bg-[#e3bd74]/50" />
+              </p>
+              <h2 className="text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">
+                Todo lo que necesitas en un solo lugar
+              </h2>
             </div>
-            <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {items.map((s) => {
-                const byDay = new Map(s.serviceSchedules.map((sc) => [sc.dayOfWeek, sc]));
-                return (
-                  <li
-                    key={s.id}
-                    id={`servicio-${s.id}`}
-                    className="acard acard-pad flex scroll-mt-24 flex-col gap-3"
-                  >
-                    <div>
-                      <p className="akpi-label" style={{ color: "#7a1f3d" }}>{s.category.name}</p>
-                      <h3 className="admin-section-title" style={{ marginTop: "0.2rem" }}>
-                        <Link href={`/admin/servicios/${s.id}`} className="transition-colors hover:text-[#7a1f3d]">
-                          {s.name}
-                        </Link>
-                      </h3>
-                      {s.description ? (
-                        <p className="admin-section-sub" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                          {s.description}
-                        </p>
-                      ) : null}
-                    </div>
-                    <dl className="grid grid-cols-3 gap-2 rounded-[10px] bg-[#faf8f7] p-3 text-center">
-                      <div>
-                        <dt className="text-[0.66rem] font-bold uppercase tracking-wider text-[#6f625e]">Capacidad</dt>
-                        <dd className="anum text-base font-extrabold">{formatNumber(s.capacity)}</dd>
-                      </div>
-                      <div className="border-x border-[#e8e1de]">
-                        <dt className="text-[0.66rem] font-bold uppercase tracking-wider text-[#6f625e]">Precio</dt>
-                        <dd className="anum text-base font-extrabold">{formatCOP(s.price)}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-[0.66rem] font-bold uppercase tracking-wider text-[#6f625e]">Próx. reservas</dt>
-                        <dd className="anum text-base font-extrabold">{formatNumber(s._count.reservations)}</dd>
-                      </div>
-                    </dl>
-                    <div>
-                      <p className="mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider text-[#6f625e]">
-                        <Users className="h-3 w-3" /> Horario semanal
-                      </p>
-                      {s.serviceSchedules.length > 0 ? (
-                        <ol className="grid grid-cols-7 gap-1" aria-label={`Horario de ${s.name}`}>
-                          {DAY_ORDER.map((d) => {
-                            const sc = byDay.get(d);
-                            return (
-                              <li
-                                key={d}
-                                title={sc ? `${DAY_LABELS[d]}: ${sc.openTime}–${sc.closeTime}` : `${DAY_LABELS[d]}: cerrado`}
-                                className={`rounded-md border px-0.5 py-1 text-center ${
-                                  sc ? "border-[#e3c3cf] bg-[#f6e8ed]" : "border-[#f0e9e6] bg-[#faf8f7]"
-                                }`}
+
+            {[...byCategory.entries()].map(([category, items], ci) => (
+              <section key={category} aria-label={category} className="space-y-4">
+                {ci > 0 ? <SectionDivider /> : null}
+                <div className="flex items-baseline justify-between gap-3">
+                  <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">
+                    {category}
+                  </h3>
+                  <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-bold text-white/70">
+                    {formatNumber(items.length)} {items.length === 1 ? "servicio" : "servicios"}
+                  </span>
+                </div>
+                <ul className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                  {items.map((s) => {
+                    const byDay = new Map(s.serviceSchedules.map((sc) => [sc.dayOfWeek, sc]));
+                    const photo = servicePhoto(s.name);
+                    return (
+                      <li key={s.id} id={`servicio-${s.id}`} className="omega-ring h-full scroll-mt-24">
+                        <article className="omega-ring-inner flex h-full flex-col overflow-hidden bg-[#141013]">
+                          {photo ? (
+                            <Link
+                              href={`/admin/servicios/${s.id}`}
+                              className="relative block h-44 shrink-0 overflow-hidden"
+                              aria-label={`Ver ${s.name}`}
+                            >
+                              <Image
+                                src={photo}
+                                alt={s.name}
+                                fill
+                                sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                                className="object-cover transition-transform duration-700 ease-out hover:scale-[1.05]"
+                              />
+                              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+                              <p className="absolute bottom-3 left-4 right-4 text-[10px] font-bold uppercase tracking-[0.18em] text-[#e3bd74]">
+                                {s.category.name}
+                              </p>
+                            </Link>
+                          ) : null}
+                          <div className="flex flex-1 flex-col gap-3 p-5">
+                            <div>
+                              {!photo ? (
+                                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#e3bd74]">
+                                  {s.category.name}
+                                </p>
+                              ) : null}
+                              <h4 className="mt-1 text-lg font-black leading-tight text-white">
+                                <Link href={`/admin/servicios/${s.id}`} className="transition-colors hover:text-[#e3bd74]">
+                                  {s.name}
+                                </Link>
+                              </h4>
+                              {s.description ? (
+                                <p className="mt-1 text-xs leading-relaxed text-white/60" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                                  {s.description}
+                                </p>
+                              ) : null}
+                            </div>
+                            <dl className="grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-center">
+                              <div>
+                                <dt className="text-[0.62rem] font-bold uppercase tracking-wider text-white/50">Capacidad</dt>
+                                <dd className="anum text-base font-extrabold text-white">{formatNumber(s.capacity)}</dd>
+                              </div>
+                              <div className="border-x border-white/10">
+                                <dt className="text-[0.62rem] font-bold uppercase tracking-wider text-white/50">Precio</dt>
+                                <dd className="anum text-base font-extrabold text-[#e3bd74]">{formatCOP(s.price)}</dd>
+                              </div>
+                              <div>
+                                <dt className="text-[0.62rem] font-bold uppercase tracking-wider text-white/50">Próx. reservas</dt>
+                                <dd className="anum text-base font-extrabold text-white">{formatNumber(s._count.reservations)}</dd>
+                              </div>
+                            </dl>
+                            <div>
+                              <p className="mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider text-white/50">
+                                <Users className="h-3 w-3" /> Horario semanal
+                              </p>
+                              {s.serviceSchedules.length > 0 ? (
+                                <ol className="grid grid-cols-7 gap-1" aria-label={`Horario de ${s.name}`}>
+                                  {DAY_ORDER.map((d) => {
+                                    const sc = byDay.get(d);
+                                    return (
+                                      <li
+                                        key={d}
+                                        title={sc ? `${DAY_LABELS[d]}: ${sc.openTime}–${sc.closeTime}` : `${DAY_LABELS[d]}: cerrado`}
+                                        className={`rounded-md border px-0.5 py-1 text-center ${
+                                          sc ? "border-[#e3bd74]/40 bg-[#e3bd74]/10" : "border-white/10 bg-white/5"
+                                        }`}
+                                      >
+                                        <span className="block text-[0.6rem] font-bold text-white/50">{DAY_LABELS[d]}</span>
+                                        <span className={`block text-[0.6rem] font-semibold ${sc ? "text-[#e3bd74]" : "text-white/30"}`}>
+                                          {sc ? `${sc.openTime.slice(0, 5)}` : "—"}
+                                        </span>
+                                      </li>
+                                    );
+                                  })}
+                                </ol>
+                              ) : (
+                                <p className="text-xs text-white/40">Sin horario configurado en el sistema.</p>
+                              )}
+                            </div>
+                            <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
+                              <Link
+                                href={`/admin/servicios/${s.id}`}
+                                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/20 px-4 py-2.5 text-xs font-bold text-white transition-colors hover:border-[#e3bd74] hover:text-[#e3bd74]"
+                                style={{ minHeight: "2.4rem" }}
                               >
-                                <span className="block text-[0.6rem] font-bold text-[#6f625e]">{DAY_LABELS[d]}</span>
-                                <span className={`block text-[0.6rem] font-semibold ${sc ? "text-[#7a1f3d]" : "text-[#a89c97]"}`}>
-                                  {sc ? `${sc.openTime.slice(0, 5)}` : "—"}
-                                </span>
-                              </li>
-                            );
-                          })}
-                        </ol>
-                      ) : (
-                        <p className="text-xs text-[#a89c97]">Sin horario configurado en el sistema.</p>
-                      )}
-                    </div>
-                    <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-[#f0e9e6] pt-3">
-                      <Link
-                        href={`/admin/servicios/${s.id}`}
-                        className="abtn abtn-secondary flex-1"
-                        style={{ minHeight: "2.4rem" }}
-                      >
-                        Ver instalación
-                        <ArrowUpRight className="h-4 w-4" />
-                      </Link>
-                      <Link
-                        href={`/admin/reservas?servicio=${s.id}`}
-                        aria-label={`Ver reservas de ${s.name}`}
-                        className="abtn abtn-primary flex-1"
-                        style={{ minHeight: "2.4rem" }}
-                      >
-                        Reservas
-                      </Link>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ))
+                                Ver instalación
+                                <ArrowUpRight className="h-4 w-4" />
+                              </Link>
+                              <Link
+                                href={`/admin/reservas?servicio=${s.id}`}
+                                aria-label={`Ver reservas de ${s.name}`}
+                                className="inline-flex flex-1 items-center justify-center rounded-xl bg-[#7a1f3d] px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-[#8f2547]"
+                                style={{ minHeight: "2.4rem" }}
+                              >
+                                Reservas
+                              </Link>
+                            </div>
+                          </div>
+                        </article>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
