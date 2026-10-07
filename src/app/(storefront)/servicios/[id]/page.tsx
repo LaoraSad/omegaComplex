@@ -5,13 +5,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { mockServices } from '@/lib/storefront/mock/services';
 import { getAvailabilityForDate, TimeSlotAvailability } from '@/lib/storefront/api/availability';
-import PanoramaClient from '@/components/tour/PanoramaClient';
-import SectionDivider from '@/components/SectionDivider';
+import PanoramaModal from '@/components/tour/PanoramaModal';
+import PanningImage from '@/components/tour/PanningImage';
 import AmbientBubbles from '@/components/AmbientBubbles';
+import SectionDivider from '@/components/SectionDivider';
 import {
   ArrowLeft,
-  ArrowRight,
-  ArrowUpRight,
   Calendar,
   Clock,
   Users,
@@ -24,7 +23,6 @@ import {
   Timer,
   ShieldCheck,
   CreditCard,
-  Maximize2,
 } from 'lucide-react';
 
 interface ServiceDetailPageProps {
@@ -56,12 +54,6 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
   const [bookingStep, setBookingStep] = useState<1 | 2 | 3>(1);
   const [lockSecondsRemaining, setLockSecondsRemaining] = useState<number>(600); // 10 minutos = 600s
   const [isLockExpired, setIsLockExpired] = useState(false);
-
-  // Instalaciones relacionadas (misma categoría, imágenes reales existentes)
-  const relatedServices = useMemo(
-    () => mockServices.filter((s) => s.categoryId === service.categoryId && s.id !== service.id).slice(0, 4),
-    [service.categoryId, service.id],
-  );
 
   // Cargar disponibilidad al cambiar fecha o servicio
   useEffect(() => {
@@ -128,299 +120,139 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
   };
 
   return (
-    <div className="bg-[#0e0b0d] text-[#f5f1ec] antialiased">
-      {/* ============ HERO DE LA INSTALACIÓN ============ */}
-      <section className="omega-hero relative -mt-20 flex min-h-[82svh] items-end overflow-hidden pt-20">
-        <div className="absolute inset-0" aria-hidden="true">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={service.image} alt="" className="omega-kenburns h-full w-full object-cover" />
-          {/* Mismo tratamiento sutil de la Home para legibilidad */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/62 via-black/28 to-black/10" />
-          <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/75 via-black/35 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/60 to-transparent" />
-        </div>
+    <div className="omega-dark-section relative overflow-hidden bg-[#0e0b0d] text-white">
+      <div aria-hidden="true" className="omega-cta-glow" />
+      <AmbientBubbles variant="mixed" />
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
+      {/* Botón de retorno */}
+      <div className="mb-6">
+        <Link
+          href="/servicios"
+          className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-white/55 hover:text-[#e3bd74] transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Volver al catálogo de servicios</span>
+        </Link>
+      </div>
 
-        <div className="relative z-10 mx-auto w-full max-w-[1400px] px-5 pb-14 pt-12 sm:px-8 lg:px-12">
-          <Link
-            href="/servicios"
-            className="omega-fade-up inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.22em] text-white/70 transition-colors hover:text-[#e3bd74]"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Volver al catálogo</span>
-          </Link>
-
-          <p
-            className="omega-fade-up mt-6 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#e3bd74]"
-            style={{ animationDelay: '90ms' }}
-          >
-            <span>{service.categoryName}</span>
-            <span className="inline-block h-px w-14 bg-[#e3bd74]/50" />
-          </p>
-          <h1
-            className="omega-fade-up mt-3 max-w-[800px] text-[38px] font-black uppercase leading-[0.98] tracking-tight text-white sm:text-6xl"
-            style={{ animationDelay: '150ms' }}
-          >
-            {service.name}
-          </h1>
-          <p
-            className="omega-fade-up mt-4 max-w-[560px] text-[15px] leading-relaxed text-white/85"
-            style={{ animationDelay: '220ms' }}
-          >
-            {service.description}
-          </p>
-
-          <div
-            className="omega-fade-up mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px] font-bold uppercase tracking-[0.18em] text-white/80"
-            style={{ animationDelay: '280ms' }}
-          >
-            <span className="inline-flex items-center gap-2">
-              <Users className="h-4 w-4 text-[#e3bd74]" />
-              <span>{service.capacity} personas</span>
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-[#e3bd74]" />
-              <span>{formattedPrice} / hora</span>
-            </span>
-          </div>
-
-          <div className="omega-fade-up mt-7 flex flex-col gap-4 sm:flex-row sm:items-center" style={{ animationDelay: '340ms' }}>
-            <a
-              href="#reserva"
-              className="group inline-flex items-center justify-center gap-2.5 rounded-[4px] bg-[#7a1f3d] px-8 py-3.5 text-[12px] font-bold uppercase tracking-[0.16em] text-white transition-colors hover:bg-[#8f2547]"
-            >
-              <span>Reservar ahora</span>
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </a>
-            {service.tour360Id && (
-              <Link
-                href={`/tour/${service.tour360Id}`}
-                className="inline-flex items-center justify-center gap-2 rounded-[4px] border border-white/25 px-8 py-3.5 text-[12px] font-bold uppercase tracking-[0.16em] text-white backdrop-blur-sm transition-colors hover:border-[#e3bd74] hover:text-[#e3bd74]"
-              >
-                <Maximize2 className="h-4 w-4" />
-                <span>Tour 360°</span>
-              </Link>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <SectionDivider />
-
-      {/* ============ INFORMACIÓN DE LA INSTALACIÓN ============ */}
-      <section className="omega-dark-section relative overflow-hidden py-16 sm:py-20">
-        <AmbientBubbles variant="mixed" />
-        <div className="relative mx-auto max-w-[1400px] px-5 sm:px-8 lg:px-12">
-          <p className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#e3bd74]">
-            <span>La instalación</span>
-            <span className="inline-block h-px w-14 bg-[#e3bd74]/50" />
-          </p>
-          <h2 className="mt-3 max-w-[640px] text-[30px] font-black uppercase leading-[1.05] tracking-tight text-white sm:text-4xl">
-            Todo lo que debes saber
-          </h2>
-
-          <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-3">
-            {/* Ficha */}
-            <div className="omega-card-dark rounded-[6px] p-7">
-              <Clock className="h-6 w-6 text-[#e3bd74]" strokeWidth={1.6} />
-              <h3 className="mt-4 text-[15px] font-extrabold uppercase tracking-wide text-white">
-                Ficha de la instalación
-              </h3>
-              <dl className="mt-4 space-y-2.5 text-[13px] text-white/60">
-                <div className="flex justify-between gap-4 border-b border-white/10 pb-2">
-                  <dt>Capacidad</dt>
-                  <dd className="font-bold text-white">{service.capacity} personas</dd>
-                </div>
-                <div className="flex justify-between gap-4 border-b border-white/10 pb-2">
-                  <dt>Duración</dt>
-                  <dd className="font-bold text-white">Franjas de 1 hora</dd>
-                </div>
-                <div className="flex justify-between gap-4 border-b border-white/10 pb-2">
-                  <dt>Tarifa</dt>
-                  <dd className="font-bold text-[#e3bd74]">{formattedPrice} / hora</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt>Categoría</dt>
-                  <dd className="font-bold text-white">{service.categoryName}</dd>
-                </div>
-              </dl>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Columna Izquierda: Información del Servicio y Reglas (7 cols) */}
+        <div className="lg:col-span-7">
+          {/* Tarjeta principal del servicio */}
+          <div className="omega-ring h-full">
+          <div className="omega-ring-inner p-6 sm:p-8 space-y-6 bg-[#141013]">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-white/20 bg-white/5 text-white/85">
+                {service.categoryName}
+              </span>
+              <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-[#7A1F3D] text-white flex items-center gap-1.5 shadow-xs">
+                <Users className="w-3.5 h-3.5" />
+                <span>Capacidad oficial: {service.capacity} personas</span>
+              </span>
             </div>
 
-            {/* Vista 360 */}
-            <div className="omega-card-dark overflow-hidden rounded-[6px]">
-              <div className="flex items-center justify-between px-7 pt-7">
-                <h3 className="flex items-center gap-2 text-[15px] font-extrabold uppercase tracking-wide text-white">
-                  <Compass className="h-5 w-5 text-[#e3bd74]" />
-                  <span>Vista 360°</span>
-                </h3>
-                {service.tour360Id && (
-                  <Link
-                    href={`/tour/${service.tour360Id}`}
-                    className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[#e3bd74] transition-colors hover:text-white"
-                  >
-                    <span>Tour completo</span>
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                  </Link>
-                )}
-              </div>
-              <div className="p-5">
-                <div className="h-64 overflow-hidden rounded-[4px] bg-black">
-                  <PanoramaClient src={service.panoramaUrl} caption={service.name} />
+            <div>
+              <p className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#e3bd74]">
+                <span>Publicación oficial</span>
+                <span className="inline-block h-px w-14 bg-[#e3bd74]/50" />
+              </p>
+              <h1 className="mt-2 text-3xl sm:text-4xl font-black text-white tracking-tight uppercase">
+                {service.name}
+              </h1>
+            </div>
+
+            <p className="text-sm sm:text-base text-white/60 leading-relaxed">
+              {service.description}
+            </p>
+
+            {/* Foto del servicio (se puede ampliar) */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Compass className="w-4 h-4 text-[#e3bd74]" />
+                  <span>Fotografía del espacio:</span>
+                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] text-white/40 hidden sm:inline">Toca la imagen para ampliarla</span>
                 </div>
-                <p className="mt-3 px-2 text-[12px] text-white/50">
-                  Gira o arrastra para explorar el espacio antes de reservar.
+              </div>
+              <div className="w-full h-80 rounded-2xl overflow-hidden bg-black shadow-inner border border-white/10">
+                <PanoramaModal src={service.panoramaUrl} title={service.name} subtitle={service.categoryName} trigger={
+                  <PanningImage src={service.image} alt={service.name} />
+                } />
+              </div>
+            </div>
+
+            <SectionDivider />
+
+            {/* Ficha técnica y reglas */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                <span className="text-[11px] uppercase font-bold text-white/45 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-[#e3bd74]" />
+                  <span>Duración de la reserva</span>
+                </span>
+                <p className="font-extrabold text-white">
+                  Franjas de 1 hora exacta
+                </p>
+              </div>
+              <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                <span className="text-[11px] uppercase font-bold text-white/45 flex items-center gap-1">
+                  <CreditCard className="w-3.5 h-3.5 text-[#e3bd74]" />
+                  <span>Tarifa por hora</span>
+                </span>
+                <p className="font-extrabold text-[#e3bd74]">
+                  {formattedPrice} COP
                 </p>
               </div>
             </div>
 
-            {/* Normas */}
-            <div className="omega-card-dark rounded-[6px] p-7">
-              <ShieldCheck className="h-6 w-6 text-[#e3bd74]" strokeWidth={1.6} />
-              <h3 className="mt-4 text-[15px] font-extrabold uppercase tracking-wide text-white">
-                Normas de ingreso
-              </h3>
-              {service.rules && service.rules.length > 0 ? (
-                <ul className="mt-4 space-y-2.5 text-[13px] leading-relaxed text-white/60">
+            {/* Reglas oficiales si aplican */}
+            {service.rules && service.rules.length > 0 && (
+              <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-400/25 space-y-2">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-amber-200 flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-300" />
+                  <span>Normas obligatorias de ingreso:</span>
+                </h4>
+                <ul className="text-xs sm:text-sm text-amber-100/85 space-y-1.5 font-medium">
                   {service.rules.map((rule, idx) => (
                     <li key={idx} className="flex items-start gap-2">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#e3bd74]" />
+                      <Check className="w-4 h-4 text-[#e3bd74] shrink-0 mt-0.5" />
                       <span>{rule}</span>
                     </li>
                   ))}
                 </ul>
-              ) : (
-                <p className="mt-4 text-[13px] leading-relaxed text-white/60">
-                  Consulta las normas generales del complejo en la sección de información.
-                </p>
-              )}
-              <div className="mt-5 border-t border-white/10 pt-4 text-[12px] leading-relaxed text-white/50">
-                <p className="flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5 text-[#e3bd74]" />
-                  <span>Reservas hasta con 3 meses de anticipación.</span>
-                </p>
-                <p className="mt-1.5">Horario: 08:00 – 17:00 · Lunes cerrado.</p>
               </div>
-            </div>
+            )}
           </div>
-
-          {/* Horarios del servicio (datos reales) */}
-          {service.schedules && service.schedules.length > 0 && (
-            <div className="mt-5 omega-card-dark rounded-[6px] p-7">
-              <h3 className="flex items-center gap-2 text-[15px] font-extrabold uppercase tracking-wide text-white">
-                <Clock className="h-5 w-5 text-[#e3bd74]" />
-                <span>Franjas horarias</span>
-              </h3>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {service.schedules.map((s) => (
-                  <span
-                    key={s}
-                    className="rounded-[4px] border border-white/10 bg-white/5 px-3.5 py-2 text-[12px] font-bold tracking-wide text-white/80"
-                  >
-                    {s}
-                  </span>
-                ))}
-              </div>
-              {service.availableDays && service.availableDays.length > 0 && (
-                <p className="mt-4 text-[12px] uppercase tracking-[0.16em] text-white/50">
-                  Días habilitados: <span className="font-bold text-white/80">{service.availableDays.join(' · ')}</span>
-                </p>
-              )}
-            </div>
-          )}
+          </div>
         </div>
-      </section>
 
-      {/* ============ GALERÍA: MISMA CATEGORÍA ============ */}
-      {relatedServices.length > 0 && (
-        <>
-          <SectionDivider />
-          <section className="omega-dark-section-2 relative overflow-hidden py-16 sm:py-20">
-            <div className="relative mx-auto max-w-[1400px] px-5 sm:px-8 lg:px-12">
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                  <p className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#e3bd74]">
-                    <span>También en {service.categoryName}</span>
-                    <span className="inline-block h-px w-14 bg-[#e3bd74]/50" />
-                  </p>
-                  <h2 className="mt-3 text-[30px] font-black uppercase leading-[1.05] tracking-tight text-white sm:text-4xl">
-                    Sigue explorando
-                  </h2>
-                </div>
-                <Link
-                  href="/servicios"
-                  className="group inline-flex w-fit items-center gap-2.5 rounded-[4px] border border-white/25 px-6 py-3 text-[11px] font-bold uppercase tracking-[0.16em] text-white transition-colors hover:border-[#e3bd74] hover:text-[#e3bd74]"
-                >
-                  <span>Ver todas las instalaciones</span>
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Link>
+        {/* Columna Derecha: Flujo de Disponibilidad y Reserva (5 cols) */}
+        <div className="lg:col-span-5">
+          <div className="omega-ring h-full">
+          <div className="omega-ring-inner p-6 sm:p-8 space-y-6 bg-[#141013]">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-[#e3bd74]">
+                  Paso a paso
+                </span>
+                <h3 className="text-xl font-extrabold text-white uppercase tracking-tight">
+                  Reserva tu Franja
+                </h3>
               </div>
-
-              <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-                {relatedServices.map((s) => (
-                  <article key={s.id} className="omega-card omega-card-dark group relative overflow-hidden rounded-[6px]">
-                    <Link href={`/servicios/${s.id}`} aria-label={`Ver ${s.name}`} className="block">
-                      <div className="relative h-[280px] overflow-hidden">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={s.image}
-                          alt={s.name}
-                          loading="lazy"
-                          className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
-                        <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-5">
-                          <div>
-                            <h3 className="text-[15px] font-extrabold uppercase leading-tight tracking-wide text-white">
-                              {s.name}
-                            </h3>
-                            <p className="mt-1.5 flex items-center gap-1.5 text-[12px] font-medium text-white/65">
-                              <Users className="h-3.5 w-3.5 text-[#e3bd74]" />
-                              <span>{s.capacity} personas</span>
-                            </p>
-                          </div>
-                          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/25 text-white transition-all group-hover:border-[#e3bd74] group-hover:bg-[#e3bd74] group-hover:text-[#1d1214]">
-                            <ArrowUpRight className="h-4 w-4" />
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  </article>
-                ))}
-              </div>
+              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-[#7A1F3D] text-white">
+                Cobro por hora
+              </span>
             </div>
-          </section>
-        </>
-      )}
 
-      <SectionDivider />
-
-      {/* ============ RESERVA ============ */}
-      <section id="reserva" className="relative scroll-mt-20 overflow-hidden bg-[#14090f] py-16 sm:py-20">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 top-0 h-72 w-[52rem] -translate-x-1/2 rounded-full bg-[#7a1f3d]/25 blur-[110px]"
-        />
-        <div className="relative mx-auto max-w-[900px] px-5 sm:px-8">
-          <div className="text-center">
-            <p className="inline-flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#e3bd74]">
-              <span>Reserva tu franja</span>
-              <span className="inline-block h-px w-14 bg-[#e3bd74]/50" />
-            </p>
-            <h2 className="mt-3 text-[30px] font-black uppercase leading-[1.05] tracking-tight text-white sm:text-4xl">
-              Asegura tu espacio
-            </h2>
-            <p className="mx-auto mt-3 max-w-[520px] text-[14px] leading-relaxed text-white/60">
-              Disponibilidad en tiempo real, cobro por hora y códigos QR de acceso inmediato.
-            </p>
-          </div>
-
-          <div className="omega-card-dark mt-10 rounded-[6px] p-6 sm:p-8">
             {/* PASO 1: SELECCIÓN DE FECHA Y HORARIO */}
             {bookingStep === 1 && (
               <div className="space-y-6">
                 {/* Selector de Fecha */}
                 <div>
-                  <label className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white">
-                    <Calendar className="h-4 w-4 text-[#e3bd74]" />
+                  <label className="block text-xs font-bold uppercase tracking-wider text-white mb-2 flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4 text-[#e3bd74]" />
                     <span>1. Selecciona la fecha (hasta 3 meses):</span>
                   </label>
                   <input
@@ -433,21 +265,23 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                       setLoadingAvailability(true);
                       setSelectedDate(e.target.value);
                     }}
-                    className="w-full rounded-[4px] border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white [color-scheme:dark] focus:border-[#e3bd74] focus:outline-none"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-semibold text-white [color-scheme:dark] placeholder-white/35 focus:outline-none focus:border-[#e3bd74] focus:shadow-[0_0_0_3px_rgba(227,189,116,0.18)] transition-all"
                   />
-                  <p className="mt-1.5 text-[11px] text-white/50">
+                  <p className="text-[11px] text-white/45 mt-1.5">
                     * El complejo opera de 08:00 a 17:00. Lunes cerrado por mantenimiento.
                   </p>
                 </div>
 
+                <SectionDivider />
+
                 {/* Alerta de día de mantenimiento */}
                 {isMaintenance ? (
-                  <div className="space-y-1 rounded-[4px] border border-red-400/30 bg-red-500/10 p-4 text-xs text-red-200 sm:text-sm">
-                    <p className="flex items-center gap-1.5 font-bold">
-                      <AlertTriangle className="h-4 w-4 text-red-400" />
+                  <div className="p-4 rounded-xl bg-red-500/10 border border-red-400/25 text-red-100 text-xs sm:text-sm space-y-1">
+                    <p className="font-bold flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-red-400" />
                       <span>Complejo cerrado por mantenimiento</span>
                     </p>
-                    <p className="text-xs text-red-200/80">
+                    <p className="text-xs text-red-100/75">
                       Los lunes no se prestan servicios por jornada de mantenimiento general (si el lunes es festivo, se traslada al martes). Por favor selecciona otra fecha.
                     </p>
                   </div>
@@ -455,30 +289,30 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                   /* Selector de Franjas Horarias */
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white">
-                        <Clock className="h-4 w-4 text-[#e3bd74]" />
+                      <label className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+                        <Clock className="w-4 h-4 text-[#e3bd74]" />
                         <span>2. Horario disponible (08:00 - 17:00):</span>
                       </label>
-                      <span className="text-[11px] text-white/50">
+                      <span className="text-[11px] text-white/45">
                         {loadingAvailability ? 'Verificando...' : 'En tiempo real'}
                       </span>
                     </div>
 
                     {/* Guía de estados */}
-                    <div className="flex flex-wrap gap-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/50">
-                      <span className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500" /> Disponible
+                    <div className="flex flex-wrap gap-2 text-[10px] font-semibold text-white/50 pb-1">
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" /> Disponible
                       </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-white/20" /> Ocupado
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-white/20" /> Ocupado
                       </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-amber-500" /> Bloqueado (10m)
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-amber-500" /> Bloqueado (10m)
                       </span>
                     </div>
 
                     {/* Grid de franjas */}
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {availabilitySlots.map((slot) => {
                         const isAvailable = slot.status === 'disponible';
                         const isBlocked = slot.status === 'bloqueado';
@@ -489,18 +323,18 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                             key={slot.timeSlot}
                             disabled={!isAvailable}
                             onClick={() => setSelectedSlot(slot.timeSlot)}
-                            className={`rounded-[4px] border p-3 text-left transition-all ${
+                            className={`p-3 rounded-xl border text-left transition-all ${
                               isSelected
-                                ? 'border-[#7A1F3D] bg-[#7A1F3D] text-white'
+                                ? 'bg-[#7A1F3D] text-white border-[#e3bd74]/60 shadow-[0_0_24px_rgba(122,31,61,0.5)] cursor-pointer'
                                 : isAvailable
-                                ? 'cursor-pointer border-white/10 bg-white/5 text-white hover:border-[#e3bd74]'
+                                ? 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-[#e3bd74]/50 text-white cursor-pointer'
                                 : isBlocked
-                                ? 'cursor-not-allowed border-amber-400/20 bg-amber-500/5 text-white/40 opacity-75'
-                                : 'cursor-not-allowed border-white/5 bg-white/[0.02] text-white/30 opacity-60'
+                                ? 'bg-amber-500/10 border-amber-400/25 text-white/50 cursor-not-allowed opacity-75'
+                                : 'bg-white/[0.03] border-white/10 text-white/30 cursor-not-allowed opacity-60'
                             }`}
                           >
-                            <p className="text-xs font-bold">{slot.timeSlot}</p>
-                            <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wider opacity-80">
+                            <p className="font-bold text-xs">{slot.timeSlot}</p>
+                            <span className="text-[10px] font-semibold block mt-0.5 opacity-90">
                               {isAvailable
                                 ? `${slot.availableCapacity} cupos libres`
                                 : isBlocked
@@ -516,11 +350,11 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
 
                 {/* Cantidad de entradas / acompañantes */}
                 {selectedSlot && !isMaintenance && (
-                  <div className="space-y-4 border-t border-white/10 pt-6">
+                  <div className="pt-4 border-t border-white/10 space-y-4">
                     <div>
-                      <div className="mb-1.5 flex items-center justify-between">
-                        <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white">
-                          <Users className="h-4 w-4 text-[#e3bd74]" />
+                      <div className="flex justify-between items-center mb-1.5">
+                        <label className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+                          <Users className="w-4 h-4 text-[#e3bd74]" />
                           <span>3. Entradas requeridas:</span>
                         </label>
                         <span className="text-xs font-bold text-[#e3bd74]">
@@ -530,40 +364,40 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => setTicketsCount(Math.max(1, ticketsCount - 1))}
-                          className="h-10 w-10 cursor-pointer rounded-[4px] border border-white/10 bg-white/5 text-lg font-bold text-white transition-colors hover:border-[#e3bd74]"
+                          className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 text-lg font-bold text-white border border-white/10 cursor-pointer transition-colors"
                         >
                           -
                         </button>
-                        <span className="w-10 text-center text-lg font-black text-white">
+                        <span className="text-lg font-black text-white w-10 text-center">
                           {ticketsCount}
                         </span>
                         <button
                           onClick={() => setTicketsCount(Math.min(service.capacity, ticketsCount + 1))}
-                          className="h-10 w-10 cursor-pointer rounded-[4px] border border-white/10 bg-white/5 text-lg font-bold text-white transition-colors hover:border-[#e3bd74]"
+                          className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 text-lg font-bold text-white border border-white/10 cursor-pointer transition-colors"
                         >
                           +
                         </button>
                       </div>
-                      <p className="mt-1 text-[11px] text-white/50">
+                      <p className="text-[11px] text-white/45 mt-1">
                         Cada entrada generará un código QR individual e intransferible.
                       </p>
                     </div>
 
                     {/* Resumen de cobro */}
-                    <div className="space-y-2 rounded-[4px] border border-white/10 bg-white/5 p-4">
-                      <div className="flex justify-between text-xs text-white/50">
+                    <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+                      <div className="flex justify-between text-xs text-white/55">
                         <span>Servicio:</span>
                         <span className="font-semibold text-white">{service.name}</span>
                       </div>
-                      <div className="flex justify-between text-xs text-white/50">
+                      <div className="flex justify-between text-xs text-white/55">
                         <span>Fecha y hora:</span>
                         <span className="font-semibold text-white">{selectedDate} ({selectedSlot})</span>
                       </div>
-                      <div className="flex justify-between text-xs text-white/50">
+                      <div className="flex justify-between text-xs text-white/55">
                         <span>Total entradas:</span>
                         <span className="font-semibold text-white">{ticketsCount} persona(s)</span>
                       </div>
-                      <div className="flex items-baseline justify-between border-t border-white/10 pt-2 text-base font-black text-white">
+                      <div className="pt-2 border-t border-white/10 flex justify-between items-baseline font-black text-base text-white">
                         <span>Total a pagar:</span>
                         <span className="text-xl text-[#e3bd74]">{formattedTotalPrice} COP</span>
                       </div>
@@ -576,11 +410,10 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                         setLockSecondsRemaining(600);
                         setIsLockExpired(false);
                       }}
-                      className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[4px] bg-[#7A1F3D] py-4 text-center text-sm font-extrabold uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#8f2547]"
+                      className="w-full py-4 rounded-xl bg-[#7A1F3D] hover:bg-[#8f2547] text-white font-extrabold text-sm shadow-[0_10px_28px_rgba(122,31,61,0.4)] transition-all active:scale-95 text-center cursor-pointer flex items-center justify-center gap-2"
                     >
-                      <Lock className="h-4 w-4" />
-                      <span>Continuar a bloqueo y pago</span>
-                      <ArrowRight className="h-4 w-4" />
+                      <Lock className="w-4 h-4" />
+                      <span>Continuar a Bloqueo y Pago →</span>
                     </button>
                   </div>
                 )}
@@ -591,12 +424,12 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
             {bookingStep === 2 && (
               <div className="space-y-6">
                 {isLockExpired ? (
-                  <div className="space-y-3 rounded-[4px] border border-red-400/30 bg-red-500/10 p-6 text-center">
-                    <Timer className="mx-auto h-10 w-10 text-red-400" />
-                    <h4 className="text-base font-bold text-red-200">
+                  <div className="p-6 rounded-2xl bg-red-500/10 border border-red-400/25 text-center space-y-3">
+                    <Timer className="w-10 h-10 text-red-400 mx-auto" />
+                    <h4 className="font-bold text-red-100 text-base">
                       El bloqueo de 10 minutos ha expirado
                     </h4>
-                    <p className="text-xs leading-relaxed text-red-200/80">
+                    <p className="text-xs text-red-100/70 leading-relaxed">
                       Para garantizar un aforo justo para todos los clientes, el cupo temporal se ha liberado. Por favor selecciona nuevamente tu horario.
                     </p>
                     <button
@@ -605,7 +438,7 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                         setSelectedSlot(null);
                         setIsLockExpired(false);
                       }}
-                      className="cursor-pointer rounded-[4px] bg-[#7A1F3D] px-5 py-2.5 text-xs font-bold uppercase tracking-[0.12em] text-white hover:bg-[#8f2547]"
+                      className="px-5 py-2.5 rounded-xl bg-[#7A1F3D] text-white text-xs font-bold shadow-xs hover:bg-[#8f2547] cursor-pointer"
                     >
                       Volver a seleccionar horario
                     </button>
@@ -613,23 +446,23 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                 ) : (
                   <>
                     {/* Contador regresivo de bloqueo temporal */}
-                    <div className="flex items-center justify-between rounded-[4px] border border-amber-400/25 bg-amber-500/10 p-4">
+                    <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-400/25 flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-200">
-                          <Timer className="h-3.5 w-3.5 animate-pulse text-amber-300" />
+                        <span className="text-[10px] uppercase font-bold text-amber-200 tracking-wider flex items-center gap-1.5">
+                          <Timer className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
                           <span>Bloqueo temporal activo:</span>
                         </span>
-                        <p className="text-xs text-amber-200/80">
+                        <p className="text-xs text-amber-100/75">
                           Tu cupo está reservado exclusivamente para ti.
                         </p>
                       </div>
-                      <div className="rounded-[4px] border border-amber-400/25 bg-black/40 px-3 py-1 text-2xl font-black tabular-nums tracking-wide text-[#e3bd74]">
+                      <div className="text-2xl font-black tabular-nums tracking-wide text-[#e3bd74] bg-black/40 px-3 py-1 rounded-xl border border-amber-400/25 shadow-2xs">
                         {formatLockTimer(lockSecondsRemaining)}
                       </div>
                     </div>
 
                     {/* Resumen de reserva */}
-                    <div className="space-y-2.5 rounded-[4px] border border-white/10 bg-white/5 p-5 text-xs text-white/50">
+                    <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-2.5 text-xs text-white/55">
                       <div className="flex justify-between">
                         <span>Servicio:</span>
                         <span className="font-bold text-white">{service.name}</span>
@@ -642,7 +475,7 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                         <span>Entradas individuales:</span>
                         <span className="font-bold text-white">{ticketsCount} QR</span>
                       </div>
-                      <div className="flex items-baseline justify-between border-t border-white/10 pt-2 text-base font-black text-white">
+                      <div className="pt-2 border-t border-white/10 flex justify-between items-baseline font-black text-base text-white">
                         <span>Monto total:</span>
                         <span className="text-xl text-[#e3bd74]">{formattedTotalPrice} COP</span>
                       </div>
@@ -650,17 +483,17 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
 
                     {/* Proveedor de Pago Stripe */}
                     <div className="space-y-3">
-                      <span className="block text-xs font-bold uppercase tracking-wider text-white">
+                      <span className="text-xs font-bold uppercase tracking-wider text-white block">
                         Pasarela de pago segura:
                       </span>
-                      <div className="flex items-center justify-between rounded-[4px] border border-white/10 bg-white/5 p-3.5">
+                      <div className="p-3.5 rounded-xl border border-white/10 bg-white/5 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <CreditCard className="h-4 w-4 text-indigo-300" />
-                          <span className="text-sm font-black tracking-tight text-indigo-200">stripe</span>
-                          <span className="text-xs font-medium text-white/50">Tarjeta débito / crédito (COP)</span>
+                          <CreditCard className="w-4 h-4 text-indigo-300" />
+                          <span className="font-black text-indigo-300 tracking-tight text-sm">stripe</span>
+                          <span className="text-xs text-white/50 font-medium">Tarjeta débito / crédito (COP)</span>
                         </div>
-                        <span className="flex items-center gap-1 text-xs font-bold text-emerald-400">
-                          <ShieldCheck className="h-3.5 w-3.5" />
+                        <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
+                          <ShieldCheck className="w-3.5 h-3.5" />
                           <span>Cifrado SSL</span>
                         </span>
                       </div>
@@ -669,7 +502,7 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                         onClick={() => {
                           setBookingStep(3);
                         }}
-                        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[4px] bg-[#7A1F3D] py-4 text-center text-sm font-black uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#8f2547]"
+                        className="w-full py-4 rounded-xl bg-[#7A1F3D] hover:bg-[#8f2547] text-white font-black text-sm shadow-[0_10px_28px_rgba(122,31,61,0.4)] transition-all active:scale-95 text-center cursor-pointer flex items-center justify-center gap-2"
                       >
                         <span>Pagar {formattedTotalPrice} COP con Stripe</span>
                         <span>→</span>
@@ -677,7 +510,7 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
 
                       <button
                         onClick={() => setBookingStep(1)}
-                        className="w-full cursor-pointer py-2 text-xs font-semibold text-white/50 transition-colors hover:text-white"
+                        className="w-full py-2 text-xs font-semibold text-white/45 hover:text-white transition-colors cursor-pointer"
                       >
                         Cancelar y cambiar franja
                       </button>
@@ -690,15 +523,15 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
             {/* PASO 3: CONFIRMACIÓN Y EMISIÓN DE CÓDIGOS QR */}
             {bookingStep === 3 && (
               <div className="space-y-6 text-center">
-                <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-emerald-400/30 bg-emerald-500/10">
-                  <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+                <div className="w-16 h-16 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-400 flex items-center justify-center text-3xl mx-auto shadow-xs">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-400" />
                 </div>
 
                 <div className="space-y-1">
-                  <h4 className="text-2xl font-black uppercase tracking-tight text-white">
-                    ¡Reserva confirmada!
+                  <h4 className="text-2xl font-black text-white uppercase tracking-tight">
+                    ¡Reserva Confirmada!
                   </h4>
-                  <p className="text-xs text-white/60 sm:text-sm">
+                  <p className="text-xs sm:text-sm text-white/55">
                     Hemos generado {ticketsCount} código(s) QR individual(es) para tu acceso.
                   </p>
                 </div>
@@ -708,44 +541,45 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                   {Array.from({ length: ticketsCount }).map((_, idx) => (
                     <div
                       key={idx}
-                      className="flex flex-col items-center gap-4 rounded-[4px] border border-white/10 bg-white/5 p-4 text-left sm:flex-row"
+                      className="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col sm:flex-row items-center gap-4 text-left"
                     >
-                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[4px] border border-white/10 bg-white p-1">
+                      <div className="w-16 h-16 rounded-xl bg-white border border-white/10 p-1 flex items-center justify-center shrink-0">
+                        {/* Intencionalmente <img>: URL externa + QR (no optimizar ni recomprimir). */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=OMEGA-${service.id}-${selectedDate}-${idx + 1}`}
                           alt="Código QR de Entrada"
-                          className="h-full w-full object-contain"
+                          className="w-full h-full object-contain"
                         />
                       </div>
-                      <div className="min-w-0 flex-1 space-y-0.5 text-center sm:text-left">
+                      <div className="space-y-0.5 min-w-0 flex-1">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-[#e3bd74]">
                           Entrada {idx + 1} de {ticketsCount}
                         </span>
-                        <p className="truncate text-xs font-extrabold text-white">
+                        <p className="text-xs font-extrabold text-white truncate">
                           {service.name}
                         </p>
-                        <p className="text-[11px] text-white/50">
+                        <p className="text-[11px] text-white/55">
                           {selectedDate} | {selectedSlot}
                         </p>
                       </div>
-                      <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300">
                         Válido
                       </span>
                     </div>
                   ))}
                 </div>
 
-                <p className="text-[11px] text-white/50">
+                <p className="text-[11px] text-white/45">
                   Los códigos también fueron enviados a tu correo electrónico. Puedes consultarlos en cualquier momento en <strong>Mis reservas</strong>.
                 </p>
 
-                <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                <div className="pt-2 flex flex-col sm:flex-row gap-3">
                   <Link
                     href="/mis-reservas"
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-[4px] bg-[#7A1F3D] py-3 text-xs font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#8f2547]"
+                    className="flex-1 py-3 rounded-xl bg-[#7A1F3D] text-white font-bold text-xs hover:bg-[#8f2547] transition-colors flex items-center justify-center gap-1.5"
                   >
-                    <QrCode className="h-4 w-4" />
+                    <QrCode className="w-4 h-4" />
                     <span>Ver mis reservas</span>
                   </Link>
                   <button
@@ -753,7 +587,7 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                       setBookingStep(1);
                       setSelectedSlot(null);
                     }}
-                    className="flex-1 cursor-pointer rounded-[4px] border border-white/15 py-3 text-xs font-bold uppercase tracking-[0.12em] text-white transition-colors hover:border-[#e3bd74] hover:text-[#e3bd74]"
+                    className="flex-1 py-3 rounded-xl border border-white/15 text-xs font-bold text-white hover:bg-white/5 cursor-pointer transition-colors"
                   >
                     Hacer otra reserva
                   </button>
@@ -761,8 +595,10 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
               </div>
             )}
           </div>
+          </div>
         </div>
-      </section>
+      </div>
+      </div>
     </div>
   );
 }
