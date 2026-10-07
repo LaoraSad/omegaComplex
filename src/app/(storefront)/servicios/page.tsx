@@ -5,6 +5,9 @@ import { useSearchParams } from 'next/navigation';
 import { mockCategories } from '@/lib/storefront/mock/categories';
 import { mockServices } from '@/lib/storefront/mock/services';
 import ServiceCard from '@/components/catalog/ServiceCard';
+import BookingGuide from '@/components/storefront/BookingGuide';
+import AmbientBubbles from '@/components/AmbientBubbles';
+import SectionDivider from '@/components/SectionDivider';
 import { Search, Waves, Trophy, Dumbbell, Sparkles, Filter, X } from 'lucide-react';
 
 function ServicesContent() {
@@ -44,30 +47,36 @@ function ServicesContent() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="omega-dark-section relative overflow-hidden bg-[#0e0b0d] text-white">
+      <div aria-hidden="true" className="omega-cta-glow" />
+      <AmbientBubbles variant="mixed" />
+      <BookingGuide />
+
+      <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       {/* Encabezado */}
-      <div className="mb-10 text-center sm:text-left space-y-2">
-        <span className="text-xs font-bold uppercase tracking-wider text-[#C8A96B]">
-          Catálogo Oficial
-        </span>
-        <h1 className="text-3xl sm:text-4xl font-black text-[#1F1F1F] tracking-tight">
+      <div className="mb-8 text-center sm:text-left space-y-2">
+        <p className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#e3bd74] max-sm:justify-center">
+          <span>Catálogo Oficial</span>
+          <span className="inline-block h-px w-14 bg-[#e3bd74]/50" />
+        </p>
+        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight uppercase">
           Servicios e Instalaciones
         </h1>
-        <p className="text-sm sm:text-base text-[#6B7280] max-w-2xl">
-          Explora los servicios disponibles del complejo con vista 360°, consulta capacidades y selecciona el espacio ideal para tu entrenamiento o esparcimiento.
+        <p className="text-sm sm:text-base text-white/60 max-w-2xl">
+          Explora los servicios disponibles del complejo, consulta capacidades y selecciona el espacio ideal para tu entrenamiento o esparcimiento.
         </p>
       </div>
 
       {/* Filtros por Categoría y Buscador */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-10 pb-6 border-b border-[#E5E7EB]">
+      <div data-tour="filtros" className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6">
         {/* Pestañas de categorías */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 scrollbar-none">
           <button
             onClick={() => setCategoryState('todas')}
             className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
               currentCategory === 'todas'
-                ? 'bg-[#7A1F3D] text-white shadow-xs'
-                : 'bg-white text-[#6B7280] border border-[#E5E7EB] hover:text-[#1F1F1F]'
+                ? 'bg-[#7a1f3d] text-white shadow-[0_8px_24px_rgba(122,31,61,0.45)]'
+                : 'bg-white/5 text-white/60 border border-white/10 hover:text-white hover:border-white/25'
             }`}
           >
             <Filter className="w-3.5 h-3.5" />
@@ -83,8 +92,8 @@ function ServicesContent() {
                 onClick={() => setCategoryState(cat.id)}
                 className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
                   isSelected
-                    ? 'bg-[#7A1F3D] text-white shadow-xs'
-                    : 'bg-white text-[#6B7280] border border-[#E5E7EB] hover:text-[#1F1F1F]'
+                    ? 'bg-[#7a1f3d] text-white shadow-[0_8px_24px_rgba(122,31,61,0.45)]'
+                    : 'bg-white/5 text-white/60 border border-white/10 hover:text-white hover:border-white/25'
                 }`}
               >
                 <span>{getCategoryIcon(cat.slug)}</span>
@@ -96,38 +105,42 @@ function ServicesContent() {
         </div>
 
         {/* Buscador de texto */}
-        <div className="relative min-w-[280px]">
+        <div data-tour="buscador" className="relative min-w-[280px]">
           <input
             type="text"
             placeholder="Buscar cancha, piscina..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-2.5 pl-10 text-sm bg-white border border-[#E5E7EB] rounded-xl text-[#1F1F1F] placeholder-[#6B7280] focus:outline-none focus:border-[#7A1F3D] transition-colors"
+            className="w-full px-4 py-2.5 pl-10 text-sm bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/35 focus:outline-none focus:border-[#b3295a] focus:shadow-[0_0_0_3px_rgba(142,35,71,0.35)] transition-all"
           />
-          <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-[#6B7280]" />
+          <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-white/40" />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-3 text-[#6B7280] hover:text-[#1F1F1F]"
+              className="absolute right-3 top-3 text-white/40 hover:text-white"
             >
               <X className="w-4 h-4" />
             </button>
           )}
         </div>
       </div>
+      {/* El divisor ES la línea inferior de la barra de filtros */}
+      <SectionDivider />
 
-      {/* Grid de Servicios con Visor 360 */}
+      {/* Grid de Servicios */}
       {filteredServices.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredServices.map((service) => (
-            <ServiceCard key={service.id} service={service} />
+        <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredServices.map((service, i) => (
+            <div key={service.id} data-tour={i === 0 ? 'reservar' : undefined} className="omega-card min-w-0">
+              <ServiceCard service={service} />
+            </div>
           ))}
         </div>
       ) : (
-        <div className="text-center py-16 bg-white rounded-2xl border border-[#E5E7EB] p-8 max-w-md mx-auto space-y-3">
-          <Search className="w-12 h-12 text-[#6B7280] mx-auto opacity-50" />
-          <h3 className="font-bold text-lg text-[#1F1F1F]">No se encontraron servicios</h3>
-          <p className="text-xs text-[#6B7280]">
+        <div className="mt-10 text-center py-16 rounded-2xl border border-white/10 bg-white/5 p-8 max-w-md mx-auto space-y-3">
+          <Search className="w-12 h-12 text-white/30 mx-auto" />
+          <h3 className="font-bold text-lg text-white">No se encontraron servicios</h3>
+          <p className="text-xs text-white/55">
             No hay servicios que coincidan con la búsqueda o categoría seleccionada.
           </p>
           <button
@@ -135,19 +148,20 @@ function ServicesContent() {
               setCategoryState('todas');
               setSearchQuery('');
             }}
-            className="text-xs font-bold text-[#7A1F3D] hover:underline cursor-pointer"
+            className="text-xs font-bold text-[#e3bd74] hover:underline cursor-pointer"
           >
             Restablecer filtros
           </button>
         </div>
       )}
+      </div>
     </div>
   );
 }
 
 export default function ServicesPage() {
   return (
-    <Suspense fallback={<div className="p-12 text-center text-[#6B7280]">Cargando catálogo...</div>}>
+    <Suspense fallback={<div className="p-12 text-center text-white/55 bg-[#0e0b0d]">Cargando catálogo...</div>}>
       <ServicesContent />
     </Suspense>
   );

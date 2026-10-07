@@ -20,7 +20,7 @@ function Wordmark() {
         className="auth-logo-image"
         height={77}
         priority
-        src="/Logo-blanco.png"
+        src="/Logo-vino.png"
         width={280}
       />
     </Link>

@@ -247,6 +247,7 @@ export default function MyReservationsPage() {
                   className="p-5 rounded-2xl bg-[#F5F5F5] border border-[#E5E7EB] flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left"
                 >
                   <div className="w-28 h-28 rounded-xl bg-white border border-[#E5E7EB] p-1.5 flex items-center justify-center shrink-0 shadow-xs">
+                    {/* Intencionalmente <img>: los QR no deben pasar por el optimizador (recomprimirlos daña el escaneo). */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={tkt.qrCodeUrl}
