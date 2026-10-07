@@ -56,7 +56,7 @@ model Customer {
 }
 
 model Category {
-  id          String  @id @default(uuid()) @db.Uuid
+  id          String  @id @default(cuid())
   name        String  @unique
   description String?
 
@@ -64,8 +64,8 @@ model Category {
 }
 
 model Service {
-  id          String  @id @default(uuid()) @db.Uuid
-  categoryId  String  @db.Uuid
+  id          String  @id @default(cuid())
+  categoryId  String
   name        String  @unique
   slug        String  @unique
   description String?
@@ -235,7 +235,6 @@ model Reservation {
   startsAt   DateTime
   endsAt     DateTime
   createdAt  DateTime           @default(now())
-  // updatedAt   DateTime           @updatedAt
 
   customer Customer @relation(fields: [customerId], references: [id])
   service  Service  @relation(fields: [serviceId], references: [id])

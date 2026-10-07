@@ -13,8 +13,10 @@ import type { StripeCheckoutSessionResult } from "./payments.types";
 export async function createCheckoutSession(
   input: CreatePaymentInput
 ): Promise<StripeCheckoutSessionResult> {
-  const paymentRecord = await getPaymentById(input.reservationId);
-  const reservation = paymentRecord?.reservation;
+  const reservation = await db.reservation.findUnique({
+    where: { id: input.reservationId },
+    include: { service: { select: { id: true, name: true } } },
+  });
 
   if (!reservation) {
     throw new HttpError(404, "RESERVATION_NOT_FOUND", "Reserva no encontrada");
@@ -96,7 +98,7 @@ export async function handleStripeWebhook(payload: string, signature: string): P
 
   switch (event.type) {
     case "checkout.session.completed": {
-      const session = event.data.object as Stripe.Checkout.Session;
+      const session = event.data.object as Stripe.Checkout.Session & { receipt_url?: string };
       const paymentId = session.metadata?.paymentId;
       const reservationId = session.metadata?.reservationId;
 
@@ -141,7 +143,7 @@ export async function handleStripeWebhook(payload: string, signature: string): P
     }
 
     case "payment_intent.succeeded": {
-      const intent = event.data.object as Stripe.PaymentIntent;
+      const intent = event.data.object as Stripe.PaymentIntent & { charges?: { data: Array<{ receipt_url?: string }> } };
       const paymentId = intent.metadata?.paymentId;
       const reservationId = intent.metadata?.reservationId;
 

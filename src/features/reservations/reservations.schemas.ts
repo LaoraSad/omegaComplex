@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const createReservationSchema = z.object({
-  serviceId: z.string().uuid("ID de servicio inválido"),
+  serviceId: z.string().min(1, "ID de servicio inválido"),
   startsAt: z.iso.datetime({ offset: true }).catch(() => { throw new Error("Fecha de inicio inválida"); }),
   endsAt: z.iso.datetime({ offset: true }).catch(() => { throw new Error("Fecha de fin inválida"); }),
   quantity: z.number().int().min(1).max(20).default(1),
@@ -14,7 +14,7 @@ export const reservationParamsSchema = z.object({
 
 export const listReservationsQuerySchema = z.object({
   status: z.string().optional(),
-  serviceId: z.string().uuid().optional(),
+  serviceId: z.string().optional(),
   channel: z.enum(["online", "in_person"]).optional(),
   from: z.iso.datetime({ offset: true }).optional(),
   to: z.iso.datetime({ offset: true }).optional(),

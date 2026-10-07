@@ -75,7 +75,7 @@ export async function createReservation(
   }
 
   const result = await createReservationWithHold(customerId, {
-    serviceId: input.serviceId,
+    serviceId: service.id,
     startsAt,
     endsAt,
     quantity: input.quantity,

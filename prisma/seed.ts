@@ -109,144 +109,154 @@ async function main() {
   const services = [
     // Piscinas
     {
-      name: "Piscina infantil",
+      name: "Piscina Infantil",
       slug: "piscina-infantil",
-      description: "Piscina destinada al uso infantil.",
-      price: 8000,
+      description: "Piscina interactiva con juegos y poca profundidad para los más pequeños.",
+      price: 15000,
       capacity: 100,
       categoryId: piscinas.id,
     },
     {
-      name: "Piscina adultos 1",
-      slug: "piscina-adultos-1",
-      description: "Piscina para adultos.",
-      price: 12000,
+      name: "Piscina de Olas",
+      slug: "piscina-olas",
+      description: "Gran piscina con sistema de olas artificiales intermitentes para toda la familia.",
+      price: 20000,
       capacity: 100,
       categoryId: piscinas.id,
     },
     {
-      name: "Piscina adultos 2",
-      slug: "piscina-adultos-2",
-      description: "Piscina para adultos.",
-      price: 10000,
+      name: "Zona de Toboganes - Piscina 1 (Tobogán)",
+      slug: "toboganes-piscina-1",
+      description: "Tobogán rápido con caída libre y piscina de recepción.",
+      price: 18000,
       capacity: 30,
       categoryId: piscinas.id,
     },
     {
-      name: "Piscina adultos 3",
-      slug: "piscina-adultos-3",
-      description: "Piscina para adultos.",
-      price: 10000,
-      capacity: 30,
+      name: "Zona de Toboganes - Piscina 2 (Inodoro)",
+      slug: "toboganes-piscina-2",
+      description: "Atracción tipo embudo gigante y deslizador en espiral.",
+      price: 18000,
+      capacity: 20,
       categoryId: piscinas.id,
     },
     {
-      name: "Piscina adultos 4",
-      slug: "piscina-adultos-4",
-      description: "Piscina para adultos.",
-      price: 9000,
+      name: "Zona de Toboganes - Piscina 3 (Luisita)",
+      slug: "toboganes-piscina-3",
+      description: "Tobogán mediano y seguro para jóvenes y adultos.",
+      price: 18000,
       capacity: 20,
       categoryId: piscinas.id,
     },
 
     // Deportes
     {
-      name: "Gimnasio",
-      slug: "gimnasio",
-      description: "Gimnasio del complejo.",
-      price: 15000,
-      capacity: 40,
-      categoryId: deportes.id,
-    },
-    {
-      name: "Cancha de microfútbol 1",
-      slug: "cancha-microfutbol-1",
-      description: "Cancha de microfútbol.",
-      price: 60000,
-      capacity: 14,
-      categoryId: deportes.id,
-    },
-    {
-      name: "Cancha de microfútbol 2",
-      slug: "cancha-microfutbol-2",
-      description: "Cancha de microfútbol.",
-      price: 60000,
-      capacity: 14,
-      categoryId: deportes.id,
-    },
-    {
-      name: "Cancha de microfútbol 3",
-      slug: "cancha-microfutbol-3",
-      description: "Cancha de microfútbol.",
-      price: 60000,
-      capacity: 14,
-      categoryId: deportes.id,
-    },
-    {
-      name: "Cancha de microfútbol 4",
-      slug: "cancha-microfutbol-4",
-      description: "Cancha de microfútbol.",
-      price: 60000,
-      capacity: 14,
-      categoryId: deportes.id,
-    },
-    {
-      name: "Cancha de fútbol",
-      slug: "cancha-futbol",
-      description: "Cancha de fútbol.",
-      price: 100000,
+      name: "Cancha de Fútbol 11",
+      slug: "futbol-campo",
+      description: "Campo de fútbol reglamentario en césped natural con graderías e iluminación profesional.",
+      price: 120000,
       capacity: 22,
       categoryId: deportes.id,
     },
     {
-      name: "Polideportiva 1",
-      slug: "polideportiva-1",
-      description: "Cancha polideportiva.",
-      price: 50000,
+      name: "Gimnasio del Complejo",
+      slug: "gimnasio-principal",
+      description: "Sala de acondicionamiento físico con máquinas de fuerza, mancuernas y zona cardiovascular.",
+      price: 12000,
+      capacity: 40,
+      categoryId: deportes.id,
+    },
+    {
+      name: "Cancha Sintética de Microfútbol 1",
+      slug: "microfutbol-cancha-1",
+      description: "Cancha sintética al aire libre con cerramiento perimetral de seguridad e iluminación LED.",
+      price: 60000,
+      capacity: 14,
+      categoryId: deportes.id,
+    },
+    {
+      name: "Cancha de Microfútbol 2 (Coliseo Cubierto)",
+      slug: "microfutbol-cancha-2",
+      description: "Moderna cancha techada en coliseo con gramilla sintética de alta amortiguación y graderías.",
+      price: 75000,
+      capacity: 14,
+      categoryId: deportes.id,
+    },
+    {
+      name: "Cancha de Microfútbol 3 (Gramilla Natural)",
+      slug: "microfutbol-cancha-3",
+      description: "Cancha de microfútbol rodeada de naturaleza con arcos reglamentarios y bancas para espectadores.",
+      price: 55000,
+      capacity: 14,
+      categoryId: deportes.id,
+    },
+    {
+      name: "Cancha Polideportivo 1 (Voleibol y Múltiple)",
+      slug: "polideportivo-1",
+      description: "Cancha múltiple al aire libre demarcada para voleibol, baloncesto y microfútbol.",
+      price: 45000,
       capacity: 12,
       categoryId: deportes.id,
     },
     {
-      name: "Polideportiva 2",
-      slug: "polideportiva-2",
-      description: "Cancha polideportiva.",
-      price: 50000,
+      name: "Cancha Polideportivo 2 (Baloncesto)",
+      slug: "polideportivo-2",
+      description: "Pista deportiva con demarcación oficial y tableros reglamentarios de baloncesto.",
+      price: 45000,
       capacity: 12,
+      categoryId: deportes.id,
+    },
+    {
+      name: "Cancha de Pádel Panorámica",
+      slug: "cancha-padel",
+      description: "Pista de pádel con césped azul de última generación, cerramiento en cristal templado e iluminación LED.",
+      price: 70000,
+      capacity: 4,
+      categoryId: deportes.id,
+    },
+    {
+      name: "Cancha de Tenis (Polvo de Ladrillo)",
+      slug: "cancha-tenis",
+      description: "Cancha de tenis en tierra batida de medidas oficiales con malla cortavientos y excelente drenaje.",
+      price: 65000,
+      capacity: 4,
       categoryId: deportes.id,
     },
 
     // Bienestar dentro de Deportes por ahora
     {
-      name: "Turco",
+      name: "Baño Turco",
       slug: "bano-turco",
-      description: "Baño turco del complejo.",
-      price: 12000,
+      description: "Baño de vapor con aromaterapia para desintoxicación y relajación muscular.",
+      price: 22000,
       capacity: 30,
       categoryId: deportes.id,
     },
     {
-      name: "Sauna",
+      name: "Sauna Finlandés",
       slug: "sauna",
-      description: "Sauna del complejo.",
-      price: 12000,
+      description: "Cabina de calor seco en madera de cedro con piedras volcánicas naturales.",
+      price: 22000,
       capacity: 30,
       categoryId: deportes.id,
     },
-  ];
+];
+
+  // Delete related records to avoid foreign key conflicts
+  await prisma.access.deleteMany({});
+  await prisma.reservationSlot.deleteMany({});
+  await prisma.reservationHold.deleteMany({});
+  await prisma.payment.deleteMany({});
+  await prisma.qrToken.deleteMany({});
+  await prisma.reservation.deleteMany({});
+  await prisma.serviceSlot.deleteMany({});
+  await prisma.serviceSchedule.deleteMany({});
+  await prisma.serviceClosure.deleteMany({});
+  await prisma.service.deleteMany({});
 
   for (const service of services) {
-    await prisma.service.upsert({
-      where: {
-        name: service.name,
-      },
-      update: {
-        description: service.description,
-        price: service.price,
-        capacity: service.capacity,
-        categoryId: service.categoryId,
-        slug: service.slug,
-      },
-      create: {
+    await prisma.service.create({
+      data: {
         name: service.name,
         slug: service.slug,
         description: service.description,
