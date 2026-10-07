@@ -17,7 +17,13 @@ export const AUTH_API_PATHS = {
   forgotPassword: "/api/auth/forgot-password",
   resetPassword: "/api/auth/reset-password",
   resendVerificationEmail: "/api/auth/resend-verification",
+  verifyEmail: "/api/auth/verify-email",
 } as const;
+
+export type RegistrationResult = {
+  email: string;
+  verificationEmailSent: boolean;
+};
 
 export class AuthApiError extends Error {
   status?: number;
@@ -97,8 +103,8 @@ export function login(data: LoginData): Promise<AuthUser> {
   return request<AuthUser>(AUTH_API_PATHS.login, data);
 }
 
-export function register(data: RegisterData): Promise<AuthUser> {
-  return request<AuthUser>(AUTH_API_PATHS.register, data);
+export function register(data: RegisterData): Promise<RegistrationResult> {
+  return request<RegistrationResult>(AUTH_API_PATHS.register, data);
 }
 
 export function logout(): Promise<void> {
@@ -119,6 +125,10 @@ export function resetPassword(data: ResetPasswordData): Promise<void> {
 
 export function resendVerificationEmail(email: string): Promise<void> {
   return request<void>(AUTH_API_PATHS.resendVerificationEmail, { email });
+}
+
+export function verifyEmail(email: string, code: string): Promise<void> {
+  return request<void>(AUTH_API_PATHS.verifyEmail, { email, code });
 }
 
 export function loginWithGoogle(): Promise<never> {
