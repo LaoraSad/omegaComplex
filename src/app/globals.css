@@ -989,6 +989,38 @@ input {
   }
 }
 
+/* Paneo infinito ping-pong para vistas previas panorámicas (sin 360).
+   El <img> va escalado (margen de recorrido) y se desplaza en X de
+   --pan-from a --pan-to en loop alterno. Pura GPU (transform), sin JS. */
+.omega-pan-viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0103;
+}
+
+.omega-pan-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  will-change: transform;
+  animation: omega-pan-x var(--pan-duration, 22s) ease-in-out infinite alternate;
+}
+
+/* Pausa al interactuar: hover en desktop, toque mantenido en móvil. */
+.omega-pan-viewport:hover .omega-pan-img,
+.omega-pan-viewport:active .omega-pan-img {
+  animation-play-state: paused;
+}
+
+@keyframes omega-pan-x {
+  from { translate: var(--pan-from, 10%) 0; }
+  to { translate: var(--pan-to, -10%) 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -998,4 +1030,92 @@ input {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Aro de luz giratorio para cards (mismo lenguaje que inicio: vinotinto + dorado).
+   Uso: <div class="omega-ring"><div class="omega-ring-inner ...">contenido</div></div>
+   Reutilizable en guest/user (storefront) y admin. */
+@property --omega-ring-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.omega-ring {
+  position: relative;
+  border-radius: 18px;
+  padding: 1.5px;
+  isolation: isolate;
+  background: conic-gradient(
+    from var(--omega-ring-angle, 0deg),
+    transparent 0deg,
+    rgb(227 189 116 / 85%) 55deg,
+    rgb(122 31 61 / 90%) 120deg,
+    transparent 175deg,
+    transparent 235deg,
+    rgb(227 189 116 / 75%) 295deg,
+    transparent 360deg
+  );
+  animation: omega-ring-spin 5.5s linear infinite;
+  transition: transform 300ms ease, box-shadow 300ms ease;
+}
+
+.omega-ring::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--omega-ring-angle, 0deg),
+    transparent 0deg,
+    rgb(227 189 116 / 55%) 55deg,
+    rgb(122 31 61 / 55%) 120deg,
+    transparent 175deg,
+    transparent 235deg,
+    rgb(227 189 116 / 45%) 295deg,
+    transparent 360deg
+  );
+  filter: blur(12px);
+  opacity: 0.6;
+  z-index: -1;
+  animation: inherit;
+}
+
+.omega-ring:hover {
+  box-shadow: 0 20px 50px rgb(0 0 0 / 50%), 0 0 28px rgb(201 169 107 / 18%);
+}
+
+.omega-ring-sm {
+  border-radius: 8px;
+}
+
+.omega-ring-inner {
+  border-radius: calc(18px - 1.5px);
+  overflow: hidden;
+  /* Opaco: si fuera translúcido el halo se vería a través de toda la card
+     en vez de solo en los bordes. */
+  background: linear-gradient(180deg, #171214, #100c0e);
+  height: 100%;
+}
+
+.omega-ring-sm .omega-ring-inner {
+  border-radius: calc(8px - 1.5px);
+}
+
+@keyframes omega-ring-spin {
+  to {
+    --omega-ring-angle: 360deg;
+  }
+}
+
+/* Fondo oscuro home reutilizable fuera del storefront (ej. admin). */
+.omega-dark-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  background:
+    radial-gradient(60rem 22rem at 15% -10%, rgb(122 31 61 / 22%), transparent 60%),
+    radial-gradient(48rem 20rem at 90% 0%, rgb(201 169 107 / 8%), transparent 55%),
+    #0e0b0d;
+  border: 1px solid rgb(255 255 255 / 9%);
 }

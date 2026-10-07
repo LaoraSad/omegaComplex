@@ -7,6 +7,7 @@ import { mockServices } from '@/lib/storefront/mock/services';
 import ServiceCard from '@/components/catalog/ServiceCard';
 import BookingGuide from '@/components/storefront/BookingGuide';
 import AmbientBubbles from '@/components/AmbientBubbles';
+import SectionDivider from '@/components/SectionDivider';
 import { Search, Waves, Trophy, Dumbbell, Sparkles, Filter, X } from 'lucide-react';
 
 function ServicesContent() {
@@ -46,27 +47,28 @@ function ServicesContent() {
   };
 
   return (
-    <div className="relative overflow-hidden bg-[#0e0b0d] text-white">
+    <div className="omega-dark-section relative overflow-hidden bg-[#0e0b0d] text-white">
       <div aria-hidden="true" className="omega-cta-glow" />
       <AmbientBubbles variant="mixed" />
       <BookingGuide />
 
       <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       {/* Encabezado */}
-      <div className="mb-10 text-center sm:text-left space-y-2">
-        <span className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#e3bd74]">
-          Catálogo Oficial
-        </span>
+      <div className="mb-8 text-center sm:text-left space-y-2">
+        <p className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#e3bd74] max-sm:justify-center">
+          <span>Catálogo Oficial</span>
+          <span className="inline-block h-px w-14 bg-[#e3bd74]/50" />
+        </p>
         <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight uppercase">
           Servicios e Instalaciones
         </h1>
         <p className="text-sm sm:text-base text-white/60 max-w-2xl">
-          Explora los servicios disponibles del complejo con vista 360°, consulta capacidades y selecciona el espacio ideal para tu entrenamiento o esparcimiento.
+          Explora los servicios disponibles del complejo, consulta capacidades y selecciona el espacio ideal para tu entrenamiento o esparcimiento.
         </p>
       </div>
 
       {/* Filtros por Categoría y Buscador */}
-      <div data-tour="filtros" className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-10 pb-6 border-b border-white/10">
+      <div data-tour="filtros" className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6">
         {/* Pestañas de categorías */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 scrollbar-none">
           <button
@@ -122,18 +124,20 @@ function ServicesContent() {
           )}
         </div>
       </div>
+      {/* El divisor ES la línea inferior de la barra de filtros */}
+      <SectionDivider />
 
-      {/* Grid de Servicios con Visor 360 */}
+      {/* Grid de Servicios */}
       {filteredServices.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredServices.map((service, i) => (
-            <div key={service.id} data-tour={i === 0 ? 'reservar' : undefined} className="min-w-0">
+            <div key={service.id} data-tour={i === 0 ? 'reservar' : undefined} className="omega-card min-w-0">
               <ServiceCard service={service} />
             </div>
           ))}
         </div>
       ) : (
-        <div className="text-center py-16 rounded-2xl border border-white/10 bg-white/5 p-8 max-w-md mx-auto space-y-3">
+        <div className="mt-10 text-center py-16 rounded-2xl border border-white/10 bg-white/5 p-8 max-w-md mx-auto space-y-3">
           <Search className="w-12 h-12 text-white/30 mx-auto" />
           <h3 className="font-bold text-lg text-white">No se encontraron servicios</h3>
           <p className="text-xs text-white/55">

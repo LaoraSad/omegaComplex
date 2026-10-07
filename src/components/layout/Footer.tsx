@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Clock, MapPin, QrCode } from 'lucide-react';
+import SectionDivider from '@/components/SectionDivider';
 
 export default function Footer() {
   return (
     <footer id="contacto" className="scroll-mt-20 bg-[#0e0b0d] text-white">
-      {/* Filete dorado de transición desde el CTA */}
-      <div className="h-px w-full bg-white/10" />
+      {/* El divisor ES la línea superior del footer */}
+      <SectionDivider />
 
       <div className="mx-auto max-w-[1400px] px-5 pb-10 pt-14 sm:px-8 lg:px-12 lg:pt-16">
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
