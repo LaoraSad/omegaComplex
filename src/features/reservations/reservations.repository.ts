@@ -265,7 +265,13 @@ export async function updateReservationStatus(
   return db.$transaction(async (tx) => {
     const reservation = await tx.reservation.update({
       where: { id: reservationId },
-      data: { status },
+      data: { 
+        status,
+        ...(status === "confirmed" && { 
+          confirmedAt: new Date(),
+          paidAt: new Date(),
+        }),
+      },
       include: { slots: { include: { slot: true } }, holds: { where: { status: "active" } } },
     });
 
