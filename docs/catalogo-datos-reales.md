@@ -54,9 +54,9 @@ Los datos mock de “Mis reservas” y el catálogo de piscinas también siguen 
 
 ## Migración y despliegue
 
-La migración local de categorías está en `prisma/migrations/20261007160000_catalog_categories/migration.sql`. La inspección de solo lectura a Supabase encontró 15 servicios que coinciden con el mapeo esperado y ninguna instalación asociada a “Eventos”.
+Las migraciones relevantes están en `prisma/migrations/20261007150000_add_slug_to_service/migration.sql` y `prisma/migrations/20261007160000_catalog_categories/migration.sql`. La primera se recuperó desde la rama remota que la contenía y se verificó contra el checksum registrado en Supabase. La inspección del catálogo encontró 15 servicios clasificables y ninguna instalación asociada a “Eventos”.
 
-**No se ejecutó la migración ni el seed contra la base.** `prisma migrate status` detectó que Supabase ya tiene aplicada `20261007150000_add_slug_to_service`, pero ese archivo no está en este checkout. El historial local y el remoto divergen. Antes de desplegar hay que recuperar el archivo original de esa migración desde su repositorio de origen y volver a comprobar el historial. No se debe marcar como aplicada ni editar el historial remoto a mano.
+**Estado actual:** la migración `20261007160000_catalog_categories` se aplicó correctamente a Supabase. `prisma migrate status` confirma que la base está al día. No se ejecutó el seed ni se cambiaron precios.
 
 ## Validación realizada
 
@@ -65,4 +65,5 @@ La migración local de categorías está en `prisma/migrations/20261007160000_ca
 - `npx prisma validate`: pasó.
 - ESLint focalizado en los archivos de este cambio: sin errores; permanecen dos advertencias anteriores en `prisma/seed.ts` (`userRole` y `employeeRole` sin uso).
 - `npm run lint` global sigue reportando dos errores ajenos al cambio en `Navbar.tsx` y `PanoramaModal.tsx`.
-- No se escribieron datos en Supabase.
+- Se aplicó la migración del catálogo en Supabase; no se ejecutó el seed.
+- La portada, `GET /api/categories` y `GET /api/services` respondieron HTTP 200 después de la migración.
