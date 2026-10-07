@@ -21,6 +21,7 @@ const BUBBLES: Array<{
   { left: "78%", top: "62%", size: 110, tone: "is-wine", duration: "11s", delay: "0.6s" },
   { left: "12%", top: "70%", size: 44, tone: "is-gold", duration: "8s", delay: "2s", floatB: true },
   { left: "46%", top: "8%", size: 28, tone: "is-soft", duration: "7s", delay: "0.9s" },
+  { left: "30%", top: "44%", size: 64, tone: "is-gold", duration: "9.5s", delay: "1.6s", floatB: true },
 ];
 
 const SPARKS: Array<{ left: string; top: string; delay: string }> = [
@@ -29,6 +30,7 @@ const SPARKS: Array<{ left: string; top: string; delay: string }> = [
   { left: "82%", top: "44%", delay: "2.6s" },
   { left: "36%", top: "78%", delay: "0.8s" },
   { left: "55%", top: "58%", delay: "3.2s" },
+  { left: "72%", top: "80%", delay: "1s" },
 ];
 
 export default function AmbientBubbles({ variant = "mixed" }: AmbientBubblesProps) {

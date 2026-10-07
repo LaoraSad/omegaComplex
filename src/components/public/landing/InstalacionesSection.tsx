@@ -2,7 +2,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, ArrowUpRight, Users } from 'lucide-react';
 import AmbientBubbles from '@/components/AmbientBubbles';
-import { optimized360 } from '@/lib/storefront/optimized-360';
 import type { Service } from '@/types/storefront/omega';
 
 interface Props {
@@ -48,9 +47,9 @@ export default function InstalacionesSection({ services }: Props) {
         {/* Galería editorial: la fotografía es protagonista */}
         <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {items.map((s) => {
-            const blur = optimized360(s.image)?.blur;
             return (
-            <article key={s.id} className="omega-card omega-card-dark group relative overflow-hidden rounded-[6px]">
+            <article key={s.id} className="omega-ring omega-ring-sm omega-card group">
+              <div className="omega-ring-inner relative overflow-hidden">
               <Link href={`/servicios/${s.id}`} aria-label={`Reservar ${s.name}`} className="block">
                 <div className="relative h-[320px] overflow-hidden sm:h-[340px]">
                   <Image
@@ -59,15 +58,13 @@ export default function InstalacionesSection({ services }: Props) {
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
                     quality={85}
-                    placeholder={blur ? 'blur' : undefined}
-                    blurDataURL={blur}
                     className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
                   />
                   {/* overlay sutil inferior para legibilidad */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
                   {s.tour360Id && (
                     <span className="absolute left-4 top-4 rounded-full border border-white/15 bg-black/55 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/90 backdrop-blur-sm">
-                      Vista 360°
+                      Vista previa
                     </span>
                   )}
                   <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-5">
@@ -89,6 +86,7 @@ export default function InstalacionesSection({ services }: Props) {
                   </div>
                 </div>
               </Link>
+              </div>
             </article>
             );
           })}

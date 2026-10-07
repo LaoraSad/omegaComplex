@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Service } from '@/types/storefront/omega';
-import PanoramaModal from '@/components/tour/PanoramaModal';
-import { Users, ArrowRight, Compass, AlertCircle, Check } from 'lucide-react';
+import { Users, ArrowRight, AlertCircle, Check } from 'lucide-react';
 
 interface ServiceCardProps {
   service: Service;
@@ -17,24 +17,20 @@ export default function ServiceCard({ service }: ServiceCardProps) {
   }).format(service.pricePerHour);
 
   return (
-    <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#e3bd74]/50 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5),0_0_24px_rgba(201,169,107,0.12)]">
-      {/* Cabecera: Visor 360 interactivo en vivo */}
-      <div className="relative h-56 bg-[#0a0103] overflow-hidden">
-        {/* Vista previa en plano; al tocarla se abre la ventana 360 responsive */}
-        <PanoramaModal src={service.panoramaUrl} title={service.name} trigger={
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={service.image} alt={service.name} className="w-full h-full object-cover" />
-        } />
+    <div className="omega-ring group h-full">
+      <div className="omega-ring-inner flex h-full flex-col bg-[#141013] backdrop-blur-sm transition-all duration-300 group-hover:-translate-y-1">
+      {/* Cabecera: imagen estática (el detalle permite ampliarla) */}
+      <Link href={`/servicios/${service.id}`} className="relative block h-56 overflow-hidden bg-[#0a0103]" aria-label={`Ver ${service.name}`}>
+        <Image
+          src={service.image}
+          alt={service.name}
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
+          className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
+        />
 
         {/* Overlay sutil para legibilidad de títulos */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/30 pointer-events-none z-10" />
-
-        {/* Badge 360° interactivo */}
-        <div className="absolute top-3 left-3 z-20 px-3 py-1 rounded-full text-xs font-bold bg-black/60 backdrop-blur-md text-white border border-white/20 shadow-xs flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-[#e3bd74] animate-ping" />
-          <Compass className="w-3.5 h-3.5 text-[#e3bd74]" />
-          <span className="text-[#e3bd74]">Vista 360°</span>
-        </div>
 
         {/* Badge de Capacidad oficial */}
         <span className="absolute top-3 right-3 z-20 px-3 py-1 rounded-full text-xs font-bold bg-[#7A1F3D] text-white shadow-xs flex items-center gap-1">
@@ -42,7 +38,7 @@ export default function ServiceCard({ service }: ServiceCardProps) {
           <span>Aforo: {service.capacity}</span>
         </span>
 
-        {/* Nombre y categoría sobre el visor 360 */}
+        {/* Nombre y categoría sobre la imagen */}
         <div className="absolute bottom-3 left-4 right-4 z-20 text-white">
           <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#e3bd74] block mb-0.5">
             {service.categoryName}
@@ -51,7 +47,7 @@ export default function ServiceCard({ service }: ServiceCardProps) {
             {service.name}
           </h3>
         </div>
-      </div>
+      </Link>
 
       {/* Cuerpo de la tarjeta */}
       <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
@@ -101,6 +97,7 @@ export default function ServiceCard({ service }: ServiceCardProps) {
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
+      </div>
       </div>
     </div>
   );
