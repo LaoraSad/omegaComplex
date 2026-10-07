@@ -14,8 +14,6 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-RUN npm run optimize:360
-
 RUN npm run build
 
 
