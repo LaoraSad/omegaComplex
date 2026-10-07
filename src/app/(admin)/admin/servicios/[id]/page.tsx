@@ -43,7 +43,7 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
   const service = await getServiceDetail(id);
   if (!service) notFound();
 
-  const photo = servicePhoto(service.name);
+  const photo = servicePhoto(service.slug);
   const byDay = new Map(service.serviceSchedules.map((sc) => [sc.dayOfWeek, sc]));
 
   const { start: todayStart, end: todayEnd } = bogotaDayRange();

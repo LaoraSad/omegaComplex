@@ -43,7 +43,7 @@ Las escrituras requieren `requireRole("admin")`. La validación rechaza nombres 
 - La portada consulta servicios desde Prisma.
 - El catálogo público consulta `GET /api/categories` y `GET /api/services`; filtra por slug de categoría y busca sobre nombres/descripciones reales.
 - La ficha `/servicios/{id}` consulta `GET /api/services/{id}` y muestra capacidad, precio y horarios almacenados. No presenta duración, reglas o precio por hora si no existen en el modelo.
-- Las imágenes son archivos locales existentes vinculados por una regla de presentación; no se usan como fuente de nombres, categorías, precios ni capacidades.
+- Las imágenes son archivos locales vinculados por el slug persistido del servicio; no se usan como fuente de nombres, categorías, precios ni capacidades. Los 16 servicios actuales tienen un asset existente asignado.
 - Se retiraron los adaptadores y fixtures mock de categorías y servicios que alimentaban estas vistas.
 
 ## Estado de reservas y piscinas
