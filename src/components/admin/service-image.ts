@@ -2,7 +2,7 @@ import { mockServices } from "@/lib/storefront/mock/services";
 
 // Los servicios con equivalencia usan la misma imagen del Home
 // (mockServices, campo `image`). Las piscinas adultas reutilizan la imagen
-// oficial /360/adult_pool.jpg que ya consume el módulo de tour.
+// oficial /newassets/piscina-olas.png del banco de fotos del complejo.
 const HOME_IMAGE_BY_ID = new Map(mockServices.map((s) => [s.id, s.image]));
 
 // Correspondencia instalación (BD) -> entrada del Home: mismo complejo,
@@ -25,7 +25,7 @@ const DB_TO_HOME: Array<{ db: RegExp; homeId: string }> = [
 export function servicePhoto(serviceName: string): string | null {
   const normalizedName = serviceName.trim();
   if (/^piscina adultos(?: \d+)?$/i.test(normalizedName)) {
-    return "/360/adult_pool.jpg";
+    return "/newassets/piscina-olas.png";
   }
 
   const hit = DB_TO_HOME.find((r) => r.db.test(normalizedName));
