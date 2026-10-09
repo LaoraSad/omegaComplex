@@ -1,4 +1,8 @@
-// TODO: validación de QR -> /validar.
+import type { Metadata } from "next";
+import ValidarView from "./ValidarView";
+
+export const metadata: Metadata = { title: "Validar QR" };
+
 export default function ValidarPage() {
-  return <main></main>;
+  return <ValidarView />;
 }
