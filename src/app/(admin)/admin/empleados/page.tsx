@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
-import { MapPin, Search, UserRoundSearch } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight, MapPin, Search, UserRoundSearch } from "lucide-react";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { formatNumber, fullName, initials } from "@/components/admin/format";
-import { listEmployees } from "@/features/admin/admin.repository";
+import { listEmployees, listZoneOptions } from "@/features/admin/admin.repository";
+import { EmployeeCreateSection } from "./EmpleadosClient";
 
 export const metadata: Metadata = { title: "Empleados" };
 
@@ -14,7 +16,7 @@ interface EmpleadosPageProps {
 export default async function EmpleadosPage({ searchParams }: EmpleadosPageProps) {
   const params = await searchParams;
   const q = params.q?.trim() || undefined;
-  const employees = await listEmployees(q);
+  const [employees, groups] = await Promise.all([listEmployees(q), listZoneOptions()]);
 
   return (
     <div className="space-y-6">
@@ -22,6 +24,7 @@ export default async function EmpleadosPage({ searchParams }: EmpleadosPageProps
         eyebrow="Personas"
         title="Empleados"
         description="Cada empleado tiene una zona asignada y solo valida QR de esa zona. Aquí ves la asignación real del sistema."
+        actions={<EmployeeCreateSection groups={groups} />}
       />
 
       <form method="GET" action="/admin/empleados" className="acard acard-pad" role="search">
@@ -58,7 +61,12 @@ export default async function EmpleadosPage({ searchParams }: EmpleadosPageProps
                 </span>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-[#211a1d]">
-                    {fullName(e.user.firstName, e.user.lastName)}
+                    <Link
+                      href={`/admin/empleados/${e.id}`}
+                      className="hover:text-[#7a1f3d] hover:underline"
+                    >
+                      {fullName(e.user.firstName, e.user.lastName)}
+                    </Link>
                   </p>
                   <p className="truncate text-xs text-[#6f625e]">{e.user.email}</p>
                 </div>
@@ -99,6 +107,9 @@ export default async function EmpleadosPage({ searchParams }: EmpleadosPageProps
                   <p className="text-xs font-semibold text-[#92600a]">Sin zona asignada en el sistema.</p>
                 )}
               </div>
+              <Link href={`/admin/empleados/${e.id}`} className="asection-link inline-flex items-center gap-1">
+                Gestionar empleado <ArrowUpRight className="h-4 w-4" />
+              </Link>
             </li>
           ))}
         </ul>
