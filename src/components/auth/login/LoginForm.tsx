@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { AuthError } from "@/components/auth/AuthError";
+import { SocialLoginButton } from "@/components/auth/SocialLoginButton";
 import { AuthInput } from "@/components/auth/AuthInput";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { getAuthErrorMessage, login } from "@/lib/api/auth";
@@ -125,6 +126,11 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps = {}) {
       <AuthButton disabled={loading} loading={loading} type="submit">
         Iniciar sesión
       </AuthButton>
+
+      <p className="auth-divider">
+        <span>o continúa con Google</span>
+      </p>
+      <SocialLoginButton />
 
       <p className="auth-form-footer">
         ¿No tienes una cuenta?{" "}

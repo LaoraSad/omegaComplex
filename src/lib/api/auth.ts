@@ -121,14 +121,6 @@ export function resendVerificationEmail(email: string): Promise<void> {
   return request<void>(AUTH_API_PATHS.resendVerificationEmail, { email });
 }
 
-export function loginWithGoogle(): Promise<never> {
-  return Promise.reject(
-    new AuthApiError(
-      "El inicio de sesión con Google no está habilitado en este momento.",
-    ),
-  );
-}
-
 export function getAuthErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }

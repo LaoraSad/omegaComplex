@@ -1,16 +1,17 @@
-interface SocialLoginButtonProps {
-  disabled?: boolean;
-  onClick: () => void;
-}
+const OAUTH_START_PATH = "/api/auth/oauth/google";
 
-export function SocialLoginButton({ disabled = false, onClick }: SocialLoginButtonProps) {
+/**
+ * Acceso con Google. Es un enlace y no un boton porque OAuth exige una
+ * navegacion de pagina completa: la app redirige a Google, Google devuelve el
+ * codigo y el callback abre la sesion.
+ */
+export function SocialLoginButton({
+  label = "Continuar con Google",
+}: {
+  label?: string;
+}) {
   return (
-    <button
-      className="auth-button auth-button-social"
-      disabled={disabled}
-      onClick={onClick}
-      type="button"
-    >
+    <a className="auth-button auth-button-social" href={OAUTH_START_PATH}>
       <svg aria-hidden="true" height="18" viewBox="0 0 48 48" width="18">
         <path
           d="M43.6 24.5c0-1.4-.1-2.8-.4-4.1H24v7.8h11a9.4 9.4 0 01-4.1 6.2v5.1h6.6c3.8-3.5 6.1-8.7 6.1-15z"
@@ -29,7 +30,7 @@ export function SocialLoginButton({ disabled = false, onClick }: SocialLoginButt
           fill="#EA4335"
         />
       </svg>
-      Continuar con Google
-    </button>
+      {label}
+    </a>
   );
 }
