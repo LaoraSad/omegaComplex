@@ -30,6 +30,8 @@ export default function Navbar({ initialUser }: NavbarProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('inicio');
+  // Cierra el menú móvil al navegar, igual que se sincroniza initialUser arriba.
+  const [prevPathname, setPrevPathname] = useState(pathname);
   // Bloqueo post-click: evita que el spy pelee con el desplazamiento suave.
   const scrollLockRef = useRef(false);
 
@@ -47,6 +49,11 @@ export default function Navbar({ initialUser }: NavbarProps) {
     setPrevInitial(initialUser);
     setUser(initialUser);
     setSessionChecked(true);
+  }
+
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    setMobileOpen(false);
   }
 
   useEffect(() => {
@@ -75,10 +82,6 @@ export default function Navbar({ initialUser }: NavbarProps) {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
-
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
 
   // Scroll-spy: la barra dorada sigue la sección visible en la landing.
   useEffect(() => {

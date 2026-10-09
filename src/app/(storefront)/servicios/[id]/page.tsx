@@ -8,6 +8,7 @@ import SectionDivider from '@/components/SectionDivider';
 import { servicePhoto } from '@/components/admin/service-image';
 import PanoramaModal from '@/components/tour/PanoramaModal';
 import PanningImage from '@/components/tour/PanningImage';
+import { ReservaModal } from '@/components/storefront/ReservaModal';
 import type { CatalogServiceRecord } from '@/features/catalog/catalog.types';
 
 interface ApiResult<T> {
@@ -26,6 +27,7 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
   const [service, setService] = useState<CatalogServiceRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [abriendoReserva, setAbriendoReserva] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -131,17 +133,32 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
 
             <aside className="h-fit rounded-xl border border-[#e3bd74]/25 bg-[#141013] p-6">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#e3bd74]">Reservas</p>
-              <h2 className="mt-2 text-xl font-black">Reserva en línea no disponible</h2>
+              <h2 className="mt-2 text-xl font-black">Reserva en línea</h2>
               <p className="mt-3 text-sm leading-relaxed text-white/60">
-                La disponibilidad, los bloqueos y el pago aún no están conectados a servicios reales. No se confirmará ni cobrará ninguna reserva desde esta página.
+                Elige la fecha y la franja, di cuántas personas asistirán y registra a los acompañantes.
+                Cada persona recibe su propio QR por correo.
               </p>
-              <Link href="/servicios" className="mt-6 inline-flex items-center justify-center rounded-md border border-white/20 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:border-[#e3bd74] hover:text-[#e3bd74]">
-                Volver al catálogo
-              </Link>
+              <button
+                type="button"
+                onClick={() => setAbriendoReserva(true)}
+                disabled={!service}
+                className="mt-6 w-full rounded-md border border-[#e3bd74]/50 px-4 py-2.5 text-sm font-bold text-[#e3bd74] transition-colors hover:bg-[#e3bd74]/10 disabled:opacity-50"
+              >
+                Reservar
+              </button>
             </aside>
           </div>
         )}
       </main>
+
+      {abriendoReserva && service ? (
+        <ReservaModal
+          serviceId={service.id}
+          serviceName={service.name}
+          precioHora={service.price}
+          onClose={() => setAbriendoReserva(false)}
+        />
+      ) : null}
     </div>
   );
 }

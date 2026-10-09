@@ -48,24 +48,29 @@ export default function PanoramaModal({ src, title, subtitle, trigger }: Panoram
     setPan(clamped);
   }, [clampPan]);
 
-  const close = useCallback(() => {
-    setVisible(false);
-    window.setTimeout(() => {
-      setOpen(false);
-      zoomRef.current = 1;
-      setZoom(1);
-      panRef.current = { x: 0, y: 0 };
-      setPan({ x: 0, y: 0 });
-      setDragging(false);
-    }, 180);
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
+  const resetView = useCallback(() => {
     zoomRef.current = 1;
     setZoom(1);
     panRef.current = { x: 0, y: 0 };
     setPan({ x: 0, y: 0 });
+    setDragging(false);
+  }, []);
+
+  const openModal = useCallback(() => {
+    resetView();
+    setOpen(true);
+  }, [resetView]);
+
+  const close = useCallback(() => {
+    setVisible(false);
+    window.setTimeout(() => {
+      setOpen(false);
+      resetView();
+    }, 180);
+  }, [resetView]);
+
+  useEffect(() => {
+    if (!open) return;
     const frame = requestAnimationFrame(() => setVisible(true));
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -112,7 +117,7 @@ export default function PanoramaModal({ src, title, subtitle, trigger }: Panoram
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={openModal}
         className="group/zoom relative block h-full w-full cursor-zoom-in"
         aria-label={`Ampliar imagen de ${title ?? 'espacio'}`}
       >

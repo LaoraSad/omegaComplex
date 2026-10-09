@@ -161,7 +161,6 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
                         <span className="text-[#6f625e]">
                           {formatDateTime(a.accessedAt)} ·{" "}
                           {fullName(a.employee.user.firstName, a.employee.user.lastName)}
-                          {a.wristbandColor ? ` · manilla ${a.wristbandColor}` : ""}
                           {a.denialReason ? ` · ${a.denialReason}` : ""}
                         </span>
                         <StatusBadge kind="access" value={a.result} />
