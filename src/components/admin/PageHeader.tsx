@@ -12,10 +12,10 @@ export function PageHeader({ eyebrow, title, description, actions }: PageHeaderP
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div className="min-w-0">
-        <p className="akpi-label" style={{ color: "#7a1f3d" }}>
+        <p className="akpi-label admin-page-eyebrow">
           {eyebrow}
         </p>
-        <h1 className="admin-section-title" style={{ fontSize: "1.5rem", marginTop: "0.3rem" }}>
+        <h1 className="admin-section-title admin-page-title">
           {title}
         </h1>
         {description ? <p className="admin-section-sub">{description}</p> : null}

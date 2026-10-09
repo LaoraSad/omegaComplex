@@ -154,8 +154,6 @@ export interface DashboardOverview {
   accessesAllowedToday: number;
   accessesDeniedToday: number;
   holdsActive: number;
-  servicesCount: number;
-  customersCount: number;
   occupancyToday: { used: number; total: number } | null;
   occupancyByService: Array<{
     serviceId: string;
