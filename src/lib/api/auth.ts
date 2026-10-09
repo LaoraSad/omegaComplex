@@ -127,9 +127,12 @@ export function resendVerificationEmail(email: string): Promise<void> {
   return request<void>(AUTH_API_PATHS.resendVerificationEmail, { email });
 }
 
-// NOTA(merge verificacion-recuperacion): no se traen verifyEmail ni el stub
-// loginWithGoogle de la rama — AUTH_API_PATHS no tiene verifyEmail (rompería
-// tsc) y el stub deshabilita el OAuth con Google que ya funciona en develop.
+export function verifyEmail(email: string, code: string): Promise<void> {
+  return request<void>(AUTH_API_PATHS.verifyEmail, { email, code });
+}
+
+// NOTA(merge verificacion-recuperacion): no se trae el stub loginWithGoogle
+// de la rama porque deshabilita el OAuth con Google que ya funciona en develop.
 export function getAuthErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
