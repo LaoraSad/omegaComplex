@@ -35,97 +35,174 @@ export function getAppUrl(): string {
 export function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => {
     const entities: Record<string, string> = {
-      "&": "&",
-      "<": "<",
-      ">": ">",
-      '"': '"',
-      "'": "'",
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
     };
     return entities[character];
   });
 }
 
-// Base email structure shared by all templates
 function emailLayout(content: string): string {
   const appUrl = getAppUrl();
+  const logoUrl = `${appUrl}/logo-blanco.png`;
   return `<!doctype html>
-<html lang="es">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;background:#f1f1f1;color:#242124;font-family:Arial,Helvetica,sans-serif">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f1f1;padding:28px 12px">
-    <tr><td align="center">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#fff;border-top:7px solid #7a1f3d">
-        <tr><td align="center" style="padding:30px 24px 20px;background:#7a1f3d">
-          <img src="${appUrl}/Logo-blanco.png" width="168" alt="Omega Complex" style="display:block;width:168px;max-width:70%;height:auto">
-        </td></tr>
-        <tr><td style="padding:30px 28px 34px">${content}</td></tr>
-        <tr><td style="border-top:1px solid #e6e3e4;padding:18px 24px;text-align:center;color:#777;font-size:12px;line-height:1.6">
-          Omega Complex · Deporte, bienestar y recreación<br>Este mensaje fue enviado automáticamente. No respondas a este correo.
-        </td></tr>
-      </table>
-    </td></tr>
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+  <title>Omega Complex</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  <style>
+    @media only screen and (max-width: 600px) {
+      .container { width: 100% !important; max-width: 100% !important; }
+      .content-padding { padding-left: 20px !important; padding-right: 20px !important; }
+      .button-full { width: 100% !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#f5f3f0;font-family:Georgia,'Times New Roman',Times,serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f5f3f0;">
+    <tr>
+      <td align="center" style="padding:0;">
+        <table role="presentation" class="container" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+          <!-- HEADER VINOTINTO CON LOGO -->
+          <tr>
+            <td style="background-color:#6b1d3f;padding:40px 40px 36px;text-align:center;">
+              <img src="${logoUrl}" alt="Omega Complex" width="200" style="display:block;width:200px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;">
+              <p style="margin:16px 0 0;font-family:Georgia,'Times New Roman',Times,serif;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#e8d5b7;">Deporte &middot; Bienestar &middot; Comunidad</p>
+            </td>
+          </tr>
+
+          <!-- CONTENIDO PRINCIPAL -->
+          <tr>
+            <td class="content-padding" style="padding:48px 48px 40px;">
+
+              ${content}
+
+            </td>
+          </tr>
+
+          <!-- DIVISOR DECORATIVO -->
+          <tr>
+            <td style="padding:0 48px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td style="border-top:1px solid #e8e2d9;"></td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="padding:28px 48px 36px;text-align:center;background-color:#faf8f5;">
+              <p style="margin:0 0 8px;font-family:Georgia,'Times New Roman',Times,serif;font-size:13px;color:#8a7e74;">Omega Complex &middot; Complejo Deportivo</p>
+              <p style="margin:0 0 16px;font-family:Georgia,'Times New Roman',Times,serif;font-size:12px;color:#a89e94;">Deporte, bienestar y recreaci&oacute;n</p>
+              <p style="margin:0;font-family:Georgia,'Times New Roman',Times,serif;font-size:11px;color:#c4bab0;">Este mensaje fue enviado autom&aacute;ticamente. No respondas a este correo.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
   </table>
 </body>
 </html>`;
 }
 
-// Template functions - each generates the content portion for a specific email type
-
 function verificationContent(code: string): string {
   const safeCode = escapeHtml(code);
-  return `<p style="margin:0 0 8px;color:#7a1f3d;font-size:12px;font-weight:bold;letter-spacing:1.4px;text-transform:uppercase">Omega Complex</p>
-    <h1 style="margin:0 0 18px;color:#242124;font-size:25px;line-height:1.25">Verifica tu correo electrónico</h1>
-    <p style="margin:0 0 14px;color:#555;font-size:15px;line-height:1.6">Tu código de verificación es:</p>
-    <div style="margin:0 0 20px;padding:17px 12px;border:1px solid #eadde1;background:#fbf7f8;color:#7a1f3d;text-align:center;font-size:34px;font-weight:800;letter-spacing:8px">${safeCode}</div>
-    <p style="margin:0 0 9px;color:#555;font-size:14px;line-height:1.6">Este código expirará en unos minutos.</p>
-    <p style="margin:0;color:#555;font-size:14px;line-height:1.6">No compartas este código con nadie.</p>`;
+  return `
+  <h1 style="margin:0 0 20px;font-family:Georgia,'Times New Roman',Times,serif;font-size:28px;font-weight:700;color:#1a1a1a;line-height:1.3;">Verifica tu correo electr&oacute;nico</h1>
+  <p style="margin:0 0 28px;font-family:Georgia,'Times New Roman',Times,serif;font-size:16px;color:#4a4a4a;line-height:1.6;">Para completar tu registro en Omega Complex, utiliza el siguiente c&oacute;digo de verificaci&oacute;n:</p>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 28px;">
+    <tr>
+      <td align="center" style="background-color:#faf6f2;border:1px solid #e8d5c8;border-radius:8px;padding:24px 20px;">
+        <p style="margin:0 0 8px;font-family:Georgia,'Times New Roman',Times,serif;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#9a8474;">Tu c&oacute;digo de verificaci&oacute;n</p>
+        <p style="margin:0;font-family:'Courier New',Courier,monospace;font-size:36px;font-weight:700;letter-spacing:6px;color:#6b1d3f;">${safeCode}</p>
+      </td>
+    </tr>
+  </table>
+  <p style="margin:0 0 8px;font-family:Georgia,'Times New Roman',Times,serif;font-size:13px;color:#7a6e64;">Este c&oacute;digo expirar&aacute; en <strong>10 minutos</strong>.</p>
+  <p style="margin:0;font-family:Georgia,'Times New Roman',Times,serif;font-size:13px;color:#9a8e84;">No compartas este c&oacute;digo con nadie.</p>
+`;
 }
 
 function passwordResetContent(token: string): string {
   const resetUrl = `${getAppUrl()}/reset-password?token=${encodeURIComponent(token)}`;
-  return `<p style="margin:0 0 8px;color:#7a1f3d;font-size:12px;font-weight:bold;letter-spacing:1.4px;text-transform:uppercase">Omega Complex</p>
-    <h1 style="margin:0 0 18px;color:#242124;font-size:25px;line-height:1.25">Restablece tu contraseña</h1>
-    <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.65">Recibimos una solicitud para cambiar la contraseña de tu cuenta. Usa el botón para elegir una nueva.</p>
-    <p style="margin:0 0 26px;text-align:center"><a href="${resetUrl}" style="display:inline-block;padding:14px 23px;background:#7a1f3d;color:#fff;text-decoration:none;font-size:14px;font-weight:bold">Restablecer contraseña</a></p>
-    <p style="margin:0 0 9px;color:#555;font-size:13px;line-height:1.6">El enlace expirará en 30 minutos y solo puede utilizarse una vez.</p>
-    <p style="margin:0;color:#777;font-size:13px;line-height:1.6">Si no solicitaste este cambio, ignora este mensaje. Tu contraseña no cambiará.</p>`;
+  return `
+  <h1 style="margin:0 0 20px;font-family:Georgia,'Times New Roman',Times,serif;font-size:28px;font-weight:700;color:#1a1a1a;line-height:1.3;">Restablece tu contrase&ntilde;a</h1>
+  <p style="margin:0 0 28px;font-family:Georgia,'Times New Roman',Times,serif;font-size:16px;color:#4a4a4a;line-height:1.6;">Recibimos una solicitud para cambiar la contrase&ntilde;a de tu cuenta. Usa el siguiente bot&oacute;n para elegir una nueva:</p>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 28px;">
+    <tr>
+      <td align="center">
+        <a href="${resetUrl}" class="button-full" style="display:inline-block;padding:16px 40px;background-color:#6b1d3f;color:#ffffff;text-decoration:none;font-family:Georgia,'Times New Roman',Times,serif;font-size:14px;font-weight:700;letter-spacing:0.5px;border-radius:6px;border:0;cursor:pointer;">Restablecer contrase&ntilde;a</a>
+      </td>
+    </tr>
+  </table>
+  <p style="margin:0 0 12px;font-family:Georgia,'Times New Roman',Times,serif;font-size:13px;color:#7a6e64;">El enlace expirar&aacute; en <strong>30 minutos</strong> y solo puede utilizarse una vez.</p>
+  <p style="margin:0;font-family:Georgia,'Times New Roman',Times,serif;font-size:13px;color:#9a8e84;">Si no solicitaste este cambio, ignora este mensaje. Tu contrase&ntilde;a no cambiar&aacute;.</p>
+`;
 }
 
 function welcomeContent(firstName: string): string {
-  return `<p style="margin:0 0 8px;color:#7a1f3d;font-size:12px;font-weight:bold;letter-spacing:1.4px;text-transform:uppercase">Omega Complex</p>
-    <h1 style="margin:0 0 18px;color:#242124;font-size:25px;line-height:1.25">¡Bienvenido a Omega Complex!</h1>
-    <p style="margin:0 0 14px;color:#555;font-size:15px;line-height:1.65">Hola ${escapeHtml(firstName)}, tu correo fue verificado correctamente y tu cuenta ya está lista.</p>
-    <p style="margin:0;color:#555;font-size:14px;line-height:1.65">Nos alegra tenerte en nuestra comunidad. Te esperamos para disfrutar de nuestras instalaciones y actividades.</p>`;
+  const safeFirstName = escapeHtml(firstName);
+  const visitUrl = `${getAppUrl()}/servicios`;
+  return `
+  <h1 style="margin:0 0 20px;font-family:Georgia,'Times New Roman',Times,serif;font-size:28px;font-weight:700;color:#1a1a1a;line-height:1.3;">&iexcl;Bienvenido a Omega Complex!</h1>
+  <p style="margin:0 0 20px;font-family:Georgia,'Times New Roman',Times,serif;font-size:16px;color:#4a4a4a;line-height:1.6;">Hola <strong>${safeFirstName}</strong>, tu correo fue verificado correctamente y tu cuenta ya est&aacute; lista.</p>
+  <p style="margin:0 0 28px;font-family:Georgia,'Times New Roman',Times,serif;font-size:16px;color:#4a4a4a;line-height:1.6;">Nos alegra tenerte en nuestra comunidad. Te esperamos para disfrutar de nuestras instalaciones y actividades.</p>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 28px;">
+    <tr>
+      <td align="center">
+        <a href="${visitUrl}" class="button-full" style="display:inline-block;padding:16px 40px;background-color:#6b1d3f;color:#ffffff;text-decoration:none;font-family:Georgia,'Times New Roman',Times,serif;font-size:14px;font-weight:700;letter-spacing:0.5px;border-radius:6px;border:0;cursor:pointer;">Visitar Omega Complex</a>
+      </td>
+    </tr>
+  </table>
+  <p style="margin:0;font-family:Georgia,'Times New Roman',Times,serif;font-size:14px;color:#6b6e64;line-height:1.6;">&iexcl;Vive el deporte!</p>
+`;
 }
-
-// Public API: send functions
 
 export async function sendVerificationEmail(to: string, code: string): Promise<void> {
   const { error } = await getClient().emails.send({
     from: getFromEmail(),
     to,
-    subject: "Tu código de verificación - Omega Complex",
+    subject: "Tu c&oacute;digo de verificaci&oacute;n - Omega Complex",
     html: emailLayout(verificationContent(code)),
   });
-  if (error) throw new Error(`Resend rechazó el correo: ${error.message}`);
+  if (error) throw new Error(`Resend rechaz&oacute; el correo: ${error.message}`);
 }
 
 export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {
   const { error } = await getClient().emails.send({
     from: getFromEmail(),
     to,
-    subject: "Restablece tu contraseña - Omega Complex",
+    subject: "Restablece tu contrase&ntilde;a - Omega Complex",
     html: emailLayout(passwordResetContent(token)),
   });
-  if (error) throw new Error(`Resend rechazó el correo: ${error.message}`);
+  if (error) throw new Error(`Resend rechaz&oacute; el correo: ${error.message}`);
 }
 
 export async function sendWelcomeEmail(to: string, firstName: string): Promise<void> {
   const { error } = await getClient().emails.send({
     from: getFromEmail(),
     to,
-    subject: "¡Bienvenido a Omega Complex!",
+    subject: "&iexcl;Bienvenido a Omega Complex!",
     html: emailLayout(welcomeContent(firstName)),
   });
-  if (error) throw new Error(`Resend rechazó el correo: ${error.message}`);
+  if (error) throw new Error(`Resend rechaz&oacute; el correo: ${error.message}`);
 }
