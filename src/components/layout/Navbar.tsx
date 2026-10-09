@@ -84,7 +84,9 @@ export default function Navbar({ initialUser }: NavbarProps) {
   }, []);
 
   // Scroll-spy: la barra dorada sigue la sección visible en la landing.
+  // Además cierra el menú móvil al cambiar de ruta.
   useEffect(() => {
+    setMobileOpen(false);
     if (typeof window === 'undefined') return;
     const ids = LINKS.map((l) => l.id);
     const updateFromScroll = () => {
