@@ -14,9 +14,11 @@ import {
   findCustomerByDocument,
   findRoleByName,
   findUserByEmail,
+  findUserCredentialsById,
+  updateUserPassword,
 } from "./auth.repository";
 
-import type { LoginInput, RegisterInput } from "./auth.schemas";
+import type { ChangePasswordInput, LoginInput, RegisterInput } from "./auth.schemas";
 
 function toAuthUser(user: {
   id: string;
@@ -134,4 +136,22 @@ export async function login(input: LoginInput) {
   await createSession(user.id, user.role.name as "user" | "admin" | "employee");
 
   return toAuthUser(user);
+}
+
+/**
+ * Cambio de contraseña con sesión iniciada. Exige la contraseña actual para
+ * que alguien con acceso momentáneo al dispositivo no pueda fijar una nueva.
+ */
+export async function changePassword(userId: string, input: ChangePasswordInput) {
+  const credentials = await findUserCredentialsById(userId);
+  if (!credentials || !credentials.isActive) {
+    throw new UnauthorizedError("No autenticado");
+  }
+
+  const currentValid = await bcrypt.compare(input.currentPassword, credentials.passwordHash);
+  if (!currentValid) {
+    throw new UnauthorizedError("La contraseña actual no es correcta");
+  }
+
+  await updateUserPassword(userId, await bcrypt.hash(input.newPassword, 12));
 }
