@@ -80,6 +80,7 @@ model Service {
   serviceSlots        ServiceSlot[]
   employeeAssignments EmployeeAssignment[]
   reservations        Reservation[]
+  reservationBlocks   ReservationBlock[]
 }
 
 // ========= ENUMS =========
@@ -245,6 +246,8 @@ model Reservation {
   creator  User?    @relation(fields: [createdBy], references: [id])
 
   slots    ReservationSlot[]
+  blocks   ReservationBlock[]
+  guests   ReservationGuest[]
   holds    ReservationHold[]
   payments Payment[]
   qrTokens QrToken[]
@@ -261,6 +264,27 @@ model ReservationSlot {
   slot        ServiceSlot @relation(fields: [slotId], references: [id])
 
   @@id([reservationId, slotId]) //Evita duplicados automáticamente, sin necesitar un @@unique aparte. Hace los include/where más directos, porque puedes buscar por el par exacto sin pasar por un índice secundario.
+}
+
+// Quién ocupa cada cupo de la reserva.
+//
+// El titular de la cuenta es el primero (isTitular = true); el resto son los
+// acompañantes. El número de filas es el número de QR que se emiten: el SCRUM
+// lo resuelve asi en la pregunta 16 ("el número de qrs que se envían"), y el
+// PDF con los QR individuales sale de esta tabla.
+model ReservationGuest {
+  id            String  @id @default(uuid()) @db.Uuid
+  reservationId String  @db.Uuid
+  fullName      String
+  document      String
+  isTitular     Boolean @default(false)
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  // Un QR por zona, no uno solo: quien reservó piscina y baloncesto entra con dos
+  // códigos distintos, uno para cada puerta. De ahí que ya no sea 1 a 1.
+  qrTokens    QrToken[]
+
+  @@index([reservationId])
 }
 
 model ReservationHold {
@@ -307,7 +331,13 @@ model StripeEvent {
 model QrToken {
   id            String    @id @default(uuid()) @db.Uuid
   reservationId String    @db.Uuid
+  // Zona a la que da acceso este QR. Se llena al emitir el QR y es lo que el
+  // empleado contrasta contra su zona asignada. Es nulo solo para reservas
+  // antiguas, que aun no han pasado por la emision de QR.
+  blockId       String?   @db.Uuid
   tokenHash     String    @unique
+  // Numeracion legible dentro de la zona: el PDF imprime algo como Z2-P03
+  // (zona 2, persona 3) para que el empleado identifique a quien escanea.
   seqNo         Int       @default(1)
   status        QrStatus  @default(active)
   createdAt     DateTime  @default(now())
@@ -315,7 +345,15 @@ model QrToken {
   // printedAt     DateTime?
 
   reservation Reservation @relation(fields: [reservationId], references: [id])
+  block       ReservationBlock? @relation(fields: [blockId], references: [id])
+  // Persona a la que pertenece este QR. Nulo hasta que se asigna al confirmar
+  // el pago.
+  guest       ReservationGuest? @relation(fields: [guestId], references: [id])
+  guestId     String?           @db.Uuid
   accesses    Access[]
+
+  // Cada persona tiene un QR por zona: el par no se repite dentro de la reserva.
+  @@unique([reservationId, blockId, seqNo])
 }
 
 model Access {
@@ -329,4 +367,31 @@ model Access {
 
   qrToken  QrToken  @relation(fields: [qrTokenId], references: [id])
   employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+// Un tramo reservado dentro de una compra.
+//
+// Una reserva puede abarcar varias zonas: si alguien pide piscina y luego
+// baloncesto, son dos bloques de la misma reserva y se cobran juntos en un solo
+// pago. El bloque es lo que le da al QR su zona, porque el empleado valida en la
+// puerta de una zona concreta y un QR de baloncesto no sirve en la piscina.
+//
+// En el caso de una sola zona hay exactamente un bloque, igual que antes.
+model ReservationBlock {
+  id            String   @id @default(uuid()) @db.Uuid
+  reservationId String   @db.Uuid
+  serviceId     String   @db.Uuid
+  startsAt      DateTime
+  endsAt        DateTime
+  createdAt     DateTime @default(now())
+
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+  service     Service     @relation(fields: [serviceId], references: [id])
+  qrTokens    QrToken[]
+
+  // El solape se busca por cliente y por ventana; este indice lo cubre.
+  @@index([reservationId, startsAt])
+  @@index([serviceId, startsAt])
+  // Un mismo bloque no puede repetirse dentro de una reserva.
+  @@unique([reservationId, serviceId, startsAt])
 }
