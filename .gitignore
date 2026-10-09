@@ -36,6 +36,10 @@ yarn-error.log*
 .env*
 !.env.example
 
+# artefactos de pruebas: contienen cookies de sesion, tokens y claves
+cookies.txt
+/scripts/tokens-acceso.json
+
 # vercel
 .vercel
 
