@@ -7,9 +7,11 @@ import { getStripe } from "@/shared/lib/stripe";
 import {
   getPaymentByIntentId,
   getPaymentBySessionId,
+  obtenerContactoQr,
   recordStripeEvent,
 } from "@/features/payments/payments.repository";
 import { confirmarPagoExitoso, rechazarPago } from "@/features/payments/payments.service";
+import { sendQrEmail } from "@/lib/email/resend";
 
 // ---------------------------------------------------------------------------
 // Webhook de Stripe (SCRUM seccion 13).
@@ -119,5 +121,29 @@ async function handleCheckoutCompleted(
     paymentId: payment.id,
     stripePaymentIntentId: intentId,
   });
-  return { qrEmitidos: confirmacion.transitioned ? confirmacion.emitidos.length : 0 };
+  if (!confirmacion.transitioned) return { qrEmitidos: 0 };
+
+  // El correo es la única entrega de los códigos (solo se guardan hashes):
+  // si falla, se registra y se acusa 200 igual para no reintentar el cobro.
+  try {
+    const contacto = await obtenerContactoQr(payment.reservationId);
+    if (contacto) {
+      await sendQrEmail(contacto.email, {
+        nombre: contacto.nombre,
+        fecha: contacto.startsAt.toLocaleDateString("es-CO", {
+          timeZone: "America/Bogota",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }),
+        codigos: confirmacion.emitidos,
+      });
+    }
+  } catch (error) {
+    console.error("[webhook] pago confirmado pero falló el correo de QR", {
+      reservationId: payment.reservationId,
+      error,
+    });
+  }
+  return { qrEmitidos: confirmacion.emitidos.length };
 }

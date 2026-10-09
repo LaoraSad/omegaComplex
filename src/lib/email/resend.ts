@@ -1,5 +1,6 @@
 import "server-only";
 
+import QRCode from "qrcode";
 import { Resend } from "resend";
 
 let resendClient: Resend | undefined;
@@ -114,5 +115,52 @@ export async function sendWelcomeEmail(to: string, firstName: string): Promise<v
       <h1 style="margin:0 0 18px;color:#242124;font-size:25px;line-height:1.25">¡Bienvenido a Omega Complex!</h1>
       <p style="margin:0 0 14px;color:#555;font-size:15px;line-height:1.65">Hola ${escapeHtml(firstName)}, tu correo fue verificado correctamente y tu cuenta ya está lista.</p>
       <p style="margin:0;color:#555;font-size:14px;line-height:1.65">Nos alegra tenerte en nuestra comunidad. Te esperamos para disfrutar de nuestras instalaciones y actividades.</p>`),
+  );
+}
+
+export type QrParaCorreo = {
+  /** Etiqueta legible: Z1-P01 (zona 1, persona 1). */
+  etiqueta: string;
+  servicio: string;
+  zona: string;
+  nombre: string;
+  /** Token crudo: es lo que el empleado escanea. Solo existe en este momento. */
+  token: string;
+};
+
+/**
+ * Envía los QR de una reserva confirmada. Cada código se genera aquí como
+ * imagen PNG embebida (data URL): el token crudo solo se guarda hasheado en
+ * la base, así que este correo es la única entrega del código escaneable.
+ */
+export async function sendQrEmail(
+  to: string,
+  input: { nombre: string; fecha: string; codigos: QrParaCorreo[] },
+): Promise<void> {
+  const tarjetas = await Promise.all(
+    input.codigos.map(async (qr) => {
+      const imagen = await QRCode.toDataURL(qr.token, {
+        width: 220,
+        margin: 1,
+        color: { dark: "#211a1d", light: "#ffffff" },
+      });
+      return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 14px;border:1px solid #eadde1;border-radius:10px;overflow:hidden">
+        <tr><td align="center" style="padding:16px 12px 8px">
+          <img src="${imagen}" width="200" alt="QR ${escapeHtml(qr.etiqueta)}" style="display:block;width:200px;max-width:100%;height:auto">
+        </td></tr>
+        <tr><td align="center" style="padding:0 12px 4px;color:#7a1f3d;font-size:15px;font-weight:800;letter-spacing:1px">${escapeHtml(qr.etiqueta)} · ${escapeHtml(qr.nombre)}</td></tr>
+        <tr><td align="center" style="padding:0 12px 14px;color:#555;font-size:13px">${escapeHtml(qr.servicio)} — ${escapeHtml(qr.zona)}</td></tr>
+      </table>`;
+    }),
+  );
+
+  await send(
+    to,
+    "Tus códigos QR - Omega Complex",
+    emailLayout(`<p style="margin:0 0 8px;color:#7a1f3d;font-size:12px;font-weight:bold;letter-spacing:1.4px;text-transform:uppercase">Reserva confirmada</p>
+      <h1 style="margin:0 0 18px;color:#242124;font-size:25px;line-height:1.25">Hola ${escapeHtml(input.nombre)}, estos son tus QR</h1>
+      <p style="margin:0 0 18px;color:#555;font-size:15px;line-height:1.65">Reserva para el <strong>${escapeHtml(input.fecha)}</strong>. Presenta cada código en la puerta de su zona. Cada QR es de un solo uso y solo sirve el día de la reserva.</p>
+      ${tarjetas.join("")}
+      <p style="margin:0;color:#777;font-size:13px;line-height:1.6">Si no ves las imágenes, pide ayuda en recepción con tu documento.</p>`),
   );
 }
