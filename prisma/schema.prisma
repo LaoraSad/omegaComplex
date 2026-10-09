@@ -57,7 +57,7 @@ model Customer {
 }
 
 model Category {
-  id          String  @id @default(cuid())
+  id          String  @id @default(uuid()) @db.Uuid
   name        String  @unique
   slug        String  @unique
   description String?
@@ -67,8 +67,8 @@ model Category {
 }
 
 model Service {
-  id          String  @id @default(cuid())
-  categoryId  String
+  id          String  @id @default(uuid()) @db.Uuid
+  categoryId  String  @db.Uuid
   name        String  @unique
   slug        String  @unique
   description String?

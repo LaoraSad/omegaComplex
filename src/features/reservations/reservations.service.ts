@@ -21,6 +21,42 @@ export const HOLD_MINUTES = 10;
 export const MAX_ADVANCE_MONTHS = 3;
 /** Reintentos cuando varias reservas chocan por el lock de la misma franja. */
 const MAX_INTENTOS = 3;
+const BOGOTA = "America/Bogota";
+
+function dateKeyBogota(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: BOGOTA,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function dayOfWeekBogota(dateKey: string): number {
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone: BOGOTA,
+    weekday: "short",
+  }).format(new Date(`${dateKey}T12:00:00-05:00`));
+  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(weekday);
+}
+
+function minutesInBogota(date: Date): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: BOGOTA,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value);
+  const minute = Number(parts.find((part) => part.type === "minute")?.value);
+  return hour * 60 + minute;
+}
+
+function parseScheduleMinutes(value: string): number | null {
+  if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)) return null;
+  const [hour, minute] = value.split(":").map(Number);
+  return hour * 60 + minute;
+}
 
 export type CreateResult =
   | {
@@ -40,6 +76,7 @@ export type CreateResult =
 export type CrearError =
   | "servicio_no_existe"
   | "franja_no_existe"
+  | "horario_no_disponible"
   | "franja_otro_servicio"
   | "franja_pasada"
   | "muy_far"
@@ -214,7 +251,13 @@ export async function createReservationWithHold(
     where: { id: { in: ids } },
     include: {
       service: {
-        select: { id: true, name: true, price: true, category: { select: { name: true } } },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          category: { select: { name: true } },
+          serviceSchedules: { select: { dayOfWeek: true, openTime: true, closeTime: true } },
+        },
       },
     },
   });
@@ -238,6 +281,53 @@ export async function createReservationWithHold(
       code: "franja_otro_servicio",
       message: "Una de las franjas no pertenece a la instalación elegida.",
     };
+  }
+
+  const fechas = input.bloques.map((bloque) => bloque.fecha).sort();
+  const cierres = await db.serviceClosure.findMany({
+    where: {
+      OR: [
+        { serviceId: { in: [...new Set(input.bloques.map((bloque) => bloque.serviceId))] } },
+        { serviceId: null },
+      ],
+      dateFrom: { lte: new Date(`${fechas[fechas.length - 1]}T05:00:00.000Z`) },
+      dateTo: { gte: new Date(`${fechas[0]}T05:00:00.000Z`) },
+    },
+    select: { serviceId: true, dateFrom: true, dateTo: true },
+  });
+
+  for (const bloque of input.bloques) {
+    const slot = slotPorId.get(bloque.slotId);
+    if (!slot) continue;
+
+    const dateKey = dateKeyBogota(slot.startsAt);
+    const dayOfWeek = dayOfWeekBogota(dateKey);
+    const schedule = slot.service.serviceSchedules.find((item) => item.dayOfWeek === dayOfWeek);
+    const openMinutes = schedule ? parseScheduleMinutes(schedule.openTime) : null;
+    const closeMinutes = schedule ? parseScheduleMinutes(schedule.closeTime) : null;
+    const dateValue = Date.parse(`${dateKey}T00:00:00.000Z`);
+    const tieneCierre = cierres.some((cierre) => {
+      const desde = Date.parse(`${cierre.dateFrom.toISOString().slice(0, 10)}T00:00:00.000Z`);
+      const hasta = Date.parse(`${cierre.dateTo.toISOString().slice(0, 10)}T00:00:00.000Z`);
+      return (cierre.serviceId === null || cierre.serviceId === slot.serviceId) && dateValue >= desde && dateValue <= hasta;
+    });
+
+    if (
+      dateKey !== bloque.fecha ||
+      !schedule ||
+      openMinutes === null ||
+      closeMinutes === null ||
+      closeMinutes <= openMinutes ||
+      minutesInBogota(slot.startsAt) < openMinutes ||
+      minutesInBogota(slot.endsAt) > closeMinutes ||
+      tieneCierre
+    ) {
+      return {
+        ok: false,
+        code: "horario_no_disponible",
+        message: "La franja no está disponible dentro del horario actual de la instalación.",
+      };
+    }
   }
 
   // Orden cronológico: es como el cliente va a recorrer las zonas y como deben
