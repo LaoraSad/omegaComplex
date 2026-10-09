@@ -54,7 +54,7 @@ export async function getDayAvailability(
 
   const [service, closure] = await Promise.all([
     db.service.findFirst({
-      where: { id: serviceId, category: { isActive: true } },
+      where: { id: serviceId, category: { is: { isActive: true } } },
       select: {
         id: true,
         name: true,

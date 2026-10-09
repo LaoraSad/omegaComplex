@@ -207,12 +207,13 @@ export async function requestPasswordReset(email: string): Promise<void> {
 
   try {
     await sendPasswordResetEmail(user.email, token);
-  } catch (error) {
+  } catch {
     await db.passwordReset.updateMany({
       where: { id: reset.id, usedAt: null },
       data: { usedAt: new Date() },
     });
-    console.error("[email] No se pudo enviar el correo de recuperación", error);
+    // No incluir el objeto del proveedor en logs: puede contener datos de la solicitud.
+    console.error("[email] No se pudo enviar el correo de recuperación");
   }
 }
 

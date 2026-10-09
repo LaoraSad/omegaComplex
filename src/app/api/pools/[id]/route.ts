@@ -16,7 +16,7 @@ export const GET = handler(async (_req, ctx) => {
   const service = UUID.test(id)
     ? await getCatalogService(id)
     : await db.service.findFirst({
-        where: { slug: id, category: { isActive: true } },
+        where: { slug: id, category: { is: { isActive: true } } },
         include: {
           category: { select: { id: true, name: true, slug: true } },
           serviceSchedules: { orderBy: { dayOfWeek: "asc" } },
