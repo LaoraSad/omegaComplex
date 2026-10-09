@@ -884,6 +884,38 @@ input {
   box-shadow: 0 12px 28px rgb(122 31 61 / 30%);
 }
 
+.auth-button-social {
+  width: 100%;
+  border-color: var(--border);
+  background: #fff;
+  color: var(--foreground);
+  font-size: 1rem;
+}
+
+.auth-button-social:hover:not(:disabled) {
+  background: #fafafa;
+  border-color: #cbd0d8;
+}
+
+/* Separador "o continúa con" entre el formulario y el acceso de Google. */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin: 0.35rem 0;
+  color: #8a8f98;
+  font-family: var(--font-recoleta-family);
+  font-size: 0.76rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  height: 1px;
+  flex: 1;
+  background: var(--border);
+  content: "";
+}
+
 .auth-error,
 .auth-success,
 .auth-info {
