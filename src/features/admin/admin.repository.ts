@@ -57,61 +57,67 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
   const { start: todayStart, end: todayEnd } = bogotaDayRange();
   const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
-  // Consultas en secuencia (no en paralelo): el pool de la base de datos es
-  // limitado y el panel debe degradarse con gracia, no agotar conexiones.
-  const statusGroups = await db.reservation.groupBy({ by: ["status"], _count: { status: true } });
-  const revenue = await db.payment.aggregate({
-    _sum: { amountCop: true },
-    where: { status: "succeeded" },
-  });
-  const accessesToday = await db.access.groupBy({
-    by: ["result"],
-    _count: { result: true },
-    where: { accessedAt: { gte: todayStart, lt: todayEnd } },
-  });
-  const holdsActive = await db.reservationHold.count({
-    where: { status: "active", expiresAt: { gt: new Date() } },
-  });
-  const servicesCount = await db.service.count();
-  const customersCount = await db.customer.count();
-  const todaySlots = await db.serviceSlot.findMany({
-    where: { startsAt: { gte: todayStart, lt: todayEnd } },
-    select: {
-      capacity: true,
-      bookedCount: true,
-      heldCount: true,
-      service: { select: { id: true, name: true } },
-    },
-  });
-  const recentReservations = await db.reservation.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 6,
-    include: reservationInclude,
-  });
-  const recentAccesses = await db.access.findMany({
-    orderBy: { accessedAt: "desc" },
-    take: 6,
-    include: {
-      employee: { include: { user: { select: { firstName: true, lastName: true } } } },
-      qrToken: {
-        include: {
-          reservation: {
-            include: {
-              customer: {
-                include: { user: { select: { firstName: true, lastName: true } } },
+  // Lecturas independientes en oleadas de 3: el pooler (session mode, 15
+  // conexiones) colapsa con 10 consultas simultáneas, pero en secuencia
+  // suman ~5s de roundtrips. 3 oleadas ≈ 1s con máximo 3 conexiones.
+  // (servicesCount/customersCount se eliminaron: ninguna vista los usaba.)
+  const [statusGroups, revenue, accessesToday] = await Promise.all([
+    db.reservation.groupBy({ by: ["status"], _count: { status: true } }),
+    db.payment.aggregate({
+      _sum: { amountCop: true },
+      where: { status: "succeeded" },
+    }),
+    db.access.groupBy({
+      by: ["result"],
+      _count: { result: true },
+      where: { accessedAt: { gte: todayStart, lt: todayEnd } },
+    }),
+  ]);
+  const [holdsActive, todaySlots, last14] = await Promise.all([
+    db.reservationHold.count({
+      where: { status: "active", expiresAt: { gt: new Date() } },
+    }),
+    db.serviceSlot.findMany({
+      where: { startsAt: { gte: todayStart, lt: todayEnd } },
+      select: {
+        capacity: true,
+        bookedCount: true,
+        heldCount: true,
+        service: { select: { id: true, name: true } },
+      },
+    }),
+    db.reservation.findMany({
+      where: { createdAt: { gte: fourteenDaysAgo } },
+      select: { createdAt: true, status: true },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+  const [recentReservations, recentAccesses] = await Promise.all([
+    db.reservation.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 6,
+      include: reservationInclude,
+    }),
+    db.access.findMany({
+      orderBy: { accessedAt: "desc" },
+      take: 6,
+      include: {
+        employee: { include: { user: { select: { firstName: true, lastName: true } } } },
+        qrToken: {
+          include: {
+            reservation: {
+              include: {
+                customer: {
+                  include: { user: { select: { firstName: true, lastName: true } } },
+                },
+                service: { select: { id: true, name: true } },
               },
-              service: { select: { id: true, name: true } },
             },
           },
         },
       },
-    },
-  });
-  const last14 = await db.reservation.findMany({
-    where: { createdAt: { gte: fourteenDaysAgo } },
-    select: { createdAt: true, status: true },
-    orderBy: { createdAt: "asc" },
-  });
+    }),
+  ]);
 
   const reservationsByStatus: Record<string, number> = {};
   let totalReservations = 0;
@@ -147,24 +153,26 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
   }
 
   // Serie diaria (zona Bogota) de los ultimos 14 dias.
+  // Formateadores creados una vez: antes se construian por cada fila.
+  const dayKey = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const dayLabel = new Intl.DateTimeFormat("es-CO", {
+    timeZone: "America/Bogota",
+    day: "numeric",
+    month: "short",
+  });
   const buckets = new Map<string, { total: number; confirmed: number }>();
   for (let i = 13; i >= 0; i--) {
     const ref = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
-    const key = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Bogota",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(ref);
+    const key = dayKey.format(ref);
     buckets.set(key, { total: 0, confirmed: 0 });
   }
   for (const r of last14) {
-    const key = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Bogota",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(r.createdAt);
+    const key = dayKey.format(r.createdAt);
     const bucket = buckets.get(key);
     if (bucket) {
       bucket.total += 1;
@@ -173,11 +181,7 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
   }
   const dailySeries = [...buckets.entries()].map(([date, v]) => ({
     date,
-    label: new Intl.DateTimeFormat("es-CO", {
-      timeZone: "America/Bogota",
-      day: "numeric",
-      month: "short",
-    }).format(new Date(`${date}T12:00:00`)),
+    label: dayLabel.format(new Date(`${date}T12:00:00`)),
     total: v.total,
     confirmed: v.confirmed,
   }));
@@ -190,8 +194,6 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
     accessesAllowedToday,
     accessesDeniedToday,
     holdsActive,
-    servicesCount,
-    customersCount,
     occupancyToday,
     occupancyByService: [...byService.entries()]
       .map(([serviceId, v]) => ({ serviceId, ...v }))
