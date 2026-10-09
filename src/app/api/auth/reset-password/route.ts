@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { completePasswordReset } from "@/features/auth/email-flow.service";
 import { handler } from "@/shared/http/handler";
-import { fail } from "@/shared/http/api-response";
+import { ok } from "@/shared/http/api-response";
+import { ValidationError } from "@/shared/http/errors";
 
-// Restablecimiento de contraseña aún no implementado (no hay proveedor de correo).
-export const POST = handler(async () => {
-  return NextResponse.json(
-    fail(
-      "NOT_IMPLEMENTED",
-      "El restablecimiento de contraseña aún no está disponible. Contáctanos por nuestros canales de atención.",
-    ),
-    { status: 501 },
-  );
+const schema = z.object({
+  token: z.string().min(32).max(128),
+  password: z.string().min(8).max(100),
+});
+
+export const POST = handler(async (req) => {
+  const result = schema.safeParse(await req.json());
+  if (!result.success) throw new ValidationError("El token o la nueva contraseña no son válidos");
+  await completePasswordReset(result.data.token, result.data.password);
+  return NextResponse.json(ok(null));
 });

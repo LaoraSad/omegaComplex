@@ -112,7 +112,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps = {}) {
         email: values.email,
         password: values.password,
       };
-      await register({
+      const result = await register({
         ...data,
         firstName: data.firstName.trim(),
         lastName: data.lastName.trim(),
@@ -120,9 +120,9 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps = {}) {
         phone: data.phone.trim(),
         email: data.email.trim(),
       });
-      // El registro deja la sesión activa de inmediato.
-      router.push("/");
-      router.refresh();
+      router.push(
+        `/verify-email?email=${encodeURIComponent(result.email)}&sent=${result.verificationEmailSent}`,
+      );
     } catch (caughtError: unknown) {
       setServerError(
         getAuthErrorMessage(caughtError, "No se pudo completar el registro. Intenta de nuevo."),
@@ -219,8 +219,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps = {}) {
         value={values.confirmPassword}
       />
       <p className="auth-hint">
-        Tu documento debe estar asociado a una sola cuenta. Al registrarte tu sesión
-        quedará activa de inmediato.
+        Tu documento debe estar asociado a una sola cuenta. Verifica tu correo para activar tu cuenta.
       </p>
       <AuthButton loading={loading} type="submit">
         Crear cuenta

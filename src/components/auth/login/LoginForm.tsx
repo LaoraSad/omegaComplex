@@ -92,6 +92,14 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps = {}) {
   return (
     <form className="auth-form" noValidate onSubmit={handleSubmit}>
       {error ? <AuthError>{error}</AuthError> : null}
+      {error === "Debes verificar tu correo electrónico antes de iniciar sesión." ? (
+        <Link
+          className="auth-link"
+          href={`/verify-email?email=${encodeURIComponent(values.email.trim())}`}
+        >
+          Reenviar código de verificación
+        </Link>
+      ) : null}
 
       <AuthInput
         autoComplete="email"
