@@ -4,6 +4,9 @@ import { useEffect, useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ServiceCard from '@/components/catalog/ServiceCard';
 import BookingGuide from '@/components/storefront/BookingGuide';
+import { CarritoProvider } from '@/components/storefront/CarritoReserva';
+import { BarraCarrito } from '@/components/storefront/BarraCarrito';
+import { SelectorFranjas } from '@/components/storefront/SelectorFranjas';
 import AmbientBubbles from '@/components/AmbientBubbles';
 import SectionDivider from '@/components/SectionDivider';
 import { Search, Waves, Trophy, Dumbbell, Sparkles, Filter, X } from 'lucide-react';
@@ -23,6 +26,15 @@ async function readApi<T>(response: Response): Promise<T> {
 }
 
 function ServicesContent() {
+  return (
+    <CarritoProvider>
+      <CatalogoConCarrito />
+    </CarritoProvider>
+  );
+}
+
+/** Catálogo + carrito. Va aparte para que el provider envuelva todo el JSX. */
+function CatalogoConCarrito() {
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get('categoria');
 
@@ -32,6 +44,8 @@ function ServicesContent() {
   const [services, setServices] = useState<CatalogServiceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  // Instalacion cuyo selector de franjas esta abierto.
+  const [elegido, setElegido] = useState<CatalogServiceRecord | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -177,7 +191,7 @@ function ServicesContent() {
         <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredServices.map((service, i) => (
             <div key={service.id} data-tour={i === 0 ? 'reservar' : undefined} className="omega-card min-w-0">
-              <ServiceCard service={service} />
+              <ServiceCard service={service} onElegirFranja={() => setElegido(service)} />
             </div>
           ))}
         </div>
@@ -199,6 +213,11 @@ function ServicesContent() {
           </button>
         </div>
       )}
+
+      {elegido && <SelectorFranjas servicio={elegido} onClose={() => setElegido(null)} />}
+
+      {/* Barra fija del carrito: vive dentro del contenedor para heredar el tema. */}
+      <BarraCarrito />
       </div>
     </div>
   );
