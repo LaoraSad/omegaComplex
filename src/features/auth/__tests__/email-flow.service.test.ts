@@ -33,6 +33,7 @@ vi.mock("@/lib/email/resend", () => mocks.mail);
 import {
   completePasswordReset,
   issueVerificationCode,
+  requestPasswordReset,
   verifyEmailCode,
 } from "../email-flow.service";
 
@@ -142,6 +143,76 @@ describe("email auth flows", () => {
     expect(mocks.db.passwordReset.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: { usedAt: expect.any(Date) } }),
     );
+  });
+
+  it("no crea un token ni contacta Resend para un correo inexistente", async () => {
+    mocks.db.user.findUnique.mockResolvedValue(null);
+
+    await expect(requestPasswordReset(testEmail)).resolves.toBeUndefined();
+
+    expect(mocks.db.passwordReset.create).not.toHaveBeenCalled();
+    expect(mocks.db.$transaction).not.toHaveBeenCalled();
+    expect(mocks.mail.sendPasswordResetEmail).not.toHaveBeenCalled();
+    expect(mocks.db.user.update).not.toHaveBeenCalled();
+  });
+
+  it("crea un token hasheado y envía el enlace con Resend para una cuenta existente", async () => {
+    const user = { id: userId, email: testEmail };
+    mocks.db.user.findUnique.mockResolvedValue(user);
+    mocks.db.passwordReset.create.mockImplementation(async ({ data }) => ({ id: "reset-1", ...data }));
+
+    await requestPasswordReset(testEmail);
+
+    const [recipient, rawToken] = mocks.mail.sendPasswordResetEmail.mock.calls[0];
+    const stored = mocks.db.passwordReset.create.mock.calls[0][0].data;
+    expect(recipient).toBe(testEmail);
+    expect(rawToken).toMatch(/^[a-f\d]{64}$/);
+    expect(stored.tokenHash).toBe(createHash("sha256").update(rawToken).digest("hex"));
+    expect(stored.tokenHash).not.toBe(rawToken);
+    expect(stored.expiresAt.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it("invalida el token si Resend rechaza el correo", async () => {
+    const user = { id: userId, email: testEmail };
+    mocks.db.user.findUnique.mockResolvedValue(user);
+    mocks.db.passwordReset.create.mockResolvedValue({ id: "reset-1" });
+    mocks.mail.sendPasswordResetEmail.mockRejectedValue(new Error("private provider detail"));
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(requestPasswordReset(testEmail)).resolves.toBeUndefined();
+
+    expect(mocks.db.passwordReset.updateMany).toHaveBeenLastCalledWith({
+      where: { id: "reset-1", usedAt: null },
+      data: { usedAt: expect.any(Date) },
+    });
+    expect(errorLog).toHaveBeenCalledWith("[email] No se pudo enviar el correo de recuperación");
+    errorLog.mockRestore();
+  });
+
+  it("permite restablecer la contraseña una vez y marca el token como usado", async () => {
+    const token = "ef".repeat(32);
+    const reset = {
+      id: "reset-1",
+      userId,
+      tokenHash: createHash("sha256").update(token).digest("hex"),
+      expiresAt: new Date(Date.now() + 60_000),
+      usedAt: null,
+    };
+    mocks.db.passwordReset.findUnique.mockResolvedValue(reset);
+    mocks.db.passwordReset.updateMany.mockResolvedValue({ count: 1 });
+
+    await completePasswordReset(token, "NuevaClave123");
+
+    expect(mocks.db.passwordReset.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: reset.id, tokenHash: reset.tokenHash, usedAt: null }),
+        data: { usedAt: expect.any(Date) },
+      }),
+    );
+    expect(mocks.db.user.update).toHaveBeenCalledWith({
+      where: { id: userId },
+      data: { passwordHash: expect.any(String) },
+    });
   });
 
   it("rechaza el segundo uso de un token de recuperación", async () => {

@@ -70,8 +70,10 @@ export async function listCatalogServices(categorySlug?: string): Promise<Catalo
 	return db.service.findMany({
 		where: {
 			category: {
-				isActive: true,
-				...(categorySlug ? { slug: categorySlug } : {}),
+				is: {
+					isActive: true,
+					...(categorySlug ? { slug: categorySlug } : {}),
+				},
 			},
 		},
 		orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
@@ -84,7 +86,7 @@ export async function listCatalogServices(categorySlug?: string): Promise<Catalo
 
 export async function getCatalogService(id: string): Promise<CatalogServiceRecord | null> {
 	return db.service.findFirst({
-		where: { id, category: { isActive: true } },
+		where: { id, category: { is: { isActive: true } } },
 		include: {
 			category: { select: { id: true, name: true, slug: true } },
 			serviceSchedules: { orderBy: { dayOfWeek: "asc" } },
