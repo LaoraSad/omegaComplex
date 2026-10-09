@@ -242,13 +242,36 @@ export async function hasStripeEvent(eventId: string): Promise<boolean> {
   return (await db.stripeEvent.count({ where: { eventId } })) > 0;
 }
 
-/** Ingresos confirmados por rango, para los reportes del administrador. */
-export async function sumRevenue(from: Date, to: Date): Promise<number> {
+/** Ingresos confirmados por rango, para los reportes del administrador. */export async function sumRevenue(from: Date, to: Date): Promise<number> {
   const agg = await db.payment.aggregate({
     where: { status: "succeeded", paidAt: { gte: from, lt: to } },
     _sum: { amountCop: true },
   });
   return agg._sum.amountCop ?? 0;
+}
+
+/**
+ * Contacto y fecha de una reserva para el correo de QR: email y nombre del
+ * titular más el inicio de la primera franja.
+ */
+export async function obtenerContactoQr(
+  reservationId: string,
+): Promise<{ email: string; nombre: string; startsAt: Date } | null> {
+  const row = await db.reservation.findUnique({
+    where: { id: reservationId },
+    select: {
+      startsAt: true,
+      customer: {
+        select: { user: { select: { email: true, firstName: true, lastName: true } } },
+      },
+    },
+  });
+  if (!row) return null;
+  return {
+    email: row.customer.user.email,
+    nombre: `${row.customer.user.firstName} ${row.customer.user.lastName}`.trim(),
+    startsAt: row.startsAt,
+  };
 }
 
 function isUniqueViolation(error: unknown): boolean {
