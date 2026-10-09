@@ -1,7 +1,13 @@
-import { NextResponse } from 'next/server';
-import { pools } from '@/lib/storefront/pools-data';
+import { NextResponse } from "next/server";
 
-// GET /api/pools  → lista todas las piscinas
-export async function GET() {
-  return NextResponse.json({ data: pools, total: pools.length });
-}
+import { handler } from "@/shared/http/handler";
+import { ok } from "@/shared/http/api-response";
+import { listCatalogServices } from "@/features/catalog/catalog.repository";
+
+// Catálogo real de la base. Antes devolvía un array hardcodeado con precios y
+// capacidades inventados que no coincidían con la BD.
+export const GET = handler(async (req) => {
+  const categorySlug = new URL(req.url).searchParams.get("categoria") ?? undefined;
+  const services = await listCatalogServices(categorySlug ?? undefined);
+  return NextResponse.json(ok(services));
+});
