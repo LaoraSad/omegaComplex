@@ -53,8 +53,95 @@ const reservationInclude = {
   _count: { select: { qrTokens: true } },
 } as const;
 
-export async function getDashboardOverview(): Promise<DashboardOverview> {
-  const { start: todayStart, end: todayEnd } = bogotaDayRange();
+/** Agregación pura del groupBy de reservas: conteo por estado y total. */
+export function agregarReservasPorEstado(
+  groups: Array<{ status: string; _count: { status: number } }>,
+): { reservationsByStatus: Record<string, number>; totalReservations: number } {
+  const reservationsByStatus: Record<string, number> = {};
+  let totalReservations = 0;
+  for (const g of groups) {
+    reservationsByStatus[g.status] = g._count.status;
+    totalReservations += g._count.status;
+  }
+  return { reservationsByStatus, totalReservations };
+}
+
+export type SlotOcupacion = {
+  capacity: number;
+  bookedCount: number;
+  heldCount: number;
+  service: { id: string; name: string };
+};
+
+/** Agregación pura de franjas: ocupación global y por servicio (ord. desc). */
+export function agregarOcupacion(slots: SlotOcupacion[]): {
+  occupancyToday: { used: number; total: number } | null;
+  occupancyByService: Array<{ serviceId: string; serviceName: string; used: number; total: number }>;
+} {
+  const byService = new Map<string, { serviceName: string; used: number; total: number }>();
+  if (slots.length === 0) return { occupancyToday: null, occupancyByService: [] };
+  let used = 0;
+  let total = 0;
+  for (const s of slots) {
+    const slotUsed = s.bookedCount + s.heldCount;
+    used += slotUsed;
+    total += s.capacity;
+    const entry = byService.get(s.service.id) ?? {
+      serviceName: s.service.name,
+      used: 0,
+      total: 0,
+    };
+    entry.used += slotUsed;
+    entry.total += s.capacity;
+    byService.set(s.service.id, entry);
+  }
+  return {
+    occupancyToday: { used, total },
+    occupancyByService: [...byService.entries()]
+      .map(([serviceId, v]) => ({ serviceId, ...v }))
+      .sort((a, b) => b.used / Math.max(b.total, 1) - a.used / Math.max(a.total, 1)),
+  };
+}
+
+/** Serie diaria (zona Bogotá) de los últimos 14 días. `ahora` inyectable en pruebas. */
+export function construirSerieDiaria(
+  rows: Array<{ createdAt: Date; status: string }>,
+  ahora: Date = new Date(),
+): Array<{ date: string; label: string; total: number; confirmed: number }> {
+  const dayKey = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const dayLabel = new Intl.DateTimeFormat("es-CO", {
+    timeZone: "America/Bogota",
+    day: "numeric",
+    month: "short",
+  });
+  const buckets = new Map<string, { total: number; confirmed: number }>();
+  for (let i = 13; i >= 0; i--) {
+    const ref = new Date(ahora.getTime() - i * 24 * 60 * 60 * 1000);
+    const key = dayKey.format(ref);
+    buckets.set(key, { total: 0, confirmed: 0 });
+  }
+  for (const r of rows) {
+    const key = dayKey.format(r.createdAt);
+    const bucket = buckets.get(key);
+    if (bucket) {
+      bucket.total += 1;
+      if (r.status === "confirmed" || r.status === "used") bucket.confirmed += 1;
+    }
+  }
+  return [...buckets.entries()].map(([date, v]) => ({
+    date,
+    label: dayLabel.format(new Date(`${date}T12:00:00`)),
+    total: v.total,
+    confirmed: v.confirmed,
+  }));
+}
+
+export async function getDashboardOverview(): Promise<DashboardOverview> {  const { start: todayStart, end: todayEnd } = bogotaDayRange();
   const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
   // Lecturas independientes en oleadas de 3: el pooler (session mode, 15
@@ -119,72 +206,16 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
     }),
   ]);
 
-  const reservationsByStatus: Record<string, number> = {};
-  let totalReservations = 0;
-  for (const g of statusGroups) {
-    reservationsByStatus[g.status] = g._count.status;
-    totalReservations += g._count.status;
-  }
+  const { reservationsByStatus, totalReservations } = agregarReservasPorEstado(statusGroups);
 
   const accessesAllowedToday =
     accessesToday.find((g) => g.result === "allowed")?._count.result ?? 0;
   const accessesDeniedToday =
     accessesToday.find((g) => g.result === "denied")?._count.result ?? 0;
 
-  let occupancyToday: { used: number; total: number } | null = null;
-  const byService = new Map<string, { serviceName: string; used: number; total: number }>();
-  if (todaySlots.length > 0) {
-    let used = 0;
-    let total = 0;
-    for (const s of todaySlots) {
-      const slotUsed = s.bookedCount + s.heldCount;
-      used += slotUsed;
-      total += s.capacity;
-      const entry = byService.get(s.service.id) ?? {
-        serviceName: s.service.name,
-        used: 0,
-        total: 0,
-      };
-      entry.used += slotUsed;
-      entry.total += s.capacity;
-      byService.set(s.service.id, entry);
-    }
-    occupancyToday = { used, total };
-  }
+  const { occupancyToday, occupancyByService } = agregarOcupacion(todaySlots);
 
-  // Serie diaria (zona Bogota) de los ultimos 14 dias.
-  // Formateadores creados una vez: antes se construian por cada fila.
-  const dayKey = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Bogota",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const dayLabel = new Intl.DateTimeFormat("es-CO", {
-    timeZone: "America/Bogota",
-    day: "numeric",
-    month: "short",
-  });
-  const buckets = new Map<string, { total: number; confirmed: number }>();
-  for (let i = 13; i >= 0; i--) {
-    const ref = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
-    const key = dayKey.format(ref);
-    buckets.set(key, { total: 0, confirmed: 0 });
-  }
-  for (const r of last14) {
-    const key = dayKey.format(r.createdAt);
-    const bucket = buckets.get(key);
-    if (bucket) {
-      bucket.total += 1;
-      if (r.status === "confirmed" || r.status === "used") bucket.confirmed += 1;
-    }
-  }
-  const dailySeries = [...buckets.entries()].map(([date, v]) => ({
-    date,
-    label: dayLabel.format(new Date(`${date}T12:00:00`)),
-    total: v.total,
-    confirmed: v.confirmed,
-  }));
+  const dailySeries = construirSerieDiaria(last14);
 
   return {
     reservationsByStatus,
@@ -195,9 +226,7 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
     accessesDeniedToday,
     holdsActive,
     occupancyToday,
-    occupancyByService: [...byService.entries()]
-      .map(([serviceId, v]) => ({ serviceId, ...v }))
-      .sort((a, b) => b.used / Math.max(b.total, 1) - a.used / Math.max(a.total, 1)),
+    occupancyByService,
     dailySeries,
     recentReservations: recentReservations as ReservationRow[],
     recentAccesses: recentAccesses as AccessRow[],
