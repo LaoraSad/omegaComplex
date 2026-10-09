@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { runHoldCleanup } from "@/features/reservations/reservations.service";
+import { liberarHoldsVencidos } from "@/features/reservations/reservations.service";
 import { ok } from "@/shared/http/api-response";
 import { handler } from "@/shared/http/handler";
 
@@ -13,6 +13,6 @@ export const GET = handler(async (req: NextRequest) => {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const result = await runHoldCleanup();
-  return NextResponse.json(ok(result));
+  const liberadas = await liberarHoldsVencidos();
+  return NextResponse.json(ok({ liberadas }));
 });
