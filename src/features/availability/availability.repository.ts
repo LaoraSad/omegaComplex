@@ -23,17 +23,12 @@ export function bogotaDayBounds(date: string): { start: Date; end: Date } {
 /** Dia de la semana 0=domingo .. 6=sabado, igual que ServiceSchedule. */
 export function bogotaDayOfWeek(date: string): number {
   const { start } = bogotaDayBounds(date);
-  return Number(
-    new Intl.DateTimeFormat("en-US", { timeZone: BOGOTA, weekday: "short" })
-      .format(start)
-      .slice(0, 3) === "Sun"
-      ? 0
-      : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(
-          new Intl.DateTimeFormat("en-US", { timeZone: BOGOTA, weekday: "short" })
-            .format(start)
-            .slice(0, 3),
-        ),
-  );
+  const corto = new Intl.DateTimeFormat("en-US", { timeZone: BOGOTA, weekday: "short" })
+    .format(start)
+    .slice(0, 3);
+  if (corto === "Sun") return 0;
+  // Lun..Sab son 1..6 (indexOf daría 0..5 y pisaría al domingo).
+  return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(corto) + 1;
 }
 
 /**
