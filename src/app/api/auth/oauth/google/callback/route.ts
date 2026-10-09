@@ -9,6 +9,7 @@ import {
 } from "@/features/auth/oauth.repository";
 import { GOOGLE_PROVIDER, OAUTH_STATE_COOKIE } from "@/features/auth/oauth.constants";
 import { googleConfigured, homeFor, startSession } from "@/features/auth/oauth.helpers";
+import { logger } from "@/shared/lib/logger";
 
 // ---------------------------------------------------------------------------
 // Paso 2 del acceso con Google: Google devuelve el codigo de autorizacion.
@@ -55,7 +56,7 @@ export async function GET(request: Request): Promise<Response> {
   try {
     profile = await exchangeGoogleCode(code);
   } catch (error) {
-    console.error("[oauth] fallo al canjear el codigo de Google", error);
+    logger.error("oauth.canje_fallido", { error });
     return back("oauth_fallido");
   }
 
