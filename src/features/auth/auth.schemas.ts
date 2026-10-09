@@ -53,5 +53,19 @@ export const loginSchema = z.object({
   password: z.string().min(1, "La contraseña es obligatoria"),
 });
 
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "La contraseña actual es obligatoria"),
+    newPassword: z
+      .string()
+      .min(8, "La nueva contraseña debe tener mínimo 8 caracteres")
+      .max(100),
+  })
+  .refine((value) => value.newPassword !== value.currentPassword, {
+    message: "La nueva contraseña debe ser distinta a la actual",
+    path: ["newPassword"],
+  });
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

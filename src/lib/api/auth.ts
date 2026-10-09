@@ -18,6 +18,7 @@ export const AUTH_API_PATHS = {
   resetPassword: "/api/auth/reset-password",
   resendVerificationEmail: "/api/auth/resend-verification",
   verifyEmail: "/api/auth/verify-email",
+  changePassword: "/api/auth/change-password",
 } as const;
 
 export type RegistrationResult = {
@@ -129,6 +130,10 @@ export function resendVerificationEmail(email: string): Promise<void> {
 
 export function verifyEmail(email: string, code: string): Promise<void> {
   return request<void>(AUTH_API_PATHS.verifyEmail, { email, code });
+}
+
+export function changePassword(data: { currentPassword: string; newPassword: string }): Promise<{ message: string }> {
+  return request<{ message: string }>(AUTH_API_PATHS.changePassword, data);
 }
 
 // NOTA(merge verificacion-recuperacion): no se trae el stub loginWithGoogle
