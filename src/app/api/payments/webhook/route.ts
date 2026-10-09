@@ -8,9 +8,8 @@ import {
   getPaymentByIntentId,
   getPaymentBySessionId,
   recordStripeEvent,
-  rejectPayment,
-  settlePayment,
 } from "@/features/payments/payments.repository";
+import { confirmarPagoExitoso, rechazarPago } from "@/features/payments/payments.service";
 
 // ---------------------------------------------------------------------------
 // Webhook de Stripe (SCRUM seccion 13).
@@ -71,14 +70,14 @@ export const POST = handler(async (req) => {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
-      await handleCheckoutCompleted(session);
-      break;
+      const { qrEmitidos } = await handleCheckoutCompleted(session);
+      return NextResponse.json(ok({ received: true, qrEmitidos }));
     }
     case "checkout.session.expired": {
       const session = event.data.object as Stripe.Checkout.Session;
       const payment = await getPaymentBySessionId(session.id);
       if (payment && payment.status === "pending") {
-        await rejectPayment({ paymentId: payment.id, reason: "La sesión de pago expiró." });
+        await rechazarPago({ paymentId: payment.id, reason: "La sesión de pago expiró." });
       }
       break;
     }
@@ -86,7 +85,7 @@ export const POST = handler(async (req) => {
       const intent = event.data.object as Stripe.PaymentIntent;
       const payment = await getPaymentByIntentId(intent.id);
       if (payment && payment.status === "pending") {
-        await rejectPayment({
+        await rechazarPago({
           paymentId: payment.id,
           reason: intent.last_payment_error?.message ?? "Stripe rechazó el pago.",
         });
@@ -102,16 +101,23 @@ export const POST = handler(async (req) => {
 });
 
 /**
- * El pago quedo confirmado: se liquida el Payment y la reserva pasa a
- * confirmed. Los QR se emiten despues, en features/reservations.
+ * El pago quedo confirmado: se liquida el Payment, la reserva pasa a
+ * confirmed, los cupos retenidos pasan a confirmados y se emiten los QR
+ * (persona x zona). Todo idempotente: reprocesar es un no-op seguro.
  */
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
+async function handleCheckoutCompleted(
+  session: Stripe.Checkout.Session,
+): Promise<{ qrEmitidos: number }> {
   const payment = await getPaymentBySessionId(session.id);
-  if (!payment || payment.status !== "pending") return;
+  if (!payment || payment.status !== "pending") return { qrEmitidos: 0 };
 
   const intentId =
     typeof session.payment_intent === "string" ? session.payment_intent : null;
-  if (!intentId) return;
+  if (!intentId) return { qrEmitidos: 0 };
 
-  await settlePayment({ paymentId: payment.id, stripePaymentIntentId: intentId });
+  const confirmacion = await confirmarPagoExitoso({
+    paymentId: payment.id,
+    stripePaymentIntentId: intentId,
+  });
+  return { qrEmitidos: confirmacion.transitioned ? confirmacion.emitidos.length : 0 };
 }
