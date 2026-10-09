@@ -93,7 +93,7 @@ export async function createUserWithCustomer(data: {
         lastName: data.lastName.trim(),
         phone: data.phone.trim(),
         roleId: data.roleId,
-        emailVerified: false,
+        emailVerified: true,
       },
       include: {
         role: true,
@@ -124,6 +124,7 @@ export async function createUser(data: {
     data: {
       ...data,
       email: normalizeEmail(data.email),
+      emailVerified: true,
     },
     include: {
       role: true,

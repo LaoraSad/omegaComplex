@@ -126,14 +126,6 @@ export async function login(input: LoginInput) {
     throw new UnauthorizedError("Credenciales inválidas");
   }
 
-  if (!user.emailVerified) {
-    throw new HttpError(
-      403,
-      "EMAIL_NOT_VERIFIED",
-      "Debes verificar tu correo electrónico antes de iniciar sesión.",
-    );
-  }
-
   await createSession(user.id, user.role.name as "user" | "admin" | "employee");
 
   return toAuthUser(user);
