@@ -341,6 +341,92 @@ export async function listServiceOptions(): Promise<Array<{ id: string; name: st
   });
 }
 
+export async function upsertServiceSchedule(input: {
+  serviceId: string;
+  dayOfWeek: number;
+  openTime: string;
+  closeTime: string;
+}) {
+  if (!Number.isInteger(input.dayOfWeek) || input.dayOfWeek < 0 || input.dayOfWeek > 6) {
+    throw new Error("El día de la semana debe estar entre 0 y 6.");
+  }
+  const start = input.openTime.trim();
+  const end = input.closeTime.trim();
+  if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) {
+    throw new Error("Horas inválidas. Usa formato HH:MM.");
+  }
+  const service = await db.service.findUnique({ where: { id: input.serviceId } });
+  if (!service) throw new Error("La instalación seleccionada no existe.");
+
+  const schedule = await db.serviceSchedule.upsert({
+    where: {
+      serviceId_dayOfWeek: {
+        serviceId: input.serviceId,
+        dayOfWeek: input.dayOfWeek,
+      },
+    },
+    update: {
+      openTime: start,
+      closeTime: end,
+    },
+    create: {
+      serviceId: input.serviceId,
+      dayOfWeek: input.dayOfWeek,
+      openTime: start,
+      closeTime: end,
+    },
+  });
+
+  const { generateServiceSlotsForRange } = await import("@/features/availability/availability.repository");
+  await generateServiceSlotsForRange(input.serviceId, 90);
+
+  return schedule;
+}
+
+export async function deleteServiceSchedule(serviceId: string, dayOfWeek: number) {
+  const existing = await db.serviceSchedule.findUnique({
+    where: { serviceId_dayOfWeek: { serviceId, dayOfWeek } },
+  });
+  if (!existing) throw new Error("Ese horario ya no existe.");
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const next90 = new Date(today);
+  next90.setDate(today.getDate() + 90);
+
+  const slots = await db.serviceSlot.findMany({
+    where: {
+      serviceId,
+      startsAt: { gte: today, lt: next90 },
+    },
+    select: { id: true, startsAt: true },
+  });
+
+  const ids = slots
+    .filter((slot) => {
+      const dateKey = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Bogota",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(slot.startsAt);
+      return new Date(dateKey).getDay() === dayOfWeek
+        ? dayOfWeek === 0
+          ? new Date(dateKey).getDay() === 0
+          : new Date(dateKey).getDay() === dayOfWeek
+        : false;
+    })
+    .map((slot) => slot.id);
+
+  if (ids.length > 0) {
+    await db.serviceSlot.deleteMany({ where: { id: { in: ids } } });
+  }
+
+  return db.serviceSchedule.delete({
+    where: { serviceId_dayOfWeek: { serviceId, dayOfWeek } },
+  });
+}
+
 export async function getServiceDetail(id: string): Promise<ServiceRow | null> {
   const row = await db.service.findUnique({
     where: { id },

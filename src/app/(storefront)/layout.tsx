@@ -17,7 +17,14 @@ export default async function StorefrontLayout({
   children: React.ReactNode;
 }) {
   const session = await getSession();
-  const user = session ? await findSessionUserById(session.userId) : null;
+  let user = null;
+  if (session?.userId) {
+    try {
+      user = await findSessionUserById(session.userId);
+    } catch {
+      user = null;
+    }
+  }
 
   return (
     <div className="storefront-shell flex min-h-screen flex-col bg-[#F5F5F5] text-[#1F1F1F] antialiased font-sans">

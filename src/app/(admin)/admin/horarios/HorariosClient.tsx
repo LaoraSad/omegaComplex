@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Ban, CalendarPlus, Trash2 } from "lucide-react";
+import { Ban, CalendarPlus, Clock3, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { toInputDate } from "@/components/admin/format";
 import type { ClosureRow } from "@/features/admin/admin.types";
-import { blockFacilityAction, unblockFacilityAction } from "./actions";
+import { blockFacilityAction, deleteServiceScheduleAction, saveServiceScheduleAction, unblockFacilityAction } from "./actions";
 
 interface ServiceOption {
   id: string;
@@ -146,6 +146,95 @@ export function ClosureDeleteButton({ closure }: { closure: ClosureRow }) {
           onCancel={() => {
             if (!pending) setConfirming(false);
           }}
+        />
+      ) : null}
+    </>
+  );
+}
+
+export function ScheduleForm({ services }: { services: ServiceOption[] }) {
+  const [pending, startTransition] = useTransition();
+  const [feedback, setFeedback] = useState<{ ok: boolean; message: string } | null>(null);
+
+  function submit(formData: FormData) {
+    startTransition(async () => {
+      const result = await saveServiceScheduleAction(formData);
+      setFeedback(result);
+    });
+  }
+
+  return (
+    <form action={submit} className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="sm:col-span-2 xl:col-span-2">
+        <label className="alabel" htmlFor="s-service">Instalación</label>
+        <select id="s-service" name="serviceId" className="aselect" defaultValue="">
+          <option value="">Selecciona una instalación</option>
+          {services.map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="alabel" htmlFor="s-day">Día</label>
+        <select id="s-day" name="dayOfWeek" className="aselect" defaultValue="1">
+          <option value="0">Domingo</option>
+          <option value="1">Lunes</option>
+          <option value="2">Martes</option>
+          <option value="3">Miércoles</option>
+          <option value="4">Jueves</option>
+          <option value="5">Viernes</option>
+          <option value="6">Sábado</option>
+        </select>
+      </div>
+      <div>
+        <label className="alabel" htmlFor="s-open">Apertura</label>
+        <input id="s-open" name="openTime" type="time" defaultValue="08:00" className="ainput" />
+      </div>
+      <div>
+        <label className="alabel" htmlFor="s-close">Cierre</label>
+        <input id="s-close" name="closeTime" type="time" defaultValue="22:00" className="ainput" />
+      </div>
+      <div className="flex items-end sm:col-span-2 xl:col-span-5">
+        <button type="submit" className="abtn abtn-primary" disabled={pending}>
+          <Clock3 className="h-4 w-4" />
+          Guardar horario
+        </button>
+      </div>
+      {feedback ? (
+        <p role={feedback.ok ? "status" : "alert"} className={`aalert ${feedback.ok ? "aalert-info" : "aalert-error"} sm:col-span-2 xl:col-span-5`}>
+          {feedback.message}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
+export function ScheduleDeleteButton({ serviceId, dayOfWeek, label }: { serviceId: string; dayOfWeek: number; label: string }) {
+  const [pending, startTransition] = useTransition();
+  const [confirming, setConfirming] = useState(false);
+
+  function handleConfirm() {
+    startTransition(async () => {
+      const result = await deleteServiceScheduleAction(serviceId, dayOfWeek);
+      if (result.ok) {
+        setConfirming(false);
+      }
+    });
+  }
+
+  return (
+    <>
+      <button type="button" className="aicon-btn" onClick={() => setConfirming(true)} aria-label={`Eliminar horario ${label}`}>
+        <Trash2 className="h-4 w-4" />
+      </button>
+      {confirming ? (
+        <ConfirmDialog
+          title="Eliminar horario"
+          text={`Se quitará el horario de ${label}. Las franjas futuras dejarán de generarse para ese día.`}
+          confirmLabel="Eliminar horario"
+          pending={pending}
+          onConfirm={handleConfirm}
+          onCancel={() => setConfirming(false)}
         />
       ) : null}
     </>

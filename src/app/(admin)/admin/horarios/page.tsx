@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/admin/EmptyState";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { formatDate } from "@/components/admin/format";
 import { listClosures, listServiceOptions, listServices } from "@/features/admin/admin.repository";
-import { BlockFacilityForm, BlockFormHeader, ClosureDeleteButton } from "./HorariosClient";
+import { BlockFacilityForm, BlockFormHeader, ClosureDeleteButton, ScheduleDeleteButton, ScheduleForm } from "./HorariosClient";
 
 export const metadata: Metadata = { title: "Horarios" };
 
@@ -95,6 +95,41 @@ export default async function HorariosPage() {
       </section>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <section aria-label="Configurar horario semanal" className="acard acard-pad">
+          <div className="acard-head">
+            <div>
+              <h2 className="acard-title">Definir horario semanal</h2>
+              <p className="acard-sub">Cada instalación puede abrir y cerrar en días específicos. Las franjas del calendario se generan automáticamente.</p>
+            </div>
+          </div>
+          <ScheduleForm services={options} />
+          {services.map((service) => (
+            <div key={service.id} className="mt-4 border-t border-[#f0e9e6] pt-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="font-bold text-[#211a1d]">{service.name}</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {DAY_ORDER.map((day) => {
+                  const schedule = service.serviceSchedules.find((s) => s.dayOfWeek === day);
+                  return (
+                    <div key={`${service.id}-${day}`} className="inline-flex items-center gap-2 rounded-full border border-[#e9dfdc] bg-[#fffaf8] px-2.5 py-1 text-xs text-[#4d413f]">
+                      <span className="font-semibold">{DAY_LABELS[day]}</span>
+                      {schedule ? (
+                        <>
+                          <span>{schedule.openTime.slice(0, 5)}–{schedule.closeTime.slice(0, 5)}</span>
+                          <ScheduleDeleteButton serviceId={service.id} dayOfWeek={day} label={`${service.name} · ${DAY_LABELS[day]}`} />
+                        </>
+                      ) : (
+                        <span className="text-[#a89c97]">cerrado</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </section>
+
         <section aria-label="Bloqueos vigentes" className="acard acard-pad">
           <div className="acard-head">
             <div>

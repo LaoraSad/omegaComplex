@@ -10,7 +10,14 @@ export default async function PublicLayout({
   children: React.ReactNode;
 }) {
   const session = await getSession();
-  const user = session ? await findSessionUserById(session.userId) : null;
+  let user = null;
+  if (session?.userId) {
+    try {
+      user = await findSessionUserById(session.userId);
+    } catch {
+      user = null;
+    }
+  }
 
   return (
     <div className="storefront-shell flex min-h-screen flex-col bg-[#0e0b0d] text-[#f5f1ec] antialiased font-sans">
