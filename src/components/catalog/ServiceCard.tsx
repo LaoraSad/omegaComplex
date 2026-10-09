@@ -3,14 +3,16 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import type { CatalogServiceRecord } from '@/features/catalog/catalog.types';
-import { Users, ArrowRight } from 'lucide-react';
+import { Users, ArrowRight, CalendarPlus } from 'lucide-react';
 import { servicePhoto } from '@/components/admin/service-image';
 
 interface ServiceCardProps {
   service: CatalogServiceRecord;
+  /** Abre el selector de franjas para sumar esa zona al carrito. */
+  onElegirFranja?: () => void;
 }
 
-export default function ServiceCard({ service }: ServiceCardProps) {
+export default function ServiceCard({ service, onElegirFranja }: ServiceCardProps) {
   const image = servicePhoto(service.slug);
   const formattedPrice = new Intl.NumberFormat('es-CO', {
     style: 'currency',
@@ -74,13 +76,25 @@ export default function ServiceCard({ service }: ServiceCardProps) {
 
           </div>
 
-          <Link
-            href={`/servicios/${service.id}`}
-            className="w-full py-3.5 rounded-xl bg-[#7a1f3d] hover:bg-[#8f2547] text-white font-bold text-sm text-center shadow-[0_10px_28px_rgba(122,31,61,0.4)] transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer group"
-          >
-            <span>Ver servicio</span>
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </Link>
+          <div className="flex gap-2">
+            {onElegirFranja && (
+              <button
+                type="button"
+                onClick={onElegirFranja}
+                className="flex-1 py-3.5 rounded-xl bg-[#7a1f3d] hover:bg-[#8f2547] text-white font-bold text-sm shadow-[0_10px_28px_rgba(122,31,61,0.4)] transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <CalendarPlus className="w-4 h-4" />
+                <span>Reservar</span>
+              </button>
+            )}
+            <Link
+              href={`/servicios/${service.id}`}
+              className={`${onElegirFranja ? 'flex-1' : 'w-full'} py-3.5 rounded-xl border border-white/15 hover:bg-white/5 text-white/85 font-bold text-sm text-center transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer group`}
+            >
+              <span>Ver servicio</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
         </div>
       </div>
       </div>

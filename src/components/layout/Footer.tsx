@@ -37,22 +37,22 @@ export default function Footer() {
             </h4>
             <ul className="mt-4 space-y-3 text-[13px] text-white/60">
               <li>
-                <Link href="/servicios?categoria=cat-piscinas" className="transition-colors hover:text-[#e3bd74]">
+                <Link href="/servicios?categoria=piscinas" className="transition-colors hover:text-[#e3bd74]">
                   Piscinas y olas
                 </Link>
               </li>
               <li>
-                <Link href="/servicios?categoria=cat-canchas" className="transition-colors hover:text-[#e3bd74]">
+                <Link href="/servicios?categoria=canchas" className="transition-colors hover:text-[#e3bd74]">
                   Canchas de fútbol y polideportivos
                 </Link>
               </li>
               <li>
-                <Link href="/servicios?categoria=cat-gimnasio" className="transition-colors hover:text-[#e3bd74]">
+                <Link href="/servicios?categoria=gimnasio" className="transition-colors hover:text-[#e3bd74]">
                   Gimnasio equipado
                 </Link>
               </li>
               <li>
-                <Link href="/servicios?categoria=cat-zona-humeda" className="transition-colors hover:text-[#e3bd74]">
+                <Link href="/servicios?categoria=zonas-humedas" className="transition-colors hover:text-[#e3bd74]">
                   Zona húmeda · Sauna y turco
                 </Link>
               </li>
