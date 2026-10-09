@@ -27,8 +27,8 @@ import { getDashboardOverview, listServices } from "@/features/admin/admin.repos
 
 export const metadata: Metadata = { title: "Panel" };
 
-function InstVisual({ name }: { name: string }) {
-  const photo = servicePhoto(name);
+function InstVisual({ name, slug }: { name: string; slug: string }) {
+  const photo = servicePhoto(slug);
   if (!photo) {
     return (
       <span aria-hidden="true" className="opdash-image-fallback">
@@ -115,7 +115,7 @@ export default async function AdminDashboardPage() {
   }
 
   const occupancyById = new Map(data.occupancyByService.map((s) => [s.serviceId, s]));
-  const featured = services.find((service) => servicePhoto(service.name)) ?? services[0] ?? null;
+  const featured = services.find((service) => servicePhoto(service.slug)) ?? services[0] ?? null;
   const serviceTiles = services.filter((service) => service.id !== featured?.id).slice(0, 4);
   const featuredOcc = featured ? occupancyById.get(featured.id) : undefined;
   const maxDailyReservations = Math.max(1, ...data.dailySeries.map((day) => day.total));
@@ -263,7 +263,7 @@ export default async function AdminDashboardPage() {
                   className="opdash-media-frame is-feature"
                   aria-label={`Ver instalación ${featured.name}`}
                 >
-                  <InstVisual name={featured.name} />
+                  <InstVisual name={featured.name} slug={featured.slug} />
                   <span className="opdash-media-category">{featured.category.name}</span>
                   <span className="opdash-media-index">01</span>
                   <span className="opdash-media-cta" aria-hidden="true">
@@ -312,7 +312,7 @@ export default async function AdminDashboardPage() {
                       aria-label={`Ver instalación ${service.name}`}
                     >
                       <span className="opdash-media-frame">
-                        <InstVisual name={service.name} />
+                        <InstVisual name={service.name} slug={service.slug} />
                         <span className="opdash-media-index">{String(index + 2).padStart(2, "0")}</span>
                         <span className="opdash-media-cta" aria-hidden="true">
                           Ver <ArrowUpRight className="h-3.5 w-3.5" />

@@ -1,34 +1,23 @@
-import { mockServices } from "@/lib/storefront/mock/services";
+// Los slugs estables del catálogo apuntan a fotografías locales verificadas.
+const SERVICE_IMAGES: Record<string, string> = {
+  "piscina-infantil": "/newassets/piscina-infantil.png",
+  "piscina-olas": "/newassets/piscina-olas.png",
+  "toboganes-piscina-1": "/newassets/tobogan-piscina-1.png",
+  "toboganes-piscina-2": "/newassets/bowl-slide.png",
+  "toboganes-piscina-3": "/newassets/tobogan-piscina-3.png",
+  "futbol-campo": "/newassets/futbol-11.png",
+  "microfutbol-cancha-1": "/newassets/micro-sintetica.png",
+  "microfutbol-cancha-2": "/newassets/cubierta.png",
+  "microfutbol-cancha-3": "/newassets/soccer-grama.png",
+  "cancha-padel": "/newassets/padel.png",
+  "cancha-tenis": "/newassets/tenis.png",
+  "polideportivo-1": "/newassets/poli-multi.png",
+  "polideportivo-2": "/newassets/poli-basket.png",
+  "gimnasio-principal": "/newassets/gym.png",
+  "bano-turco": "/newassets/bano-turco.png",
+  sauna: "/newassets/turco.png",
+};
 
-// Los servicios con equivalencia usan la misma imagen del Home
-// (mockServices, campo `image`). Las piscinas adultas reutilizan la imagen
-// oficial /newassets/piscina-olas.png del banco de fotos del complejo.
-const HOME_IMAGE_BY_ID = new Map(mockServices.map((s) => [s.id, s.image]));
-
-// Correspondencia instalación (BD) -> entrada del Home: mismo complejo,
-// misma numeración y misma capacidad oficial en ambos lados.
-// Sin correspondencia exacta -> null y la UI muestra un mosaico sobrio
-// (nunca una foto inventada).
-const DB_TO_HOME: Array<{ db: RegExp; homeId: string }> = [
-  { db: /^piscina infantil$/i, homeId: "piscina-infantil" },
-  { db: /^cancha de fútbol$/i, homeId: "futbol-campo" },
-  { db: /^cancha de microfútbol 1$/i, homeId: "microfutbol-cancha-1" },
-  { db: /^cancha de microfútbol 2$/i, homeId: "microfutbol-cancha-2" },
-  { db: /^cancha de microfútbol 3$/i, homeId: "microfutbol-cancha-3" },
-  { db: /^gimnasio$/i, homeId: "gimnasio-principal" },
-  { db: /^turco$/i, homeId: "bano-turco" },
-  { db: /^sauna$/i, homeId: "sauna" },
-  { db: /^polideportiva 1$/i, homeId: "polideportivo-1" },
-  { db: /^polideportiva 2$/i, homeId: "polideportivo-2" },
-];
-
-export function servicePhoto(serviceName: string): string | null {
-  const normalizedName = serviceName.trim();
-  if (/^piscina adultos(?: \d+)?$/i.test(normalizedName)) {
-    return "/newassets/piscina-olas.png";
-  }
-
-  const hit = DB_TO_HOME.find((r) => r.db.test(normalizedName));
-  if (!hit) return null;
-  return HOME_IMAGE_BY_ID.get(hit.homeId) ?? null;
+export function servicePhoto(serviceSlug: string): string | null {
+  return SERVICE_IMAGES[serviceSlug] ?? null;
 }

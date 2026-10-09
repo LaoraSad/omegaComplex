@@ -83,7 +83,7 @@ export default async function ServiciosPage() {
                 <ul className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                   {items.map((s) => {
                     const byDay = new Map(s.serviceSchedules.map((sc) => [sc.dayOfWeek, sc]));
-                    const photo = servicePhoto(s.name);
+                    const photo = servicePhoto(s.slug);
                     return (
                       <li key={s.id} id={`servicio-${s.id}`} className="omega-ring h-full scroll-mt-24">
                         <article className="omega-ring-inner flex h-full flex-col overflow-hidden bg-[#141013]">

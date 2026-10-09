@@ -2,10 +2,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, ArrowUpRight, Users } from 'lucide-react';
 import AmbientBubbles from '@/components/AmbientBubbles';
-import type { Service } from '@/types/storefront/omega';
+import type { CatalogServiceRecord } from '@/features/catalog/catalog.types';
+import { servicePhoto } from '@/components/admin/service-image';
 
 interface Props {
-  services: Service[];
+  services: CatalogServiceRecord[];
 }
 
 export default function InstalacionesSection({ services }: Props) {
@@ -16,7 +17,7 @@ export default function InstalacionesSection({ services }: Props) {
     <section id="instalaciones" className="omega-dark-section relative scroll-mt-20 overflow-hidden py-16 sm:py-20">
       <div aria-hidden="true" className="omega-cta-glow" />
       <AmbientBubbles variant="mixed" />
-      <div className="relative mx-auto max-w-[1400px] px-5 sm:px-8 lg:px-12">
+      <div className="relative mx-auto max-w-350 px-5 sm:px-8 lg:px-12">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#e3bd74]">
@@ -30,13 +31,13 @@ export default function InstalacionesSection({ services }: Props) {
             </h2>
           </div>
           <div className="flex flex-col items-start gap-4 lg:items-end">
-            <p className="max-w-[340px] text-right text-[13px] leading-relaxed text-white/60 max-lg:text-left">
+            <p className="max-w-85 text-right text-[13px] leading-relaxed text-white/60 max-lg:text-left">
               Instalaciones modernas, seguras y diseñadas para que vivas el
               deporte como debe ser.
             </p>
             <Link
               href="/servicios"
-              className="group inline-flex items-center gap-2.5 rounded-[4px] border border-white/25 px-6 py-3 text-[11px] font-bold uppercase tracking-[0.16em] text-white transition-colors hover:border-[#e3bd74] hover:text-[#e3bd74]"
+              className="group inline-flex items-center gap-2.5 rounded-sm border border-white/25 px-6 py-3 text-[11px] font-bold uppercase tracking-[0.16em] text-white transition-colors hover:border-[#e3bd74] hover:text-[#e3bd74]"
             >
               <span>Ver todas las instalaciones</span>
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -47,26 +48,24 @@ export default function InstalacionesSection({ services }: Props) {
         {/* Galería editorial: la fotografía es protagonista */}
         <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {items.map((s) => {
+            const image = servicePhoto(s.slug);
             return (
             <article key={s.id} className="omega-ring omega-ring-sm omega-card group">
               <div className="omega-ring-inner relative overflow-hidden">
               <Link href={`/servicios/${s.id}`} aria-label={`Reservar ${s.name}`} className="block">
-                <div className="relative h-[320px] overflow-hidden sm:h-[340px]">
-                  <Image
-                    src={s.image}
-                    alt={s.name}
-                    fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
-                    quality={85}
-                    className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
-                  />
+                <div className="relative h-80 overflow-hidden sm:h-85">
+                  {image ? (
+                    <Image
+                      src={image}
+                      alt={s.name}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
+                      quality={85}
+                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
+                    />
+                  ) : <div className="absolute inset-0 bg-[#211a1d]" aria-hidden="true" />}
                   {/* overlay sutil inferior para legibilidad */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
-                  {s.tour360Id && (
-                    <span className="absolute left-4 top-4 rounded-full border border-white/15 bg-black/55 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/90 backdrop-blur-sm">
-                      Vista previa
-                    </span>
-                  )}
+                  <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/15 to-transparent" />
                   <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-5">
                     <div>
                       <h3 className="text-[15px] font-extrabold uppercase leading-tight tracking-wide text-white">
@@ -76,7 +75,6 @@ export default function InstalacionesSection({ services }: Props) {
                         <Users className="h-3.5 w-3.5 text-[#e3bd74]" />
                         <span>
                           {s.capacity} persona{s.capacity === 1 ? '' : 's'}
-                          {s.categoryId === 'cat-canchas' && s.capacity === 14 ? ' c/u' : ''}
                         </span>
                       </p>
                     </div>

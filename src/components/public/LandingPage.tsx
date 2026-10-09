@@ -5,10 +5,10 @@ import HowItWorks from '@/components/public/landing/HowItWorks';
 import ComplexInfo from '@/components/public/landing/ComplexInfo';
 import CTASection from '@/components/public/landing/CTASection';
 import SectionDivider from '@/components/SectionDivider';
-import { getFeaturedServices } from '@/lib/storefront/api/services';
+import { listCatalogServices } from '@/features/catalog';
 
 export default async function LandingPage() {
-  const featuredServices = await getFeaturedServices();
+  const featuredServices = (await listCatalogServices()).slice(0, 4);
 
   return (
     <div className="flex flex-col bg-[#0e0b0d] text-[#f5f1ec] antialiased">

@@ -58,7 +58,9 @@ model Customer {
 model Category {
   id          String  @id @default(uuid()) @db.Uuid
   name        String  @unique
+  slug        String  @unique
   description String?
+  isActive    Boolean @default(true)
 
   services Service[]
 }
@@ -67,6 +69,7 @@ model Service {
   id          String  @id @default(uuid()) @db.Uuid
   categoryId  String  @db.Uuid
   name        String  @unique
+  slug        String  @unique
   description String?
   price       Int
   capacity    Int
@@ -226,6 +229,7 @@ model Reservation {
   id         String             @id @default(uuid()) @db.Uuid
   customerId String             @db.Uuid
   serviceId  String             @db.Uuid
+  categoryNameSnapshot String?
   createdBy  String?            @db.Uuid // venta física hecha por un usuario (empleado/admin)
   status     ReservationStatus  @default(pending_payment)
   channel    ReservationChannel @default(online)
