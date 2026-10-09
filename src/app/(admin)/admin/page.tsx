@@ -65,7 +65,9 @@ function InstOcc({ used, total, compact }: { used: number; total: number; compac
 }
 
 export default async function AdminDashboardPage() {
-  // Secuencial para no presionar el pool de conexiones.
+  // Secuencial a propósito: el pooler (session mode, 15 conexiones
+  // compartidas) colapsa con picos concurrentes. El overview ya va en
+  // oleadas internas de 3 y tarda ~1s en vez de ~5s.
   const data = await getDashboardOverview();
   const services = await listServices();
 
@@ -123,10 +125,10 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="dash-stack">
-      {/* Hero: hero-admin.png oficial (el titulo vive en la imagen) */}
+      {/* Hero: hero-admin.webp oficial (el titulo vive en la imagen) */}
       <section aria-label="Panel de administración" className="aops-hero-photo is-designed">
         <Image
-          src="/hero-admin.png"
+          src="/hero-admin.webp"
           alt="Panel de administración — Operación diaria de Omega Complex"
           fill
           priority

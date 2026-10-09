@@ -2,11 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { LoginForm } from "./login/LoginForm";
 import { RegisterForm } from "./register/RegisterForm";
+import { oauthErrorMessage } from "@/features/auth/oauth.constants";
 
 interface AuthSwitchCardProps {
   initialMode?: "login" | "register";
@@ -30,7 +31,11 @@ function Wordmark() {
 export function AuthSwitchCard({ initialMode = "login" }: AuthSwitchCardProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
+
+  // Motivo del redirect de vuelta desde Google (?error=...).
+  const oauthMessage = oauthErrorMessage(searchParams.get("error"));
 
   // Determine current mode based on prop or current URL
   const currentUrlMode = pathname?.includes("register") ? "register" : "login";
@@ -98,6 +103,11 @@ export function AuthSwitchCard({ initialMode = "login" }: AuthSwitchCardProps) {
 
       {/* Header Info */}
       <div className="auth-header-block">
+        {oauthMessage ? (
+          <p className="auth-error" role="alert">
+            {oauthMessage}
+          </p>
+        ) : null}
         <p className="auth-kicker">
           {isLogin ? "Qué bueno tenerte de vuelta" : "Únete a nuestra comunidad"}
         </p>

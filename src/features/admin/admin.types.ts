@@ -82,6 +82,54 @@ export type EmployeeRow = Prisma.EmployeeGetPayload<{
   };
 }>;
 
+/** Detalle de un empleado: suma createdAt para mostrar el alta en el sistema. */
+export type EmployeeDetailRow = Prisma.EmployeeGetPayload<{
+  include: {
+    user: {
+      select: {
+        firstName: true;
+        lastName: true;
+        email: true;
+        phone: true;
+        isActive: true;
+        createdAt: true;
+      };
+    };
+    assignments: { include: { service: { select: { id: true; name: true } } } };
+    _count: { select: { accesses: true } };
+  };
+}>;
+
+/** Instalaciones agrupadas por categoría, para asignar zonas a un empleado. */
+export type ZoneGroup = {
+  categoryId: string;
+  categoryName: string;
+  services: Array<{ id: string; name: string }>;
+};
+
+/** Un acceso validado por el empleado, para su historial personal. */
+export type EmployeeAccessRow = Prisma.AccessGetPayload<{
+  include: {
+    qrToken: {
+      select: {
+        seqNo: true;
+        reservation: {
+          select: {
+            startsAt: true;
+            service: { select: { name: true } };
+            customer: {
+              select: {
+                document: true;
+                user: { select: { firstName: true; lastName: true } };
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+}>;
+
 export type CustomerRow = Prisma.CustomerGetPayload<{
   include: {
     user: {
@@ -106,8 +154,6 @@ export interface DashboardOverview {
   accessesAllowedToday: number;
   accessesDeniedToday: number;
   holdsActive: number;
-  servicesCount: number;
-  customersCount: number;
   occupancyToday: { used: number; total: number } | null;
   occupancyByService: Array<{
     serviceId: string;

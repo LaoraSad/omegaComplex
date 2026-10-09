@@ -7,9 +7,9 @@ import { ArrowRight } from 'lucide-react';
 
 /* Imágenes reales del proyecto (public/newassets + 360). La primera es la protagonista. */
 const SLIDES = [
-  { src: '/newassets/futbol-11.png', alt: 'Cancha de fútbol Omega Complex al atardecer' },
-  { src: '/newassets/cubierta.png', alt: 'Cancha de microfútbol cubierta' },
-  { src: '/newassets/piscina-olas.png', alt: 'Piscina de olas Omega Complex' },
+  { src: '/newassets/futbol-11.webp', alt: 'Cancha de fútbol Omega Complex al atardecer' },
+  { src: '/newassets/cubierta.webp', alt: 'Cancha de microfútbol cubierta' },
+  { src: '/newassets/piscina-olas.webp', alt: 'Piscina de olas Omega Complex' },
 ];
 
 export default function Hero() {

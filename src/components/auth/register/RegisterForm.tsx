@@ -7,6 +7,7 @@ import { AuthButton } from "@/components/auth/AuthButton";
 import { AuthError } from "@/components/auth/AuthError";
 import { AuthInput } from "@/components/auth/AuthInput";
 import { PasswordInput } from "@/components/auth/PasswordInput";
+import { SocialLoginButton } from "@/components/auth/SocialLoginButton";
 import { getAuthErrorMessage, register } from "@/lib/api/auth";
 import type { RegisterData } from "@/types/auth";
 
@@ -224,6 +225,12 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps = {}) {
       <AuthButton loading={loading} type="submit">
         Crear cuenta
       </AuthButton>
+
+      <p className="auth-divider">
+        <span>o regístrate con Google</span>
+      </p>
+      <SocialLoginButton label="Registrarse con Google" />
+
       <p className="auth-form-footer">
         ¿Ya tienes una cuenta?{" "}
         {onSwitchToLogin ? (
