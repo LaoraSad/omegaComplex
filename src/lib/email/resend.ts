@@ -89,6 +89,13 @@ function emailLayout(content: string): string {
       .container { width: 100% !important; max-width: 100% !important; }
       .content-padding { padding-left: 20px !important; padding-right: 20px !important; }
       .button-full { width: 100% !important; }
+      .mobile-center { text-align: center !important; }
+      .mobile-stack { display: block !important; width: 100% !important; }
+      .mobile-hide { display: none !important; }
+      .mobile-font-large { font-size: 24px !important; }
+      .mobile-font-small { font-size: 14px !important; }
+      .mobile-padding { padding: 20px 16px !important; }
+      .mobile-logo { width: 160px !important; }
     }
   </style>
 </head>
@@ -96,11 +103,11 @@ function emailLayout(content: string): string {
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f5f3f0;">
     <tr>
       <td align="center" style="padding:0;">
-        <table role="presentation" class="container" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+        <table role="presentation" class="container" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
 
           <!-- HEADER VINOTINTO CON LOGO -->
           <tr>
-            <td style="background-color:#6b1d3f;padding:40px 40px 36px;text-align:center;">
+            <td align="center" style="background-color:#6b1d3f;padding:40px 20px 36px;">
               <img src="cid:${LOGO_CID}" alt="Omega Complex" width="200" style="display:block;width:200px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;">
               <p style="margin:16px 0 0;font-family:Georgia,'Times New Roman',Times,serif;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#e8d5b7;">Deporte &middot; Bienestar &middot; Comunidad</p>
             </td>
@@ -128,7 +135,7 @@ function emailLayout(content: string): string {
 
           <!-- FOOTER -->
           <tr>
-            <td style="padding:28px 48px 36px;text-align:center;background-color:#faf8f5;">
+            <td align="center" style="padding:28px 20px 36px;background-color:#faf8f5;">
               <p style="margin:0 0 8px;font-family:Georgia,'Times New Roman',Times,serif;font-size:13px;color:#8a7e74;">Omega Complex &middot; Complejo Deportivo</p>
               <p style="margin:0 0 16px;font-family:Georgia,'Times New Roman',Times,serif;font-size:12px;color:#a89e94;">Deporte, bienestar y recreaci&oacute;n</p>
               <p style="margin:0;font-family:Georgia,'Times New Roman',Times,serif;font-size:11px;color:#c4bab0;">Este mensaje fue enviado autom&aacute;ticamente. No respondas a este correo.</p>
@@ -146,9 +153,9 @@ function emailLayout(content: string): string {
 function verificationContent(code: string): string {
   const safeCode = escapeHtml(code);
   return `
-  <h1 style="margin:0 0 20px;font-family:Georgia,'Times New Roman',Times,serif;font-size:28px;font-weight:700;color:#1a1a1a;line-height:1.3;">Verifica tu correo electr&oacute;nico</h1>
-  <p style="margin:0 0 28px;font-family:Georgia,'Times New Roman',Times,serif;font-size:16px;color:#4a4a4a;line-height:1.6;">Para completar tu registro en Omega Complex, utiliza el siguiente c&oacute;digo de verificaci&oacute;n:</p>
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 28px;">
+  <h1 class="mobile-font-large" style="margin:0 0 20px;font-family:Georgia,'Times New Roman',Times,serif;font-size:28px;font-weight:700;color:#1a1a1a;line-height:1.3;text-align:center;">Verifica tu correo electr&oacute;nico</h1>
+  <p style="margin:0 0 28px;font-family:Georgia,'Times New Roman',Times,serif;font-size:16px;color:#4a4a4a;line-height:1.6;text-align:center;">Para completar tu registro en Omega Complex, utiliza el siguiente c&oacute;digo de verificaci&oacute;n:</p>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto 28px;">
     <tr>
       <td align="center" style="background-color:#faf6f2;border:1px solid #e8d5c8;border-radius:8px;padding:24px 20px;">
         <p style="margin:0 0 8px;font-family:Georgia,'Times New Roman',Times,serif;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#9a8474;">Tu c&oacute;digo de verificaci&oacute;n</p>
@@ -156,25 +163,25 @@ function verificationContent(code: string): string {
       </td>
     </tr>
   </table>
-  <p style="margin:0 0 8px;font-family:Georgia,'Times New Roman',Times,serif;font-size:13px;color:#7a6e64;">Este c&oacute;digo expirar&aacute; en <strong>10 minutos</strong>.</p>
-  <p style="margin:0;font-family:Georgia,'Times New Roman',Times,serif;font-size:13px;color:#9a8e84;">No compartas este c&oacute;digo con nadie.</p>
+  <p style="margin:0 0 8px;font-family:Georgia,'Times New Roman',Times,serif;font-size:13px;color:#7a6e64;text-align:center;">Este c&oacute;digo expirar&aacute; en <strong>10 minutos</strong>.</p>
+  <p style="margin:0;font-family:Georgia,'Times New Roman',Times,serif;font-size:13px;color:#9a8e84;text-align:center;">No compartas este c&oacute;digo con nadie.</p>
 `;
 }
 
 function passwordResetContent(token: string): string {
   const resetUrl = `${getAppUrl()}/reset-password?token=${encodeURIComponent(token)}`;
   return `
-  <h1 style="margin:0 0 20px;font-family:Georgia,'Times New Roman',Times,serif;font-size:28px;font-weight:700;color:#1a1a1a;line-height:1.3;">Restablece tu contrase&ntilde;a</h1>
-  <p style="margin:0 0 28px;font-family:Georgia,'Times New Roman',Times,serif;font-size:16px;color:#4a4a4a;line-height:1.6;">Recibimos una solicitud para cambiar la contrase&ntilde;a de tu cuenta. Usa el siguiente bot&oacute;n para elegir una nueva:</p>
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 28px;">
+  <h1 class="mobile-font-large" style="margin:0 0 20px;font-family:Georgia,'Times New Roman',Times,serif;font-size:28px;font-weight:700;color:#1a1a1a;line-height:1.3;text-align:center;">Restablece tu contrase&ntilde;a</h1>
+  <p style="margin:0 0 28px;font-family:Georgia,'Times New Roman',Times,serif;font-size:16px;color:#4a4a4a;line-height:1.6;text-align:center;">Recibimos una solicitud para cambiar la contrase&ntilde;a de tu cuenta. Usa el siguiente bot&oacute;n para elegir una nueva:</p>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto 28px;">
     <tr>
       <td align="center">
         <a href="${resetUrl}" class="button-full" style="display:inline-block;padding:16px 40px;background-color:#6b1d3f;color:#ffffff;text-decoration:none;font-family:Georgia,'Times New Roman',Times,serif;font-size:14px;font-weight:700;letter-spacing:0.5px;border-radius:6px;border:0;cursor:pointer;">Restablecer contrase&ntilde;a</a>
       </td>
     </tr>
   </table>
-  <p style="margin:0 0 12px;font-family:Georgia,'Times New Roman',Times,serif;font-size:13px;color:#7a6e64;">El enlace expirar&aacute; en <strong>30 minutos</strong> y solo puede utilizarse una vez.</p>
-  <p style="margin:0;font-family:Georgia,'Times New Roman',Times,serif;font-size:13px;color:#9a8e84;">Si no solicitaste este cambio, ignora este mensaje. Tu contrase&ntilde;a no cambiar&aacute;.</p>
+  <p style="margin:0 0 12px;font-family:Georgia,'Times New Roman',Times,serif;font-size:13px;color:#7a6e64;text-align:center;">El enlace expirar&aacute; en <strong>30 minutos</strong> y solo puede utilizarse una vez.</p>
+  <p style="margin:0;font-family:Georgia,'Times New Roman',Times,serif;font-size:13px;color:#9a8e84;text-align:center;">Si no solicitaste este cambio, ignora este mensaje. Tu contrase&ntilde;a no cambiar&aacute;.</p>
 `;
 }
 
@@ -182,17 +189,17 @@ function welcomeContent(firstName: string): string {
   const safeFirstName = escapeHtml(firstName);
   const visitUrl = `${getAppUrl()}/servicios`;
   return `
-  <h1 style="margin:0 0 20px;font-family:Georgia,'Times New Roman',Times,serif;font-size:28px;font-weight:700;color:#1a1a1a;line-height:1.3;">&iexcl;Bienvenido a Omega Complex!</h1>
-  <p style="margin:0 0 20px;font-family:Georgia,'Times New Roman',Times,serif;font-size:16px;color:#4a4a4a;line-height:1.6;">Hola <strong>${safeFirstName}</strong>, tu correo fue verificado correctamente y tu cuenta ya est&aacute; lista.</p>
-  <p style="margin:0 0 28px;font-family:Georgia,'Times New Roman',Times,serif;font-size:16px;color:#4a4a4a;line-height:1.6;">Nos alegra tenerte en nuestra comunidad. Te esperamos para disfrutar de nuestras instalaciones y actividades.</p>
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 28px;">
+  <h1 class="mobile-font-large" style="margin:0 0 20px;font-family:Georgia,'Times New Roman',Times,serif;font-size:28px;font-weight:700;color:#1a1a1a;line-height:1.3;text-align:center;">&iexcl;Bienvenido a Omega Complex!</h1>
+  <p style="margin:0 0 20px;font-family:Georgia,'Times New Roman',Times,serif;font-size:16px;color:#4a4a4a;line-height:1.6;text-align:center;">Hola <strong>${safeFirstName}</strong>, tu correo fue verificado correctamente y tu cuenta ya est&aacute; lista.</p>
+  <p style="margin:0 0 28px;font-family:Georgia,'Times New Roman',Times,serif;font-size:16px;color:#4a4a4a;line-height:1.6;text-align:center;">Nos alegra tenerte en nuestra comunidad. Te esperamos para disfrutar de nuestras instalaciones y actividades.</p>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto 28px;">
     <tr>
       <td align="center">
         <a href="${visitUrl}" class="button-full" style="display:inline-block;padding:16px 40px;background-color:#6b1d3f;color:#ffffff;text-decoration:none;font-family:Georgia,'Times New Roman',Times,serif;font-size:14px;font-weight:700;letter-spacing:0.5px;border-radius:6px;border:0;cursor:pointer;">Visitar Omega Complex</a>
       </td>
     </tr>
   </table>
-  <p style="margin:0;font-family:Georgia,'Times New Roman',Times,serif;font-size:14px;color:#6b6e64;line-height:1.6;">&iexcl;Vive el deporte!</p>
+  <p style="margin:0;font-family:Georgia,'Times New Roman',Times,serif;font-size:14px;color:#6b6e64;line-height:1.6;text-align:center;">&iexcl;Vive el deporte!</p>
 `;
 }
 
