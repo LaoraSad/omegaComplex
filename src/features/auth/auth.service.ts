@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 
 import { createSession } from "@/shared/auth/session";
+import { logger } from "@/shared/lib/logger";
 import { issueVerificationCode } from "./email-flow.service";
 
 import {
@@ -14,9 +15,11 @@ import {
   findCustomerByDocument,
   findRoleByName,
   findUserByEmail,
+  findUserCredentialsById,
+  updateUserPassword,
 } from "./auth.repository";
 
-import type { LoginInput, RegisterInput } from "./auth.schemas";
+import type { ChangePasswordInput, LoginInput, RegisterInput } from "./auth.schemas";
 
 function toAuthUser(user: {
   id: string;
@@ -85,7 +88,7 @@ export async function register(input: RegisterInput) {
       await issueVerificationCode({ id: user.id, email: user.email });
     } catch (error) {
       verificationEmailSent = false;
-      console.error("[email] No se pudo enviar el código de verificación", error);
+      logger.error("email.verificacion_fallida", { userId: user.id, error });
     }
 
     return { email: user.email, verificationEmailSent };
@@ -123,15 +126,25 @@ export async function login(input: LoginInput) {
     throw new UnauthorizedError("Credenciales inválidas");
   }
 
-  if (!user.emailVerified) {
-    throw new HttpError(
-      403,
-      "EMAIL_NOT_VERIFIED",
-      "Debes verificar tu correo electrónico antes de iniciar sesión.",
-    );
-  }
-
   await createSession(user.id, user.role.name as "user" | "admin" | "employee");
 
   return toAuthUser(user);
+}
+
+/**
+ * Cambio de contraseña con sesión iniciada. Exige la contraseña actual para
+ * que alguien con acceso momentáneo al dispositivo no pueda fijar una nueva.
+ */
+export async function changePassword(userId: string, input: ChangePasswordInput) {
+  const credentials = await findUserCredentialsById(userId);
+  if (!credentials || !credentials.isActive) {
+    throw new UnauthorizedError("No autenticado");
+  }
+
+  const currentValid = await bcrypt.compare(input.currentPassword, credentials.passwordHash);
+  if (!currentValid) {
+    throw new UnauthorizedError("La contraseña actual no es correcta");
+  }
+
+  await updateUserPassword(userId, await bcrypt.hash(input.newPassword, 12));
 }

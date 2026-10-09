@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { ArrowLeft, Lock, Mail, Phone, ShieldCheck, UserRound } from "lucide-react";
 import { findSessionUserById } from "@/features/auth/auth.repository";
 import { getSession } from "@/shared/auth/session";
+import { ChangePasswordForm } from "./ChangePasswordForm";
 
 export const metadata: Metadata = {
   title: "Mi perfil",
@@ -123,6 +124,8 @@ export default async function ProfilePage() {
             </span>
           </p>
         </div>
+
+        <ChangePasswordForm />
 
         {/* Acciones */}
         <div className="pt-4 flex items-center justify-between border-t border-[#E5E7EB]">

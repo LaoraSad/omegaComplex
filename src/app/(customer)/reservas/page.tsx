@@ -1,4 +1,5 @@
-// TODO: área del cliente (reservas) -> /reservas.
+import { redirect } from "next/navigation";
+
 export default function ReservasPage() {
-  return <main></main>;
+  redirect("/servicios");
 }

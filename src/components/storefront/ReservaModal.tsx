@@ -206,9 +206,13 @@ export function ReservaModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          serviceId,
-          slotId,
-          fecha,
+          bloques: [
+            {
+              serviceId,
+              slotId,
+              fecha,
+            },
+          ],
           personas,
           acompañantes: acompanantes.map((a) => ({
             fullName: a.fullName.trim(),
