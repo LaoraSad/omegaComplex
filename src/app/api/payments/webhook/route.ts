@@ -12,6 +12,7 @@ import {
 } from "@/features/payments/payments.repository";
 import { confirmarPagoExitoso, rechazarPago } from "@/features/payments/payments.service";
 import { sendQrEmail } from "@/lib/email/resend";
+import { logger } from "@/shared/lib/logger";
 
 // ---------------------------------------------------------------------------
 // Webhook de Stripe (SCRUM seccion 13).
@@ -140,10 +141,7 @@ async function handleCheckoutCompleted(
       });
     }
   } catch (error) {
-    console.error("[webhook] pago confirmado pero falló el correo de QR", {
-      reservationId: payment.reservationId,
-      error,
-    });
+    logger.error("webhook.qr_email_fallido", { reservationId: payment.reservationId, error });
   }
   return { qrEmitidos: confirmacion.emitidos.length };
 }

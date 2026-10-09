@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 
 import { createSession } from "@/shared/auth/session";
+import { logger } from "@/shared/lib/logger";
 import { issueVerificationCode } from "./email-flow.service";
 
 import {
@@ -87,7 +88,7 @@ export async function register(input: RegisterInput) {
       await issueVerificationCode({ id: user.id, email: user.email });
     } catch (error) {
       verificationEmailSent = false;
-      console.error("[email] No se pudo enviar el código de verificación", error);
+      logger.error("email.verificacion_fallida", { userId: user.id, error });
     }
 
     return { email: user.email, verificationEmailSent };
