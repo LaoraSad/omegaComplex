@@ -1,14 +1,26 @@
 'use client';
 
-import { useState, useMemo, Suspense } from 'react';
+import { useEffect, useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { mockCategories } from '@/lib/storefront/mock/categories';
-import { mockServices } from '@/lib/storefront/mock/services';
 import ServiceCard from '@/components/catalog/ServiceCard';
 import BookingGuide from '@/components/storefront/BookingGuide';
 import AmbientBubbles from '@/components/AmbientBubbles';
 import SectionDivider from '@/components/SectionDivider';
 import { Search, Waves, Trophy, Dumbbell, Sparkles, Filter, X } from 'lucide-react';
+import type { CategoryRecord, CatalogServiceRecord } from '@/features/catalog/catalog.types';
+
+interface ApiResult<T> {
+  data: T | null;
+  error: { message: string } | null;
+}
+
+async function readApi<T>(response: Response): Promise<T> {
+  const result = (await response.json()) as ApiResult<T>;
+  if (!response.ok || result.error || result.data === null) {
+    throw new Error(result.error?.message ?? 'No fue posible cargar el catálogo.');
+  }
+  return result.data;
+}
 
 function ServicesContent() {
   const searchParams = useSearchParams();
@@ -16,20 +28,49 @@ function ServicesContent() {
 
   const [categoryState, setCategoryState] = useState<string>('todas');
   const [searchQuery, setSearchQuery] = useState('');
+  const [categories, setCategories] = useState<CategoryRecord[]>([]);
+  const [services, setServices] = useState<CatalogServiceRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    const controller = new AbortController();
+    async function loadCatalog() {
+      try {
+        const [categoryResponse, serviceResponse] = await Promise.all([
+          fetch('/api/categories', { cache: 'no-store', signal: controller.signal }),
+          fetch('/api/services', { cache: 'no-store', signal: controller.signal }),
+        ]);
+        const [categoryData, serviceData] = await Promise.all([
+          readApi<CategoryRecord[]>(categoryResponse),
+          readApi<CatalogServiceRecord[]>(serviceResponse),
+        ]);
+        setCategories(categoryData);
+        setServices(serviceData);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setLoadError(error instanceof Error ? error.message : 'No fue posible cargar el catálogo.');
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }
+    void loadCatalog();
+    return () => controller.abort();
+  }, []);
 
   const currentCategory = categoryParam || categoryState;
 
   const filteredServices = useMemo(() => {
-    return mockServices.filter((service) => {
-      const matchesCategory =
-        currentCategory === 'todas' || service.categoryId === currentCategory;
+    return services.filter((service) => {
+      const matchesCategory = currentCategory === 'todas' || service.category.slug === currentCategory;
       const matchesSearch =
         service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        service.categoryName.toLowerCase().includes(searchQuery.toLowerCase());
+        (service.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.category.name.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [currentCategory, searchQuery]);
+  }, [currentCategory, searchQuery, services]);
 
   const getCategoryIcon = (slug: string) => {
     switch (slug) {
@@ -39,7 +80,7 @@ function ServicesContent() {
         return <Trophy className="w-4 h-4" />;
       case 'gimnasio':
         return <Dumbbell className="w-4 h-4" />;
-      case 'zona-humeda':
+      case 'zonas-humedas':
         return <Sparkles className="w-4 h-4" />;
       default:
         return <Sparkles className="w-4 h-4" />;
@@ -80,16 +121,16 @@ function ServicesContent() {
             }`}
           >
             <Filter className="w-3.5 h-3.5" />
-            <span>Todas ({mockServices.length})</span>
+            <span>Todas ({services.length})</span>
           </button>
 
-          {mockCategories.map((cat) => {
-            const count = mockServices.filter((s) => s.categoryId === cat.id).length;
-            const isSelected = currentCategory === cat.id;
+          {categories.map((cat) => {
+            const count = services.filter((service) => service.category.slug === cat.slug).length;
+            const isSelected = currentCategory === cat.slug;
             return (
               <button
                 key={cat.id}
-                onClick={() => setCategoryState(cat.id)}
+                onClick={() => setCategoryState(cat.slug)}
                 className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
                   isSelected
                     ? 'bg-[#7a1f3d] text-white shadow-[0_8px_24px_rgba(122,31,61,0.45)]'
@@ -105,7 +146,7 @@ function ServicesContent() {
         </div>
 
         {/* Buscador de texto */}
-        <div data-tour="buscador" className="relative min-w-[280px]">
+        <div data-tour="buscador" className="relative min-w-70">
           <input
             type="text"
             placeholder="Buscar cancha, piscina..."
@@ -128,7 +169,11 @@ function ServicesContent() {
       <SectionDivider />
 
       {/* Grid de Servicios */}
-      {filteredServices.length > 0 ? (
+      {loading ? (
+        <p role="status" className="mt-10 py-16 text-center text-sm text-white/60">Cargando catálogo…</p>
+      ) : loadError ? (
+        <div role="alert" className="mt-10 rounded-xl border border-red-300/20 bg-red-950/30 p-6 text-center text-sm text-red-100">{loadError}</div>
+      ) : filteredServices.length > 0 ? (
         <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredServices.map((service, i) => (
             <div key={service.id} data-tour={i === 0 ? 'reservar' : undefined} className="omega-card min-w-0">
