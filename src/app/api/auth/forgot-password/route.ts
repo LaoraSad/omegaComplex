@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { requestPasswordReset } from "@/features/auth/email-flow.service";
+import { normalizeEmail } from "@/features/auth/auth.repository";
 import { handler } from "@/shared/http/handler";
-import { fail } from "@/shared/http/api-response";
+import { ok } from "@/shared/http/api-response";
+import { ValidationError } from "@/shared/http/errors";
 
-// Recuperación de contraseña aún no implementada (no hay proveedor de correo).
-export const POST = handler(async () => {
-  return NextResponse.json(
-    fail(
-      "NOT_IMPLEMENTED",
-      "La recuperación de contraseña aún no está disponible. Contáctanos por nuestros canales de atención.",
-    ),
-    { status: 501 },
-  );
+const schema = z.object({ email: z.string().trim().email().max(255) });
+
+export const POST = handler(async (req) => {
+  const result = schema.safeParse(await req.json());
+  if (!result.success) throw new ValidationError("Ingresa un correo electrónico válido");
+  await requestPasswordReset(normalizeEmail(result.data.email));
+  return NextResponse.json(ok({
+    message: "Si existe una cuenta para ese correo, recibirás instrucciones para continuar.",
+  }));
 });

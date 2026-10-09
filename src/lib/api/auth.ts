@@ -17,7 +17,13 @@ export const AUTH_API_PATHS = {
   forgotPassword: "/api/auth/forgot-password",
   resetPassword: "/api/auth/reset-password",
   resendVerificationEmail: "/api/auth/resend-verification",
+  verifyEmail: "/api/auth/verify-email",
 } as const;
+
+export type RegistrationResult = {
+  email: string;
+  verificationEmailSent: boolean;
+};
 
 export class AuthApiError extends Error {
   status?: number;
@@ -97,8 +103,8 @@ export function login(data: LoginData): Promise<AuthUser> {
   return request<AuthUser>(AUTH_API_PATHS.login, data);
 }
 
-export function register(data: RegisterData): Promise<AuthUser> {
-  return request<AuthUser>(AUTH_API_PATHS.register, data);
+export function register(data: RegisterData): Promise<RegistrationResult> {
+  return request<RegistrationResult>(AUTH_API_PATHS.register, data);
 }
 
 export function logout(): Promise<void> {
@@ -121,6 +127,9 @@ export function resendVerificationEmail(email: string): Promise<void> {
   return request<void>(AUTH_API_PATHS.resendVerificationEmail, { email });
 }
 
+// NOTA(merge verificacion-recuperacion): no se traen verifyEmail ni el stub
+// loginWithGoogle de la rama — AUTH_API_PATHS no tiene verifyEmail (rompería
+// tsc) y el stub deshabilita el OAuth con Google que ya funciona en develop.
 export function getAuthErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }

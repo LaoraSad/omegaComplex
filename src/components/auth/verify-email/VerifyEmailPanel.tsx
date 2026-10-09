@@ -1,62 +1,113 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { AuthError } from "@/components/auth/AuthError";
-import { getAuthErrorMessage, resendVerificationEmail } from "@/lib/api/auth";
+import { AuthInput } from "@/components/auth/AuthInput";
+import { getAuthErrorMessage, resendVerificationEmail, verifyEmail } from "@/lib/api/auth";
 
 interface VerifyEmailPanelProps {
   email: string;
+  sent: boolean;
 }
 
-export function VerifyEmailPanel({ email }: VerifyEmailPanelProps) {
+export function VerifyEmailPanel({ email, sent: initiallySent }: VerifyEmailPanelProps) {
   const [error, setError] = useState("");
-  const [sent, setSent] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(initiallySent);
+  const [code, setCode] = useState("");
+  const [verified, setVerified] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
+
+  async function handleVerify(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    if (!email) {
+      setError("No encontramos el correo asociado. Regresa al registro e inténtalo de nuevo.");
+      return;
+    }
+    if (!/^\d{6}$/.test(code)) {
+      setError("Ingresa el código de verificación de 6 dígitos.");
+      return;
+    }
+
+    setVerifying(true);
+    try {
+      await verifyEmail(email, code);
+      setVerified(true);
+    } catch (caughtError: unknown) {
+      setError(getAuthErrorMessage(caughtError, "No se pudo verificar el correo. Intenta de nuevo."));
+    } finally {
+      setVerifying(false);
+    }
+  }
 
   async function handleResend() {
     setError("");
-    setSent(false);
     if (!email) {
       setError("No encontramos el correo asociado. Regresa al registro e inténtalo de nuevo.");
       return;
     }
 
-    setLoading(true);
+    setResending(true);
     try {
       await resendVerificationEmail(email);
       setSent(true);
+      setCode("");
     } catch (caughtError: unknown) {
       setError(
-        getAuthErrorMessage(caughtError, "No se pudo reenviar el correo. Intenta de nuevo."),
+        getAuthErrorMessage(caughtError, "No se pudo reenviar el código. Intenta de nuevo."),
       );
     } finally {
-      setLoading(false);
+      setResending(false);
     }
   }
 
   return (
     <div className="auth-form">
       <p aria-live="polite" className="auth-info">
-        Enviamos un correo de verificación{email ? " a:" : "."}
+        {sent
+          ? "Te enviamos un código de 6 dígitos a tu correo."
+          : "Tu cuenta fue creada, pero no pudimos enviar el correo. Solicita un nuevo código."}
         {email ? (
           <>
             {" "}
             <strong>{email}</strong>
           </>
         ) : null}
-        . Revisa tu bandeja de entrada y la carpeta de correo no deseado.
+        {sent ? " Revisa tu bandeja de entrada y correo no deseado." : null}
       </p>
       {error ? <AuthError>{error}</AuthError> : null}
-      {sent ? (
-        <p className="auth-success" role="status">
-          Solicitud de reenvío enviada.
-        </p>
-      ) : null}
-      <AuthButton loading={loading} onClick={handleResend} type="button">
-        Reenviar correo
-      </AuthButton>
+      {verified ? (
+        <>
+          <p className="auth-success" role="status">Tu correo fue verificado correctamente. Ya puedes iniciar sesión.</p>
+          <Link className="auth-link" href="/login">Ir al inicio de sesión</Link>
+        </>
+      ) : (
+        <>
+          <form className="auth-form" noValidate onSubmit={handleVerify}>
+            <AuthInput
+              autoComplete="one-time-code"
+              inputMode="numeric"
+              label="Código de verificación"
+              maxLength={6}
+              name="verificationCode"
+              onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="000000"
+              required
+              value={code}
+            />
+            <AuthButton disabled={verifying || resending} loading={verifying} type="submit">
+              {verifying ? "Verificando..." : "Verificar correo"}
+            </AuthButton>
+          </form>
+          <AuthButton disabled={verifying || resending} loading={resending} onClick={handleResend} type="button">
+            {resending ? "Enviando..." : "Reenviar código"}
+          </AuthButton>
+          {sent ? <p className="auth-success" role="status">Código enviado.</p> : null}
+        </>
+      )}
       <p className="auth-form-footer">
         <Link className="auth-link" href="/login">
           Volver al inicio de sesión

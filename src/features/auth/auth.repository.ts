@@ -81,6 +81,7 @@ export async function createUserWithCustomer(data: {
         lastName: data.lastName.trim(),
         phone: data.phone.trim(),
         roleId: data.roleId,
+        emailVerified: false,
       },
       include: {
         role: true,

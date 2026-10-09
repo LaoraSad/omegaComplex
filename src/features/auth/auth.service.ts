@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 
 import { createSession } from "@/shared/auth/session";
+import { issueVerificationCode } from "./email-flow.service";
 
 import {
   ConflictError,
@@ -79,10 +80,15 @@ export async function register(input: RegisterInput) {
       roleId: role.id,
     });
 
-    // Sesión inmediata: el registro deja al usuario autenticado.
-    await createSession(user.id, user.role.name as "user" | "admin" | "employee");
+    let verificationEmailSent = true;
+    try {
+      await issueVerificationCode({ id: user.id, email: user.email });
+    } catch (error) {
+      verificationEmailSent = false;
+      console.error("[email] No se pudo enviar el código de verificación", error);
+    }
 
-    return toAuthUser(user);
+    return { email: user.email, verificationEmailSent };
   } catch (error) {
     // Condición de carrera en unique (email/document).
     if (
@@ -115,6 +121,14 @@ export async function login(input: LoginInput) {
 
   if (!passwordValid) {
     throw new UnauthorizedError("Credenciales inválidas");
+  }
+
+  if (!user.emailVerified) {
+    throw new HttpError(
+      403,
+      "EMAIL_NOT_VERIFIED",
+      "Debes verificar tu correo electrónico antes de iniciar sesión.",
+    );
   }
 
   await createSession(user.id, user.role.name as "user" | "admin" | "employee");

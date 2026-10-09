@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { resendVerificationCode } from "@/features/auth/email-flow.service";
+import { normalizeEmail } from "@/features/auth/auth.repository";
 import { handler } from "@/shared/http/handler";
-import { fail } from "@/shared/http/api-response";
+import { ok } from "@/shared/http/api-response";
+import { ValidationError } from "@/shared/http/errors";
 
-// Verificación por correo aún no implementada: el registro deja sesión activa
-// inmediata y no bloquea el acceso.
-export const POST = handler(async () => {
-  return NextResponse.json(
-    fail(
-      "NOT_IMPLEMENTED",
-      "La verificación por correo aún no está disponible. Tu cuenta ya está activa y puedes iniciar sesión.",
-    ),
-    { status: 501 },
-  );
+const schema = z.object({ email: z.string().trim().email().max(255) });
+
+export const POST = handler(async (req) => {
+  const result = schema.safeParse(await req.json());
+  if (!result.success) throw new ValidationError("Ingresa un correo electrónico válido");
+  await resendVerificationCode(normalizeEmail(result.data.email));
+  return NextResponse.json(ok({ message: "Si la cuenta necesita verificación, enviaremos un nuevo código." }));
 });
