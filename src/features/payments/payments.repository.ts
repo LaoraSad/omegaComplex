@@ -130,8 +130,7 @@ export async function settlePayment(input: {
 export async function rejectPayment(input: {
   paymentId: string;
   reason?: string | null;
-}): Promise<PaymentRow> {
-  return db.$transaction(async (tx) => {
+}): Promise<PaymentRow> {  return db.$transaction(async (tx) => {
     const payment = await tx.payment.update({
       where: { id: input.paymentId },
       data: { status: "failed" },
@@ -142,6 +141,71 @@ export async function rejectPayment(input: {
       data: { status: "payment_rejected" },
     });
     return payment as PaymentRow;
+  });
+}
+
+/**
+ * Consume el hold activo y traslada los cupos de retenidos a confirmados.
+ * Es el paso que convierte un pago liquidado en capacidad real ocupada.
+ *
+ * Idempotente: solo actúa si queda un hold activo. Si el webhook se reprocesa,
+ * el segundo pase no encuentra hold activo y no toca los contadores.
+ */
+export async function consumirHoldYTrasladarCupos(
+  reservationId: string,
+): Promise<{ applied: boolean }> {
+  return db.$transaction(async (tx) => {
+    const consumidos = await tx.reservationHold.updateMany({
+      where: { reservationId, status: "active" },
+      data: { status: "consumed" },
+    });
+    if (consumidos.count === 0) return { applied: false };
+
+    const puentes = await tx.reservationSlot.findMany({
+      where: { reservationId },
+      select: { slotId: true, quantity: true },
+    });
+    for (const p of puentes) {
+      await tx.$executeRaw`
+        UPDATE "ServiceSlot"
+           SET "heldCount" = GREATEST("heldCount" - ${p.quantity}, 0),
+               "bookedCount" = "bookedCount" + ${p.quantity}
+         WHERE id = ${p.slotId}::uuid
+      `;
+    }
+    return { applied: true };
+  });
+}
+
+/**
+ * Devuelve al inventario los cupos retenidos de una reserva cuyo pago falló
+ * o expiró, y libera sus holds activos.
+ *
+ * Idempotente: si no hay holds activos (reserva ya confirmada o ya liberada),
+ * no toca los contadores. Por eso es seguro llamarlo en cada rechazo.
+ */
+export async function liberarCuposDeReserva(
+  reservationId: string,
+): Promise<{ applied: boolean }> {
+  return db.$transaction(async (tx) => {
+    const liberados = await tx.reservationHold.updateMany({
+      where: { reservationId, status: "active" },
+      data: { status: "released" },
+    });
+    if (liberados.count === 0) return { applied: false };
+
+    const puentes = await tx.reservationSlot.findMany({
+      where: { reservationId },
+      select: { slotId: true, quantity: true },
+    });
+    for (const p of puentes) {
+      await tx.$executeRaw`
+        UPDATE "ServiceSlot"
+           SET "heldCount" = GREATEST("heldCount" - ${p.quantity}, 0)
+         WHERE id = ${p.slotId}::uuid
+      `;
+    }
+    return { applied: true };
   });
 }
 
@@ -178,13 +242,36 @@ export async function hasStripeEvent(eventId: string): Promise<boolean> {
   return (await db.stripeEvent.count({ where: { eventId } })) > 0;
 }
 
-/** Ingresos confirmados por rango, para los reportes del administrador. */
-export async function sumRevenue(from: Date, to: Date): Promise<number> {
+/** Ingresos confirmados por rango, para los reportes del administrador. */export async function sumRevenue(from: Date, to: Date): Promise<number> {
   const agg = await db.payment.aggregate({
     where: { status: "succeeded", paidAt: { gte: from, lt: to } },
     _sum: { amountCop: true },
   });
   return agg._sum.amountCop ?? 0;
+}
+
+/**
+ * Contacto y fecha de una reserva para el correo de QR: email y nombre del
+ * titular más el inicio de la primera franja.
+ */
+export async function obtenerContactoQr(
+  reservationId: string,
+): Promise<{ email: string; nombre: string; startsAt: Date } | null> {
+  const row = await db.reservation.findUnique({
+    where: { id: reservationId },
+    select: {
+      startsAt: true,
+      customer: {
+        select: { user: { select: { email: true, firstName: true, lastName: true } } },
+      },
+    },
+  });
+  if (!row) return null;
+  return {
+    email: row.customer.user.email,
+    nombre: `${row.customer.user.firstName} ${row.customer.user.lastName}`.trim(),
+    startsAt: row.startsAt,
+  };
 }
 
 function isUniqueViolation(error: unknown): boolean {

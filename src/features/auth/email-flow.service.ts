@@ -4,6 +4,7 @@ import { createHash, createHmac, randomBytes, randomInt } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { db } from "@/shared/lib/db";
 import { HttpError } from "@/shared/http/errors";
+import { logger } from "@/shared/lib/logger";
 import {
   sendPasswordResetEmail,
   sendVerificationEmail,
@@ -174,7 +175,7 @@ export async function verifyEmailCode(email: string, code: string): Promise<void
     try {
       await sendWelcomeEmail(verifiedUser.email, verifiedUser.firstName);
     } catch (error) {
-      console.error("[email] No se pudo enviar el correo de bienvenida", error);
+      logger.error("email.bienvenida_fallida", { error });
     }
   }
 }
@@ -213,7 +214,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
       data: { usedAt: new Date() },
     });
     // No incluir el objeto del proveedor en logs: puede contener datos de la solicitud.
-    console.error("[email] No se pudo enviar el correo de recuperación");
+    logger.error("email.recuperacion_fallida");
   }
 }
 

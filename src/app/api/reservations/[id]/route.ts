@@ -5,6 +5,7 @@ import { ok } from "@/shared/http/api-response";
 import { UnauthorizedError, NotFoundError, ConflictError } from "@/shared/http/errors";
 import { getSession } from "@/shared/auth/session";
 import { getCustomerReservation } from "@/features/reservations/reservations.repository";
+import { appUrl, createCheckoutSession } from "@/features/payments/payments.service";
 import { db } from "@/shared/lib/db";
 
 // ---------------------------------------------------------------------------
@@ -39,15 +40,8 @@ export const GET = handler(async (_req, ctx) => {
 });
 
 /**
- * Inicia el pago. Es el punto de entrada de la pasarela de Stripe, que todavía
- * no está conectada: se responde 501 con el contrato exacto que debe cumplir,
- * en vez de dejar un botón que no hace nada (SCRUM sección 13).
- *
- * Lo que falta implementar:
- *   1. Crear la Checkout Session de Stripe por r.totalCop.
- *   2. Guardarla con createPendingPayment({ reservationId, amountCop, stripeSessionId }).
- *   3. Devolver la url de Stripe para redirigir al cliente.
- * El webhook ya está preparado en /api/payments/webhook.
+ * Inicia el pago: crea la Checkout Session de Stripe y devuelve su url para
+ * redirigir al cliente. La reserva solo se confirma con el webhook oficial.
  */
 export const POST = handler(async (_req, ctx) => {
   const { id } = await ctx!.params!;
@@ -66,15 +60,14 @@ export const POST = handler(async (_req, ctx) => {
     throw new ConflictError("El bloqueo de 10 minutos expiró. Vuelve a crear la reserva.");
   }
 
-  return NextResponse.json(
-    {
-      data: null,
-      error: {
-        code: "PAYMENT_NOT_CONNECTED",
-        message:
-          "La pasarela de pago todavía no está conectada. Se implementa con Stripe: falta crear la Checkout Session y devolver su url.",
-      },
-    },
-    { status: 501 },
-  );
+  const base = appUrl();
+  const checkout = await createCheckoutSession({
+    reservationId: r.id,
+    amountCop: r.totalCop,
+    method: "card",
+    successUrl: `${base}/mis-reservas?reserva=${r.id}&pago=exitoso`,
+    cancelUrl: `${base}/mis-reservas?reserva=${r.id}&pago=cancelado`,
+  });
+
+  return NextResponse.json(ok(checkout), { status: 201 });
 });

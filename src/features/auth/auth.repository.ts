@@ -62,6 +62,18 @@ export async function findRoleByName(
   });
 }
 
+/** Credenciales mínimas para verificar y cambiar la contraseña. */
+export async function findUserCredentialsById(id: string) {
+  return db.user.findUnique({
+    where: { id },
+    select: { id: true, passwordHash: true, isActive: true },
+  });
+}
+
+export async function updateUserPassword(id: string, passwordHash: string) {
+  await db.user.update({ where: { id }, data: { passwordHash } });
+}
+
 export async function createUserWithCustomer(data: {
   email: string;
   passwordHash: string;
@@ -81,7 +93,7 @@ export async function createUserWithCustomer(data: {
         lastName: data.lastName.trim(),
         phone: data.phone.trim(),
         roleId: data.roleId,
-        emailVerified: false,
+        emailVerified: true,
       },
       include: {
         role: true,
@@ -112,6 +124,7 @@ export async function createUser(data: {
     data: {
       ...data,
       email: normalizeEmail(data.email),
+      emailVerified: true,
     },
     include: {
       role: true,

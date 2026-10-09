@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { HttpError } from "./errors";
 import { fail } from "./api-response";
+import { logger } from "@/shared/lib/logger";
 
 // Wrapper con manejo centralizado de errores (T6).
 // Uso: export const POST = handler(async (req) => { ... return NextResponse.json(ok(data)); });
@@ -20,6 +21,7 @@ export function handler(
         });
       }
       console.error("[api] unhandled error", err);
+      logger.error("api.unhandled", { url: req.url, err });
       return NextResponse.json(fail("INTERNAL_ERROR", "Error interno"), {
         status: 500,
       });

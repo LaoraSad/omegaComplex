@@ -56,7 +56,7 @@ describe("auth service email verification", () => {
     expect(mocks.createSession).not.toHaveBeenCalled();
   });
 
-  it("blocks an unverified user after validating the password", async () => {
+  it("allows an active user to sign in even when email verification is not enforced", async () => {
     const passwordHash = await bcrypt.hash(password, 4);
     mocks.repository.findUserByEmail.mockResolvedValue({
       ...newUser,
@@ -65,11 +65,11 @@ describe("auth service email verification", () => {
       passwordHash,
     });
 
-    await expect(login({ email: newUser.email, password })).rejects.toMatchObject({
-      status: 403,
-      message: "Debes verificar tu correo electrónico antes de iniciar sesión.",
+    await expect(login({ email: newUser.email, password })).resolves.toMatchObject({
+      email: newUser.email,
+      role: "user",
     });
-    expect(mocks.createSession).not.toHaveBeenCalled();
+    expect(mocks.createSession).toHaveBeenCalledWith(newUser.id, "user");
   });
 
   it("allows a verified user to sign in normally", async () => {

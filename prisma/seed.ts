@@ -1,5 +1,6 @@
 import { PrismaClient, nameRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { generateServiceSlotsForRange } from "@/features/availability/availability.repository";
 
 const prisma = new PrismaClient();
 
@@ -43,7 +44,39 @@ async function main() {
   console.log("✅ Roles creados/verificados");
 
   // =========================
-  // 2. CATEGORÍAS
+  // 2. USUARIO ADMIN (Inmediato)
+  // =========================
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@omegacomplex.com";
+  const adminPassword = process.env.ADMIN_PASSWORD || "admin123456";
+  const passwordHash = await bcrypt.hash(adminPassword, 12);
+
+  await prisma.user.upsert({
+    where: {
+      email: adminEmail,
+    },
+    update: {
+      roleId: adminRole.id,
+      passwordHash,
+      firstName: "Administrador",
+      lastName: "Omega Complex",
+      isActive: true,
+      emailVerified: true,
+    },
+    create: {
+      email: adminEmail,
+      passwordHash,
+      firstName: "Administrador",
+      lastName: "Omega Complex",
+      roleId: adminRole.id,
+      isActive: true,
+      emailVerified: true,
+    },
+  });
+
+  console.log(`✅ Administrador creado/verificado: ${adminEmail} / ${adminPassword}`);
+
+  // =========================
+  // 3. CATEGORÍAS
   // =========================
 
   const categories = [
@@ -240,10 +273,10 @@ async function main() {
   for (const service of services) {
     await prisma.service.upsert({
       where: {
-        name: service.name,
+        slug: service.slug,
       },
       update: {
-        slug: service.slug,
+        name: service.name,
         description: service.description,
         price: service.price,
         capacity: service.capacity,
@@ -263,42 +296,45 @@ async function main() {
   console.log("✅ Servicios creados/verificados");
 
   // =========================
-  // 5. USUARIO ADMIN
+  // 5. HORARIOS POR DEFECTO
   // =========================
 
-  const adminEmail = process.env.ADMIN_EMAIL;
-  const adminPassword = process.env.ADMIN_PASSWORD;
-
-  if (!adminEmail || !adminPassword) {
-    throw new Error(
-      "Faltan ADMIN_EMAIL o ADMIN_PASSWORD en las variables de entorno.",
-    );
-  }
-
-  const passwordHash = await bcrypt.hash(adminPassword, 12);
-
-  await prisma.user.upsert({
-    where: {
-      email: adminEmail,
-    },
-    update: {
-      roleId: adminRole.id,
-      passwordHash,
-      firstName: "Administrador",
-      lastName: "Omega Complex",
-      isActive: true,
-    },
-    create: {
-      email: adminEmail,
-      passwordHash,
-      firstName: "Administrador",
-      lastName: "Omega Complex",
-      roleId: adminRole.id,
-      isActive: true,
-    },
+  const operatingDays = [0, 2, 3, 4, 5, 6];
+  const createdServices = await prisma.service.findMany({
+    select: { id: true },
   });
 
-  console.log("✅ Administrador creado/verificado");
+  for (const service of createdServices) {
+    for (const dayOfWeek of operatingDays) {
+      await prisma.serviceSchedule.upsert({
+        where: {
+          serviceId_dayOfWeek: {
+            serviceId: service.id,
+            dayOfWeek,
+          },
+        },
+        update: {},
+        create: {
+          serviceId: service.id,
+          dayOfWeek,
+          openTime: "08:00",
+          closeTime: "17:00",
+        },
+      });
+    }
+  }
+
+  console.log("✅ Horarios semanales creados");
+
+  // =========================
+  // 6. GENERACIÓN DE SLOTs POR FECHAS
+  // =========================
+
+  const lookAheadDays = 90;
+
+  for (const service of createdServices) {
+    await generateServiceSlotsForRange(service.id, lookAheadDays, prisma);
+  }
 
   console.log("🎉 Seed completado correctamente.");
 }

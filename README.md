@@ -108,13 +108,14 @@ flowchart LR
 | Consulta de servicios      | **Disponible** |
 | Consulta de disponibilidad | **Disponible** |
 | Perfil                     | **Disponible** |
-| Recuperación de contraseña | En desarrollo |
-| Verificación de correo     | En desarrollo |
-| Reservas                   | En desarrollo |
-| Pagos                      | En desarrollo |
-| Código QR                  | En desarrollo |
-| Mis reservas               | En desarrollo |
-| Historial de reservas      | En desarrollo |
+| Recuperación de contraseña | **Disponible** |
+| Verificación de correo     | **Disponible** |
+| Cambio de contraseña       | **Disponible** |
+| Reservas                   | **Disponible** |
+| Pagos (Stripe)             | **Disponible** |
+| Código QR por correo       | **Disponible** |
+| Mis reservas               | **Disponible** |
+| Historial de reservas      | **Disponible** |
 
 </details>
 
@@ -126,10 +127,10 @@ flowchart LR
 | Funcionalidad         | Estado        |
 | --------------------- | ------------- |
 | Autenticación por rol | **Disponible** |
-| Escaneo de QR         | En desarrollo |
-| Validación de reserva | En desarrollo |
-| Validación de horario | En desarrollo |
-| Registro de acceso    | En desarrollo |
+| Escaneo de QR         | **Disponible** |
+| Validación de reserva | **Disponible** |
+| Validación de horario | **Disponible** |
+| Registro de acceso    | **Disponible** |
 
 </details>
 
@@ -140,13 +141,13 @@ flowchart LR
 
 | Funcionalidad            | Estado        |
 | ------------------------ | ------------- |
-| Dashboard                | En desarrollo |
-| Gestión de servicios     | En desarrollo |
-| Gestión de instalaciones | En desarrollo |
-| Gestión de horarios      | En desarrollo |
-| Gestión de reservas      | En desarrollo |
-| Gestión de empleados     | En desarrollo |
-| Información operativa    | En desarrollo |
+| Dashboard                | **Disponible** |
+| Gestión de servicios     | **Disponible** |
+| Gestión de instalaciones | **Disponible** |
+| Gestión de horarios      | **Disponible** |
+| Gestión de reservas      | **Disponible** |
+| Gestión de empleados     | **Disponible** |
+| Información operativa    | **Disponible** |
 
 </details>
 
@@ -180,7 +181,6 @@ flowchart TB
         Reservations["Reservations"]
         Payments["Payments"]
         Access["Access"]
-        Schedules["Schedules"]
         Admin["Admin"]
     end
 
@@ -211,7 +211,7 @@ flowchart TB
 
 ### Comunicación HTTP
 
-El proyecto usa **Axios** como cliente HTTP y no incorpora TanStack Query en esta etapa. Si más adelante aparecen necesidades de caché, revalidación, polling o sincronización avanzada de server state, se evaluará una herramienta especializada.
+El cliente web usa `fetch` con sobres `{ data, error }` (`src/lib/api/*`) contra los Route Handlers del mismo proyecto. No hay backend externo. (`axios` sigue declarado como dependencia pero ningún módulo lo importa.)
 
 ```mermaid
 %%{init: {'theme':'base','themeVariables':{'primaryColor':'#7A1F3D','primaryTextColor':'#F5F5F5','lineColor':'#C8A96B'}}}%%
@@ -231,19 +231,20 @@ flowchart LR
 ```text
 src/
 ├── app/
-│   ├── (auth)/          forgot-password, login, register, reset-password, verify-email
+│   ├── (auth)/          change-password (en perfil), forgot-password, login, register, reset-password, verify-email
 │   ├── (customer)/      reservas
-│   ├── (employee)/      validar
-│   ├── (piscinas)/      informacion, mis-reservas, perfil, piscinas, servicios, tour
-│   ├── (public)/
-│   └── api/             access, auth, availability, categories, facilities, payments, pools, reservations
+│   ├── (employee)/      validar, turnos
+│   ├── (storefront)/    mis-reservas, perfil, servicios
+│   ├── (public)/        landing
+│   ├── (admin)/         panel: reservas, accesos, categorías, servicios, horarios, empleados, clientes, reportes
+│   └── api/             access, admin/export, auth, availability, categories, cron/holds, payments, pools, reservations, services
 │
-├── components/          auth, piscinas, ui
-├── features/            access, admin, auth, availability, catalog, payments, reservations, schedules
-├── lib/                 api, piscinas
-├── shared/              auth, http, lib, ui
-├── types/               auth.ts, piscinas
-└── middleware.ts
+├── components/          auth, admin, catalog, public, storefront
+├── features/            access, admin, auth, availability, catalog, payments, reservations (+ qr)
+├── lib/                 api, email
+├── shared/              auth, http, lib (db, env, logger, stripe)
+├── types/               auth
+└── middleware.ts        protección por rol (JWT sin BD)
 ```
 
 </details>
@@ -292,9 +293,9 @@ Omega Complex implementa autenticación propia con `bcryptjs` para contraseñas 
 
 | Rol           | Área                   | Ruta de entrada       |
 | ------------- | ---------------------- | --------------------- |
-| Usuario       | Cliente                | `/inicio`             |
+| Usuario       | Cliente                | `/`                   |
 | Empleado      | Validación de acceso   | `/validar`            |
-| Administrador | Administración         | `/dashboard`          |
+| Administrador | Administración         | `/admin`              |
 
 ### Reservas
 
@@ -368,18 +369,26 @@ Base: mismo origen, prefijo `/api`. Todas las respuestas usan el formato `{ "dat
 | POST | `/api/auth/login` | Inicia sesión (`200`) |
 | POST | `/api/auth/logout` | Cierra sesión e invalida la cookie |
 | GET | `/api/auth/me` | Usuario actual (`401` sin sesión) |
-| POST | `/api/auth/forgot-password` | `501`: pendiente de proveedor de correo |
-| POST | `/api/auth/reset-password` | `501`: pendiente de proveedor de correo |
-| POST | `/api/auth/resend-verification` | `501`: la verificación no bloquea el acceso |
-| GET · POST | `/api/categories` | Lista y crea categorías |
-| GET · POST | `/api/facilities` | Lista y crea instalaciones |
-| GET · PATCH · DELETE | `/api/facilities/[id]` | Detalle, actualización y borrado |
-| GET | `/api/availability` | Disponibilidad por servicio y fecha |
-| GET | `/api/pools` · `/api/pools/[id]` | Catálogo de piscinas (datos locales) |
-| GET · POST | `/api/reservations` | Lista y crea reservas |
-| GET · DELETE | `/api/reservations/[id]` | Detalle y cancelación |
+| POST | `/api/auth/change-password` | Cambia la contraseña con sesión (exige la actual) |
+| POST | `/api/auth/forgot-password` | Envía enlace de recuperación por correo (Resend) |
+| POST | `/api/auth/reset-password` | Fija nueva contraseña con token de un solo uso |
+| POST | `/api/auth/resend-verification` | Reenvía código de verificación |
+| POST | `/api/auth/verify-email` | Verifica el correo con el código |
+| GET | `/api/auth/oauth/google` | Inicia OAuth con Google (state anti-CSRF) |
+| GET | `/api/auth/oauth/google/callback` | Retorno de Google, crea/vincula cuenta |
+| GET · POST | `/api/categories` | Lista y crea categorías (POST solo admin) |
+| GET · PATCH | `/api/categories/[id]` | Detalle y actualización (admin) |
+| GET | `/api/services` · `/api/services/[id]` | Catálogo real desde la base |
+| GET | `/api/availability` | Disponibilidad por servicio y fecha (público) |
+| GET | `/api/pools` · `/api/pools/[id]` | Catálogo de piscinas (datos reales) |
+| GET · POST | `/api/reservations` | Lista propias y crea reservas con hold |
+| GET | `/api/reservations/[id]` | Detalle propio con QR y pagos |
+| POST | `/api/reservations/[id]` | Crea la Checkout Session de Stripe |
 | POST | `/api/payments/webhook` | Webhook de Stripe (fuente de verdad del pago) |
-| POST | `/api/access/validate` | Validación de QR en puerta |
+| POST | `/api/access/validate` | Consulta de QR en puerta |
+| POST | `/api/access/validate?action=confirm` | El empleado confirma el ingreso |
+| GET | `/api/admin/export` | Exportación CSV (solo admin) |
+| GET | `/api/cron/holds` | Libera holds vencidos (requiere `CRON_SECRET`) |
 
 Códigos: `200` OK · `201` creado · `400` validación · `401` no autenticado · `403` rol insuficiente · `404` no encontrado · `409` conflicto (email/documento duplicado) · `501` no implementado · `500` error interno.
 
@@ -391,9 +400,9 @@ Fuente de verdad: `prisma/schema.prisma` (PostgreSQL). Resumen por dominio:
 |---|---|
 | Identidad | `Role`, `User`, `Customer` (documento único, fecha de nacimiento), `Employee`, `OAuthAccount`, `EmailVerification`, `PasswordReset` |
 | Catálogo | `Category`, `Service`, `ServiceSchedule`, `ServiceClosure`, `ServiceSlot` (cupos y bloqueos por franja) |
-| Reservas | `Reservation` (estado, canal, cantidad, total), `ReservationSlot`, `ReservationHold` (bloqueo temporal con expiración) |
+| Reservas | `Reservation` (estado, canal, cantidad, total), `ReservationBlock` (tramo por zona), `ReservationSlot`, `ReservationGuest` (titular + acompañantes), `ReservationHold` (bloqueo temporal con expiración) |
 | Pagos | `Payment` (método, estado, ids de Stripe), `StripeEvent` (idempotencia por `eventId`) |
-| Acceso | `QrToken` (hash único, estado), `Access` (resultado, motivo, empleado, brazalete) |
+| Acceso | `QrToken` (hash único, un QR por persona y zona, un solo uso), `Access` (resultado, motivo, empleado) |
 
 <img src="./docs/assets/divider.svg" width="100%" alt="" />
 
@@ -446,10 +455,15 @@ La aplicación queda disponible en `http://localhost:3000`.
 
 | Variable                | Descripción                               |
 | ----------------------- | ----------------------------------------- |
-| `DATABASE_URL`          | Conexión PostgreSQL                       |
+| `DATABASE_URL`          | Conexión PostgreSQL (+`?connection_limit=3` en dev) |
 | `JWT_SECRET`            | Secreto utilizado para firmar JWT         |
 | `STRIPE_SECRET_KEY`     | Clave privada de Stripe                   |
 | `STRIPE_WEBHOOK_SECRET` | Firma del webhook                         |
+| `RESEND_API_KEY`        | Envío de correos (QR, verificación)       |
+| `RESEND_FROM_EMAIL`     | Remitente verificado en Resend            |
+| `NEXT_PUBLIC_APP_URL`   | URL pública (links de correo y Stripe)    |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth con Google            |
+| `CRON_SECRET`           | Bearer del cron de holds (obligatorio)    |
 | `ADMIN_*`               | Variables relacionadas con administración |
 
 Los valores reales nunca deben almacenarse en el repositorio.
@@ -468,10 +482,12 @@ La API forma parte del mismo proyecto Next.js, en `src/app/api/`. No se requiere
 /api/access/validate
 /api/availability
 /api/categories
-/api/facilities
+/api/services
 /api/pools
 /api/reservations
 /api/payments/webhook
+/api/admin/export
+/api/cron/holds
 ```
 
 </details>
@@ -560,6 +576,10 @@ npm run test:e2e
 * Middleware de autorización.
 * Control de acceso basado en roles.
 * Variables sensibles mediante `.env`.
+* Firma de webhook de Stripe verificada + idempotencia por `eventId`.
+* QR de un solo uso (hash SHA-256, consumo atómico en BD).
+* Correo transaccional (Resend) + recuperación y verificación.
+* Logging JSON de eventos críticos (`shared/lib/logger`, sin secretos).
 
 </td>
 <td width="50%" valign="top">
@@ -567,12 +587,9 @@ npm run test:e2e
 **Pendiente antes de producción**
 
 * Rate limiting.
-* Hardening de autenticación.
-* Proveedor de correo transaccional.
-* Recuperación de contraseña y verificación de correo.
-* Configuración definitiva de Stripe.
+* Mover la BD a una región cercana (hoy `us-west-2`, ~270 ms por consulta).
 * Pruebas E2E de flujos críticos.
-* Observabilidad y logging.
+* PDF descargable de QR (hoy se envían por correo).
 
 </td>
 </tr>
