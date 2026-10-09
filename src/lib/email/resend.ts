@@ -1,5 +1,7 @@
 import "server-only";
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { Resend } from "resend";
 
 let resendClient: Resend | undefined;
@@ -45,9 +47,26 @@ export function escapeHtml(value: string): string {
   });
 }
 
+const LOGO_CID = "omega-logo";
+
+function getLogoBuffer(): Buffer {
+  const logoPath = join(process.cwd(), "public", "logo-blanco.png");
+  return readFileSync(logoPath);
+}
+
+function getLogoAttachments() {
+  return [
+    {
+      filename: "logo-blanco.png",
+      content: getLogoBuffer(),
+      contentType: "image/png",
+      contentId: LOGO_CID,
+      contentDisposition: "inline" as const,
+    },
+  ];
+}
+
 function emailLayout(content: string): string {
-  const appUrl = getAppUrl();
-  const logoUrl = `${appUrl}/logo-blanco.png`;
   return `<!doctype html>
 <html lang="es" xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -82,7 +101,7 @@ function emailLayout(content: string): string {
           <!-- HEADER VINOTINTO CON LOGO -->
           <tr>
             <td style="background-color:#6b1d3f;padding:40px 40px 36px;text-align:center;">
-              <img src="${logoUrl}" alt="Omega Complex" width="200" style="display:block;width:200px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;">
+              <img src="cid:${LOGO_CID}" alt="Omega Complex" width="200" style="display:block;width:200px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;">
               <p style="margin:16px 0 0;font-family:Georgia,'Times New Roman',Times,serif;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#e8d5b7;">Deporte &middot; Bienestar &middot; Comunidad</p>
             </td>
           </tr>
@@ -183,6 +202,7 @@ export async function sendVerificationEmail(to: string, code: string): Promise<v
     to,
     subject: "Tu c&oacute;digo de verificaci&oacute;n - Omega Complex",
     html: emailLayout(verificationContent(code)),
+    attachments: getLogoAttachments(),
   });
   if (error) throw new Error(`Resend rechaz&oacute; el correo: ${error.message}`);
 }
@@ -193,6 +213,7 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
     to,
     subject: "Restablece tu contrase&ntilde;a - Omega Complex",
     html: emailLayout(passwordResetContent(token)),
+    attachments: getLogoAttachments(),
   });
   if (error) throw new Error(`Resend rechaz&oacute; el correo: ${error.message}`);
 }
@@ -203,6 +224,7 @@ export async function sendWelcomeEmail(to: string, firstName: string): Promise<v
     to,
     subject: "&iexcl;Bienvenido a Omega Complex!",
     html: emailLayout(welcomeContent(firstName)),
+    attachments: getLogoAttachments(),
   });
   if (error) throw new Error(`Resend rechaz&oacute; el correo: ${error.message}`);
 }
