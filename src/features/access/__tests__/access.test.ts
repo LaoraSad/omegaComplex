@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   findQrByTokenHash: vi.fn(),
@@ -52,6 +52,28 @@ function qrBase(overrides: Partial<QrLookup> = {}): QrLookup {
   };
 }
 
+/**
+ * Reloj congelado para todo el archivo.
+ *
+ * `qrBase()` construye la franja como "media hora antes y media hora después de
+ * ahora". Si la suite corre cerca de la medianoche, esa franja cruza el cambio de
+ * día y el servicio responde `fecha_distinta` porque compara en America/Bogota.
+ * Pasaba todos los días entre las 23:30 y la 00:30, según cuándo se ejecutara.
+ *
+ * Congelar el reloj para todo el archivo quita la causa en vez de tapar el
+ * síntoma test por test.
+ */
+const HORA_FIJA = new Date("2026-06-15T18:30:00.000Z"); // 13:30 en Colombia
+
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(HORA_FIJA);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe("lookupAccess", () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -87,38 +109,40 @@ describe("lookupAccess", () => {
     expect(result).toMatchObject({ outcome: "denied", denial: { code } });
   });
 
-  it("deniega fecha distinta, franja no iniciada y franja terminada", async () => {
-    const now = new Date();
-    mocks.findQrByTokenHash.mockResolvedValue(
-      qrBase({
-        startsAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
-        endsAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000),
-      }),
-    );
-    await expect(lookupAccess("t", empleado)).resolves.toMatchObject({
-      denial: { code: "fecha_distinta" },
-    });
+it("deniega fecha distinta, franja no iniciada y franja terminada", async () => {
+      // El reloj ya viene congelado a nivel de archivo (ver HORA_FIJA).
+      const now = new Date();
 
-    mocks.findQrByTokenHash.mockResolvedValue(
-      qrBase({
-        startsAt: new Date(now.getTime() + 60 * 60 * 1000),
-        endsAt: new Date(now.getTime() + 2 * 60 * 60 * 1000),
-      }),
-    );
-    await expect(lookupAccess("t", empleado)).resolves.toMatchObject({
-      denial: { code: "franja_no_iniciada" },
-    });
+      mocks.findQrByTokenHash.mockResolvedValue(
+        qrBase({
+          startsAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
+          endsAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000),
+        }),
+      );
+      await expect(lookupAccess("t", empleado)).resolves.toMatchObject({
+        denial: { code: "fecha_distinta" },
+      });
 
-    mocks.findQrByTokenHash.mockResolvedValue(
-      qrBase({
-        startsAt: new Date(now.getTime() - 2 * 60 * 60 * 1000),
-        endsAt: new Date(now.getTime() - 60 * 60 * 1000),
-      }),
-    );
-    await expect(lookupAccess("t", empleado)).resolves.toMatchObject({
-      denial: { code: "franja_terminada" },
+      mocks.findQrByTokenHash.mockResolvedValue(
+        qrBase({
+          startsAt: new Date(now.getTime() + 60 * 60 * 1000),
+          endsAt: new Date(now.getTime() + 2 * 60 * 60 * 1000),
+        }),
+      );
+      await expect(lookupAccess("t", empleado)).resolves.toMatchObject({
+        denial: { code: "franja_no_iniciada" },
+      });
+
+      mocks.findQrByTokenHash.mockResolvedValue(
+        qrBase({
+          startsAt: new Date(now.getTime() - 2 * 60 * 60 * 1000),
+          endsAt: new Date(now.getTime() - 60 * 60 * 1000),
+        }),
+      );
+      await expect(lookupAccess("t", empleado)).resolves.toMatchObject({
+        denial: { code: "franja_terminada" },
+      });
     });
-  });
 
   it("permite en zona y avisa fuera de zona sin denegar", async () => {
     mocks.findQrByTokenHash.mockResolvedValue(qrBase());
