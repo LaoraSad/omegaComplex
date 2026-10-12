@@ -35,10 +35,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="es"
-      className={`h-full antialiased ${recoleta.variable} ${cooperBlack.variable}`}
-    >
+<html
+        lang="es"
+        className={`h-full antialiased ${recoleta.variable} ${cooperBlack.variable}`}
+        // Sin este atributo, el scroll suave de la app se aplica también a las
+        // transiciones de ruta de Next y la navegación se siente lenta.
+        data-scroll-behavior="smooth"
+      >
       <body className={`min-h-full flex flex-col ${recoleta.className}`}>
         {children}
         <Toaster position="top-center" richColors closeButton />
