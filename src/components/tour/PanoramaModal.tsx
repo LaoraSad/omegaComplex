@@ -122,7 +122,7 @@ export default function PanoramaModal({ src, title, subtitle, trigger }: Panoram
         aria-label={`Ampliar imagen de ${title ?? 'espacio'}`}
       >
         {trigger}
-        <span className="pointer-events-none absolute bottom-3 right-3 z-20 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/60 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white opacity-0 backdrop-blur-md transition-opacity duration-300 group-hover/zoom:opacity-100">
+        <span className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/60 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white opacity-0 backdrop-blur-md transition-opacity duration-300 group-hover/zoom:opacity-100">
           <Expand className="h-3.5 w-3.5 text-[#e3bd74]" />
           <span>Ampliar</span>
         </span>
