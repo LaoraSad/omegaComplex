@@ -7,9 +7,13 @@ describe("createReservationSchema", () => {
     const payload = {
       bloques: [
         {
-          serviceId: "11111111-1111-4111-8111-111111111111",
-          slotId: "11111111-1111-4111-8111-222222222222",
-          fecha: "2026-10-09",
+serviceId: "11111111-1111-4111-8111-111111111111",
+      slotId: "11111111-1111-4111-8111-222222222222",
+      fecha: "2026-10-09",
+      // Cada zona declara cuántas personas entran por su puerta y cuáles:
+      // se puede ir solo a una zona y con el grupo a otra.
+      personas: 2,
+      asistentes: [0, 1],
         },
       ],
       personas: 2,

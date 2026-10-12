@@ -53,6 +53,20 @@ export const bloqueSchema = z.object({
   serviceId: z.string().trim().uuid("La instalación no es válida"),
   slotId: slotIdSchema,
   fecha: fechaSchema,
+  /**
+   * Cuántas personas entran por esta puerta. No es un valor único de la
+   * reserva: alguien puede ir solo a una zona y con amigos a otra.
+   */
+  personas: z.coerce
+    .number({ message: "Indica cuántas personas entran a esta zona" })
+    .int("La cantidad debe ser un número entero")
+    .min(1, "Cada zona necesita al menos una persona")
+    .max(50, "Demasiadas personas para una zona"),
+  /**
+   * Índices de las personas del grupo que asisten a esta zona. El 0 es el
+   * titular. Si no se envía, se asume quevan todas las de la reserva.
+   */
+  asistentes: z.array(z.coerce.number().int().min(0)).max(50).optional(),
 });
 
 export const createReservationSchema = z.object({

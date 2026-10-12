@@ -1,13 +1,33 @@
 import { randomUUID } from "node:crypto";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { liberarHoldsVencidos } from "@/features/reservations/reservations.service";
+import {
+  esDiaDeMantenimiento,
+  esFestivo,
+  nombreFestivo,
+} from "@/features/schedules/colombia-holidays";
 import { db } from "@/shared/lib/db";
 import type { DayAvailability, SlotAvailability } from "./availability.types";
 
 // ---------------------------------------------------------------------------
 // Disponibilidad real: se cruzan ServiceSchedule (horario semanal),
-// ServiceClosure (bloqueos) y ServiceSlot (cupos por franja). Nada de franjas
-// fijas como antes.
+// ServiceClosure (cierres manuales) y ServiceSlot (cupos por franja). Nada de
+// franjas fijas como antes.
+//
+// Encima de eso hay dos reglas que no viven en ServiceSchedule:
+//   - Festivos de Colombia: el día festivo SE ABRE y desplaza el mantenimiento.
+//   - Mantenimiento: lunes por defecto, martes si el lunes es festivo.
+
+/**
+ * ¿Este día está cerrado por mantenimiento?
+ *
+ * OJO con la dirección de la regla: el festivo NO cierra el complejo, lo que
+ * hace es **desplazar el mantenimiento**. Si el lunes es festivo, ese lunes abre
+ * con horario normal y el mantenimiento se corre al martes.
+ */
+export function cerradoPorMantenimiento(date: string): boolean {
+  return esDiaDeMantenimiento(date);
+}
 // ---------------------------------------------------------------------------
 
 const BOGOTA = "America/Bogota";
@@ -135,6 +155,12 @@ export async function generateServiceSlotsForRange(
 
   for (let offset = 0; offset < rangeDays; offset++) {
     const dateKey = addBogotaDays(firstDate, offset);
+
+// Festivo y mantenimiento no generan franjas. Ojo: el festivo por sí solo NO
+  // cierra el complejo; lo que se cierra es el día de mantenimiento, que es el
+  // que se corre cuando el lunes es festivo.
+  if (cerradoPorMantenimiento(dateKey)) continue;
+
     const dateValue = Date.parse(`${dateKey}T00:00:00.000Z`);
     if (closures.some((closure) =>
       dateValue >= dateOnlyValue(closure.dateFrom) && dateValue <= dateOnlyValue(closure.dateTo),
@@ -217,20 +243,41 @@ export async function getDayAvailability(
     closureReason: closure?.reason ?? null,
   };
 
+  const cerrado = (motivo: DayAvailability["motivo"], reason: string): DayAvailability => ({
+    ...base,
+    open: false,
+    hayDisponibilidad: false,
+    motivo,
+    reason,
+    festivo: festivo ? nombreFestivo(date) : null,
+    slots: [],
+  });
+
+  // Cierre puntual del admin (imprevisto). Gana sobre todo lo demás: si alguien
+  // cerró la instalación a mano, ese es el motivo que hay que explicar.
   if (closure) {
-    return { ...base, open: false, reason: "Bloqueada", slots: [] };
+    return cerrado("cierre_admin", closure.reason ?? "Bloqueada por el administrador");
+  }
+
+  // Festivo nacional: el complejo ABRE. Lo que hace el festivo es correr el
+  // mantenimiento de esa semana al martes, no cerrar el día. Antes se cerraba y
+  // quedaba la incoherencia de un lunes festivo que ni abría ni figuraba con
+  // franjas generadas.
+  const festivo = esFestivo(date);
+
+  // Mantenimiento: lunes, o martes cuando el lunes fue festivo.
+  if (cerradoPorMantenimiento(date)) {
+    return cerrado("mantenimiento", "Jornada de mantenimiento técnico");
   }
 
   const dayOfWeek = bogotaDayOfWeek(date);
   const schedule = service.serviceSchedules.find((s) => s.dayOfWeek === dayOfWeek);
   if (!schedule) {
-    // El SCRUM fija el lunes como dia de mantenimiento; el horario semanal de la
-    // instalacion es la fuente de verdad para el resto.
-    return { ...base, open: false, reason: "Cerrado este día", slots: [] };
+    return cerrado("sin_horario", "Cerrado este día");
   }
   const bounds = scheduleBounds(date, schedule);
   if (!bounds) {
-    return { ...base, open: false, reason: "Horario no válido", slots: [] };
+    return cerrado("horario_invalido", "Horario no válido");
   }
 
   const slots = await db.serviceSlot.findMany({
@@ -264,10 +311,26 @@ export async function getDayAvailability(
     };
   });
 
+  const hayDisponibilidad = disponibles.some((s) => s.status === "available");
+
+  // El día está abierto aunque ya no queden franjas: son dos cosas distintas y
+  // confundirlas hacía que el modal dijera "no hay franjas para ese día" a las
+  // 6 de la tarde en un martes que sí atendía.
+  if (slots.length === 0) {
+    return { ...base, open: true, hayDisponibilidad: false, motivo: "sin_franjas", reason: "No hay franjas generadas para este día", festivo: festivo ? nombreFestivo(date) : null, openTime: schedule.openTime, closeTime: schedule.closeTime, slots: [] };
+  }
+
   return {
     ...base,
-    open: disponibles.some((s) => s.status === "available"),
-    reason: null,
+    open: true,
+    hayDisponibilidad,
+    festivo: festivo ? nombreFestivo(date) : null,
+    motivo: hayDisponibilidad ? null : "franjas_terminadas",
+    reason: hayDisponibilidad
+      ? null
+      : disponibles.every((s) => s.status === "past")
+        ? "Las franjas de hoy ya terminaron"
+        : "Todas las franjas de este día están completas",
     openTime: schedule.openTime,
     closeTime: schedule.closeTime,
     slots: disponibles,
@@ -321,6 +384,10 @@ export async function getSlotsInRange(
     if (closures.some((closure) =>
       dateValue >= dateOnlyValue(closure.dateFrom) && dateValue <= dateOnlyValue(closure.dateTo),
     )) return false;
+
+    // El día de mantenimiento anula el horario semanal. Los festivos no: el
+    // festivo abre el complejo y solo mueve el mantenimiento.
+    if (cerradoPorMantenimiento(dateKey)) return false;
 
     const dayOfWeek = bogotaDayOfWeek(dateKey);
     const schedule = service.serviceSchedules.find((item) => item.dayOfWeek === dayOfWeek);
