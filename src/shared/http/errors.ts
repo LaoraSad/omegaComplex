@@ -39,3 +39,15 @@ export class ConflictError extends HttpError {
     super(409, "CONFLICT", message);
   }
 }
+
+/**
+ * El servicio que se necesita para responder no está disponible. Se usa, por
+ * ejemplo, cuando la base de datos no responde: en ese caso lo correcto es
+ * mostrar un mensaje y reintentar, no dejar que la excepcion del driver suba
+ * hasta la pantalla con el detalle tecnico.
+ */
+export class ServiceUnavailableError extends HttpError {
+  constructor(message = "El servicio no está disponible en este momento. Inténtalo de nuevo en un instante.") {
+    super(503, "SERVICE_UNAVAILABLE", message);
+  }
+}
