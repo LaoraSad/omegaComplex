@@ -4,21 +4,259 @@
 // y agrega al carrito; no cobra nada todavía.
 
 import { useEffect, useState } from 'react';
-import { X, Loader2, CalendarPlus } from 'lucide-react';
+import { X, Loader2, CalendarPlus, CalendarOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { CatalogServiceRecord } from '@/features/catalog/catalog.types';
 import type { DayAvailability } from '@/features/availability/availability.types';
-import { bloqueDesdeSlot, cop, fechaCorta, formatoHora, useCarrito } from './CarritoReserva';
+import {
+  esDiaDeMantenimiento,
+  esFestivo,
+  nombreFestivo,
+} from '@/features/schedules/colombia-holidays';
+import { bloqueDesdeSlot, cop, formatoHora, useCarrito } from './CarritoReserva';
 
-const HOY = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
+/** El SCRUM no permite reservar con más de 3 meses de anticipación. */
+const MESES_MAXIMOS = 3;
+const NOMBRES_MES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+];
 
-function diasDisponibles(cantidad: number): string[] {
-  const out: string[] = [];
-  for (let i = 0; i < cantidad; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    out.push(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(d));
+/** Fecha de hoy en Bogotá como clave YYYY-MM-DD, sin la hora de UTC. */
+function hoyEnBogota(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
+}
+
+/** Último día que se puede reservar: hoy + 3 meses. */
+function limiteReserva(): string {
+  const hoy = hoyEnBogota();
+  const [y, m, d] = hoy.split('-').map(Number);
+  const fecha = new Date(Date.UTC(y, m - 1 + MESES_MAXIMOS, d, 12));
+  return `${fecha.getUTCFullYear()}-${String(fecha.getUTCMonth() + 1).padStart(2, '0')}-${String(
+    fecha.getUTCDate(),
+  ).padStart(2, '0')}`;
+}
+
+/** Partir "AAAA-MM-DD" en año, mes (1-12) y día, sin salto de zona horaria. */
+function partes(clave: string): [number, number, number] {
+  const [y, m, d] = clave.split('-').map(Number);
+  return [y, m, d];
+}
+
+/**
+ * Por qué un día está cerrado, si se puede saber sin consultar el servidor.
+ * El calendario de festivos es determinista, así que el cliente lo puede
+ * resolver solo y avisar antes de que el usuario haga clic.
+ */
+/**
+ * Por qué un día NO se puede elegir, si se puede saber sin consultar el
+ * servidor.
+ *
+ * Solo el mantenimiento cierra el complejo. Un festivo no lo cierra: el festivo
+ * abre el día y desplaza el mantenimiento al martes, así que un lunes festivo
+ * es un día reservable normal.
+ */
+function motivoDeCierreDe(clave: string): string | null {
+  if (esDiaDeMantenimiento(clave)) return 'Mantenim.';
+  return null;
+}
+
+const DIAS_SEMANA = ['lu', 'ma', 'mi', 'ju', 'vi', 'sá', 'do'];
+
+/**
+ * Calendario mensual para elegir el día de la reserva.
+ *
+ * El límite de 3 meses del SCRUM se aplica acá: al llegar al último mes
+ * navigable se muestra la alerta, en vez de dejar elegir un día que el servidor
+ * va a rechazar después.
+ */
+function CalendarioMes({ fecha, onChange }: { fecha: string; onChange: (iso: string) => void }) {
+  const hoy = hoyEnBogota();
+  const limite = limiteReserva();
+  const [fy, fm] = partes(fecha);
+  const [mesVisible, setMesVisible] = useState<[number, number]>(() => [fy, fm]);
+
+  // El mes visible NO se sincroniza con `fecha` en un efecto: la regla
+  // react-hooks/set-state-in-effect lo prohíbe. El único camino para cambiar de
+  // fecha es un clic en esta misma grilla, que actualiza las dos cosas juntas.
+  const elegirDia = (iso: string) => {
+    const [ay, am] = partes(iso);
+    setMesVisible([ay, am]);
+    onChange(iso);
+  };
+
+  const ultimoMes = (() => {
+    const [ly, lm] = partes(limite);
+    return [ly, lm] as [number, number];
+  })();
+
+  const puedeAtras = mesVisible[0] > partes(hoy)[0] || (mesVisible[0] === partes(hoy)[0] && mesVisible[1] > partes(hoy)[1]);
+  const puedeAdelante = mesVisible[0] < ultimoMes[0] || (mesVisible[0] === ultimoMes[0] && mesVisible[1] < ultimoMes[1]);
+  const enElLimite = !puedeAdelante;
+
+  // Lunes = 0 para que la semana arranque en lunes, como en Colombia.
+  const primeroDelMes = new Date(Date.UTC(mesVisible[0], mesVisible[1] - 1, 1));
+  const dow = (primeroDelMes.getUTCDay() + 6) % 7;
+  const diasEnMes = new Date(Date.UTC(mesVisible[0], mesVisible[1], 0)).getUTCDate();
+
+  const mover = (delta: number) => {
+    setMesVisible(([y, m]) => {
+      const total = y * 12 + (m - 1) + delta;
+      return [Math.floor(total / 12), (total % 12) + 1] as [number, number];
+    });
+  };
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => mover(-1)}
+          disabled={!puedeAtras}
+          aria-label="Mes anterior"
+          className="rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-20 cursor-pointer"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <span className="text-sm font-bold capitalize text-white">
+          {NOMBRES_MES[mesVisible[1] - 1]} {mesVisible[0]}
+        </span>
+        <button
+          type="button"
+          onClick={() => mover(1)}
+          disabled={!puedeAdelante}
+          aria-label="Mes siguiente"
+          className="rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-20 cursor-pointer"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="mt-3 grid grid-cols-7 gap-1 text-center">
+        {DIAS_SEMANA.map((d) => (
+          <span key={d} className="text-[0.6rem] font-bold uppercase tracking-wider text-white/35">
+            {d}
+          </span>
+        ))}
+        {Array.from({ length: dow }, (_, i) => (
+          <span key={`hueco-${i}`} />
+        ))}
+        {Array.from({ length: diasEnMes }, (_, i) => {
+          const dia = i + 1;
+          const iso = `${mesVisible[0]}-${String(mesVisible[1]).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+          const pasado = iso < hoy;
+          const muyLejos = iso > limite;
+          const cerrado = motivoDeCierreDe(iso);
+          // Un festivo ABRE el complejo: solo desplaza el mantenimiento. Se
+          // marca con su nombre para que el cliente entienda por qué ese lunes
+          // está disponible si de costumbre está cerrado.
+          const festivo = esFestivo(iso);
+          const etiqueta = festivo ? (nombreFestivo(iso) ?? 'Festivo') : null;
+          const elegido = iso === fecha;
+          const bloqueado = pasado || muyLejos || Boolean(cerrado);
+
+          return (
+            <button
+              key={iso}
+              type="button"
+              disabled={bloqueado}
+              onClick={() => elegirDia(iso)}
+              aria-current={elegido ? 'date' : undefined}
+              title={cerrado ? 'Jornada de mantenimiento' : etiqueta ?? undefined}
+              className={`relative aspect-square rounded-lg text-xs font-bold tabular-nums transition-colors ${
+                elegido
+                  ? 'bg-[#e3bd74] text-[#1a1214] cursor-pointer'
+                  : bloqueado
+                    ? 'cursor-not-allowed text-white/20'
+                    : 'text-white/80 hover:bg-white/10 cursor-pointer'
+              }`}
+            >
+              {dia}
+              {cerrado && !elegido && (
+                <span className="absolute inset-x-1 bottom-1 mx-auto h-1 w-1 rounded-full bg-white/25" />
+              )}
+              {festivo && !cerrado && !elegido && (
+                <span className="absolute right-1 top-1 text-[0.5rem] text-[#e3bd74]">◆</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-white/45">
+        <span className="inline-flex items-center gap-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-white/25" /> Cerrado
+        </span>
+        <span>Máximo {MESES_MAXIMOS} meses de anticipación</span>
+      </div>
+
+      {enElLimite && (
+        <p
+          role="status"
+          className="mt-2 flex items-start gap-1.5 rounded-lg border border-[#e3bd74]/25 bg-[#e3bd74]/10 px-2.5 py-2 text-[11px] text-[#e3bd74]"
+        >
+          <CalendarOff className="mt-0.5 h-3 w-3 shrink-0" />
+          <span>
+            Llegaste al límite: no se puede reservar con más de {MESES_MAXIMOS} meses de
+            anticipación. Elige una fecha más cercana.
+          </span>
+        </p>
+      )}
+    </div>
+  );
+}
+
+function AvisoSinFranjas({ dia }: { dia: DayAvailability | null }) {
+  if (!dia) {
+    return <p className="py-8 text-center text-sm text-white/60">No se pudo consultar ese día.</p>;
   }
-  return out;
+
+  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
+
+  // Cada motivo tiene su propio mensaje. Antes todo caía en "No hay franjas
+  // para ese día", que ocultaba que el complejo estaba cerrado por festivo o
+  // por mantenimiento, y hacía pensar al cliente que la instalación estaba llena.
+  const textos: Record<string, { titulo: string; detalle: string }> = {
+    festivo: {
+      titulo: dia.reason ?? 'Festivo nacional',
+      detalle: 'El complejo no opera en días festivos.',
+    },
+    mantenimiento: {
+      titulo: 'Jornada de mantenimiento',
+      detalle:
+        'El complejo permanece cerrado por mantenimiento técnico. Si ese día es festivo, el mantenimiento se hace el martes.',
+    },
+    cierre_admin: {
+      titulo: dia.reason ?? 'Instalación cerrada',
+      detalle: 'El administrador la cerró temporalmente. Elige otra fecha.',
+    },
+    sin_horario: { titulo: 'Cerrado este día', detalle: 'Esta instalación no atiende hoy.' },
+    horario_invalido: { titulo: 'Horario no válido', detalle: 'Elige otra fecha.' },
+    sin_franjas: { titulo: 'Sin franjas', detalle: 'Ese día no tiene franjas generadas.' },
+    franjas_terminadas: {
+      titulo: 'Se acabaron las franjas',
+      detalle:
+        dia.date === hoy
+          ? `Ya terminó el horario de hoy (cierra a las ${dia.closeTime ?? '17:00'}). Elige otra fecha.`
+          : 'Todas las franjas de ese día están ocupadas.',
+    },
+  };
+
+  // Sin motivo conocido: el servidor está desactualizado o la respuesta vino
+  // rara. Se dice eso en vez de "no hay franjas", que es justo lo que hizo creer
+  // al cliente que la instalación estaba agotada cuando el día abría normal.
+  const texto =
+    textos[dia.motivo ?? ''] ?? {
+      titulo: 'No pudimos leer la disponibilidad de ese día',
+      detalle: 'Prueba con otra fecha o recarga la página.',
+    };
+
+  return (
+    <div className="py-8 text-center">
+      <CalendarOff className="mx-auto h-8 w-8 text-white/30" />
+      <p className="mt-3 text-sm font-bold text-white/85">{texto.titulo}</p>
+      <p className="mx-auto mt-1 max-w-xs text-xs text-white/55">{texto.detalle}</p>
+    </div>
+  );
 }
 
 export function SelectorFranjas({
@@ -29,7 +267,7 @@ export function SelectorFranjas({
   onClose: () => void;
 }) {
   const { agregar, yaEsta } = useCarrito();
-  const [fecha, setFecha] = useState(HOY());
+  const [fecha, setFecha] = useState(hoyEnBogota());
   const [aviso, setAviso] = useState('');
 
   // "Cargando" se deriva de la clave pedida, no se reinicia con un setState: así
@@ -67,7 +305,11 @@ export function SelectorFranjas({
 
   const agregarFranja = (slot: DayAvailability['slots'][number]) => {
     const r = agregar(bloqueDesdeSlot(servicio, slot, fecha));
-    setAviso(r.ok ? `${servicio.name} ${formatoHora(slot.startsAt)} agregado.` : r.message);
+    setAviso(
+      r.ok
+        ? `${servicio.name} ${formatoHora(slot.startsAt)} a ${formatoHora(slot.endsAt)} agregada.`
+        : r.message,
+    );
   };
 
   return (
@@ -105,68 +347,74 @@ export function SelectorFranjas({
             <label className="block text-xs font-bold uppercase tracking-wider text-white/50">
               Fecha
             </label>
-            <div className="mt-2 flex gap-2 overflow-x-auto pb-2">
-              {diasDisponibles(14).map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => {
-                    setFecha(f);
-                    setAviso('');
-                  }}
-                  className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-bold transition-colors cursor-pointer ${
-                    f === fecha
-                      ? 'border-[#e3bd74] bg-[#e3bd74]/15 text-[#e3bd74]'
-                      : 'border-white/10 bg-white/[0.04] text-white/70 hover:bg-white/10'
-                  }`}
-                >
-                  {fechaCorta(f)}
-                </button>
-              ))}
+            <div className="mt-4">
+              <CalendarioMes
+                fecha={fecha}
+                onChange={(nueva) => {
+                  setFecha(nueva);
+                  setAviso('');
+                }}
+              />
             </div>
 
             <div className="mt-4">
               {cargando ? (
-                <p className="flex items-center gap-2 py-8 text-center text-sm text-white/60">
+                <p className="flex items-center justify-center gap-2 py-8 text-center text-sm text-white/60">
                   <Loader2 className="h-4 w-4 animate-spin" /> Consultando disponibilidad…
                 </p>
-              ) : !dia || dia.open === false ? (
-                <p className="py-8 text-center text-sm text-white/60">
-                  {dia?.reason ?? 'No hay franjas para ese día.'}
-                </p>
-              ) : dia.slots.length === 0 ? (
-                <p className="py-8 text-center text-sm text-white/60">No hay franjas generadas.</p>
+              ) : !dia || !dia.hayDisponibilidad ? (
+                <AvisoSinFranjas dia={dia} />
               ) : (
-                <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {dia.slots.map((s) => {
-                    const ocupado = yaEsta(s.id);
-                    const lleno = s.free <= 0;
-                    const deshabilitado = ocupado || lleno;
-                    return (
-                      <li key={s.id}>
-                        <button
-                          type="button"
-                          disabled={deshabilitado}
-                          onClick={() => agregarFranja(s)}
-                          className={`w-full rounded-lg border px-2 py-2.5 text-center transition-colors ${
-                            ocupado
-                              ? 'cursor-not-allowed border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-                              : lleno
-                                ? 'cursor-not-allowed border-white/10 bg-white/[0.02] text-white/30'
-                                : 'cursor-pointer border-white/10 bg-white/[0.04] text-white hover:border-[#e3bd74]/50 hover:bg-white/10'
-                          }`}
-                        >
-                          <span className="block text-sm font-bold tabular-nums">
-                            {formatoHora(s.startsAt)}
+                <>
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wider text-white/50">
+                    Elige la franja de 1 hora
+                  </p>
+                  <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {dia.slots.map((s) => {
+                      const ocupado = yaEsta(s.id);
+                      const lleno = s.free <= 0;
+                      // Una franja que ya terminó no se puede agregar aunque le
+                      // queden cupos: el servidor la rechaza igual, pero ofrecerla
+                      // llenaría el carrito de horas imposibles.
+                      const pasado = s.status === 'past';
+                      const deshabilitado = ocupado || lleno || pasado;
+                      return (
+                        <li key={s.id}>
+                          <button
+                            type="button"
+                            disabled={deshabilitado}
+                            onClick={() => agregarFranja(s)}
+                            className={`w-full rounded-lg border px-2 py-2.5 text-center transition-colors ${
+                              ocupado
+                                ? 'cursor-not-allowed border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                                : lleno || pasado
+                                  ? 'cursor-not-allowed border-white/10 bg-white/[0.02] text-white/30'
+                                  : 'cursor-pointer border-white/10 bg-white/[0.04] text-white hover:border-[#e3bd74]/50 hover:bg-white/10'
+                            }`}
+                          >
+                            {/* Rango completo: la franja es de 1 hora y el
+                                cliente tiene que ver hasta cuándo entra. */}
+                            <span className="block text-sm font-bold tabular-nums">
+                              {formatoHora(s.startsAt)}
+                            </span>
+                            <span className="block text-[0.65rem] tabular-nums text-white/45">
+                              a {formatoHora(s.endsAt)}
+                            </span>
+                            <span className="mt-0.5 block text-[10px] text-white/50">
+                              {ocupado
+                                ? 'En el carrito'
+                                : pasado
+                                  ? 'Terminó'
+                                  : lleno
+                                  ? 'Completa'
+                                  : `${s.free} libres`}
                           </span>
-                          <span className="block text-[10px] text-white/50">
-                            {ocupado ? 'En el carrito' : lleno ? 'Completa' : `${s.free} libres`}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </>
               )}
             </div>
 
