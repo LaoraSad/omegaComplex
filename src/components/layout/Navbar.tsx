@@ -20,6 +20,8 @@ const LINKS = [
   { id: 'contacto', label: 'Contacto', href: '/#contacto' },
 ];
 
+import { BotonCarrito } from '@/components/storefront/BotonCarrito';
+
 export default function Navbar({ initialUser }: NavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -194,6 +196,9 @@ export default function Navbar({ initialUser }: NavbarProps) {
                 <CalendarDays className="h-4 w-4" />
                 <span>Mis reservas</span>
               </Link>
+              {/* Carrito: sobrevive a la navegación porque el provider vive en
+                  el layout, no en cada página. */}
+              <BotonCarrito className="hidden lg:inline-flex" />
               {user.role === 'admin' && (
                 <Link
                   href="/admin"
@@ -271,6 +276,9 @@ export default function Navbar({ initialUser }: NavbarProps) {
                   <CalendarDays className="h-4 w-4 text-[#d9b56c]" />
                   <span>Mis reservas y QR</span>
                 </Link>
+                <div className="lg:hidden">
+                  <BotonCarrito className="w-full !px-3 !py-3 uppercase tracking-[0.14em]" />
+                </div>
                 <Link
                   href="/perfil"
                   onClick={() => setMobileOpen(false)}

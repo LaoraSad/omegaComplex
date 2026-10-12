@@ -1,4 +1,5 @@
 import type { LoginData, RegisterData, ResetPasswordData } from "@/types/auth";
+import { borrarCarritoGuardado } from "@/components/storefront/CarritoReserva";
 
 export type AuthUser = {
   id: string;
@@ -28,16 +29,27 @@ export type RegistrationResult = {
 
 export class AuthApiError extends Error {
   status?: number;
+  /** Código de negocio del servidor, por ejemplo `EMAIL_NOT_VERIFIED`. Permite
+   * que la interfaz reaccione sin tener que adivinarlo por el texto. */
+  code?: string;
 
-  constructor(message: string, status?: number) {
+  constructor(message: string, status?: number, code?: string) {
     super(message);
     this.name = "AuthApiError";
     this.status = status;
+    this.code = code;
   }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function getErrorCode(value: unknown): string | undefined {
+  if (!isRecord(value)) return undefined;
+  const nested = value.error;
+  if (isRecord(nested) && typeof nested.code === "string") return nested.code;
+  return typeof value.code === "string" ? value.code : undefined;
 }
 
 function getErrorMessage(value: unknown): string | undefined {
@@ -97,7 +109,7 @@ async function readEnvelope<T>(response: Response): Promise<T> {
     getErrorMessage(payload) ??
     (responseText.trim() || `La solicitud falló (HTTP ${response.status}).`);
 
-  throw new AuthApiError(message, response.status);
+  throw new AuthApiError(message, response.status, getErrorCode(payload));
 }
 
 export function login(data: LoginData): Promise<AuthUser> {
@@ -108,7 +120,11 @@ export function register(data: RegisterData): Promise<RegistrationResult> {
   return request<RegistrationResult>(AUTH_API_PATHS.register, data);
 }
 
-export function logout(): Promise<void> {
+export async function logout(): Promise<void> {
+  // Antes de cerrar la sesión: el carrito en sessionStorage guarda nombres y
+  // documentos de acompañantes. Sin sesión cerrada el logout deja en memoria
+  // lo que se puede reutilizar, así que se limpia de una.
+  borrarCarritoGuardado();
   return request<void>(AUTH_API_PATHS.logout);
 }
 
