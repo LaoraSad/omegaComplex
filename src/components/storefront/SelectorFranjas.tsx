@@ -266,7 +266,7 @@ export function SelectorFranjas({
   servicio: CatalogServiceRecord;
   onClose: () => void;
 }) {
-  const { agregar, yaEsta } = useCarrito();
+  const { agregar, yaEsta, quitar, abrirCarrito, bloques } = useCarrito();
   const [fecha, setFecha] = useState(hoyEnBogota());
   const [aviso, setAviso] = useState('');
 
@@ -309,6 +309,15 @@ export function SelectorFranjas({
       r.ok
         ? `${servicio.name} ${formatoHora(slot.startsAt)} a ${formatoHora(slot.endsAt)} agregada.`
         : r.message,
+    );
+  };
+
+  /** Quita una franja del carrito y avisa, para que quede claro qué pasó. */
+  const quitarFranja = (slot: DayAvailability['slots'][number]) => {
+    const bloque = bloques.find((b) => b.slotId === slot.id);
+    quitar(bloque?.clave ?? '');
+    setAviso(
+      `${servicio.name} ${formatoHora(slot.startsAt)} a ${formatoHora(slot.endsAt)} quitada del carrito.`,
     );
   };
 
@@ -377,21 +386,43 @@ export function SelectorFranjas({
                       // queden cupos: el servidor la rechaza igual, pero ofrecerla
                       // llenaría el carrito de horas imposibles.
                       const pasado = s.status === 'past';
-                      const deshabilitado = ocupado || lleno || pasado;
+                      // Una franja ya elegida NO se deshabilita: se puede volver
+                      // a tocar para quitarla del carrito. Antes salía deshabilitada
+                      // con aspecto de "ocupada" y quien cambiaba de opinión no
+                      // tenía forma de deshacerla.
+                      const deshabilitado = lleno || pasado;
                       return (
                         <li key={s.id}>
                           <button
                             type="button"
                             disabled={deshabilitado}
-                            onClick={() => agregarFranja(s)}
-                            className={`w-full rounded-lg border px-2 py-2.5 text-center transition-colors ${
+                            aria-pressed={ocupado}
+                            title={
                               ocupado
-                                ? 'cursor-not-allowed border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                                ? 'Quitar del carrito'
+                                : deshabilitado
+                                  ? 'No disponible'
+                                  : 'Agregar al carrito'
+                            }
+                            onClick={() => (ocupado ? quitarFranja(s) : agregarFranja(s))}
+                            className={`relative w-full rounded-lg border px-2 py-2.5 text-center transition-colors ${
+                              ocupado
+                                ? 'cursor-pointer border-emerald-500/50 bg-emerald-500/10 text-emerald-300 hover:border-rose-400/60 hover:bg-rose-500/10 hover:text-rose-200'
                                 : lleno || pasado
                                   ? 'cursor-not-allowed border-white/10 bg-white/[0.02] text-white/30'
                                   : 'cursor-pointer border-white/10 bg-white/[0.04] text-white hover:border-[#e3bd74]/50 hover:bg-white/10'
                             }`}
                           >
+                            {/* Marca de "en tu carrito" con una X: sin un gesto
+                                explícito no se entiende que tocarlo la quita. */}
+                            {ocupado ? (
+                              <span
+                                aria-hidden="true"
+                                className="absolute right-1.5 top-1.5 grid h-4 w-4 place-items-center rounded-full bg-emerald-500/25 text-[10px] font-bold text-emerald-200"
+                              >
+                                ×
+                              </span>
+                            ) : null}
                             {/* Rango completo: la franja es de 1 hora y el
                                 cliente tiene que ver hasta cuándo entra. */}
                             <span className="block text-sm font-bold tabular-nums">
@@ -425,15 +456,32 @@ export function SelectorFranjas({
             )}
           </div>
 
-          <footer className="border-t border-white/10 p-5">
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-full rounded-xl bg-[#7a1f3d] py-3 text-sm font-bold text-white transition-colors hover:bg-[#8f2547] cursor-pointer"
-            >
-              <span className="inline-flex items-center gap-2">
-                <CalendarPlus className="h-4 w-4" />
-                Listo, ver mi carrito
+<footer className="border-t border-white/10 p-5">
+              {/* Seguir comprando antes que ir al carrito: armando varias
+                  atracciones se llega acá varias veces, y si el único camino es
+                  "Listo" el cliente tiene que cerrar el modal del carrito y
+                  volver a abrir el selector cada vez. */}
+              <button
+                type="button"
+                onClick={onClose}
+                className="mb-2 w-full cursor-pointer rounded-xl border border-white/15 bg-white/[0.04] py-3 text-sm font-bold text-white transition-colors hover:border-[#e3bd74]/50 hover:bg-white/10"
+              >
+                Seguir comprando
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // Antes solo cerraba el selector y el carrito quedaba oculto
+                  // detras: el cliente pensaba que el boton no funcionaba. Ahora
+                  // cierra esta pantalla y abre el carrito, que es lo que dice.
+                  onClose();
+                  abrirCarrito();
+                }}
+                className="w-full cursor-pointer rounded-xl bg-[#7a1f3d] py-3 text-sm font-bold text-white transition-colors hover:bg-[#8f2547]"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <CalendarPlus className="h-4 w-4" />
+                  Listo, ver mi carrito
               </span>
             </button>
           </footer>

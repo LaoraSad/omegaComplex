@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   qr: {
     emitirQrDeReserva: vi.fn(),
   },
+  sendQrEmail: vi.fn(),
+  enviarEvento: vi.fn(),
   db: {
     reservation: { findUnique: vi.fn() },
     reservationHold: { findFirst: vi.fn() },
@@ -22,6 +24,15 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../payments.repository", () => mocks.repository);
 vi.mock("@/features/reservations/qr", () => mocks.qr);
 vi.mock("@/shared/lib/db", () => ({ db: mocks.db }));
+// El envío de correo vive ahora en este servicio. `@/lib/email/resend` es
+// server-only y revienta si se importa sin mock; acá solo interesa comprobar
+// que se intente entregar.
+vi.mock("@/lib/email/resend", () => ({ sendQrEmail: mocks.sendQrEmail }));
+vi.mock("@/shared/integrations/n8n", () => ({
+  enviarEvento: mocks.enviarEvento,
+  n8nConfigurado: () => false,
+}));
+vi.mock("@/shared/pdf/qr-pdf", () => ({ generarPdfQr: async () => new Uint8Array() }));
 
 import { ConflictError, NotFoundError } from "@/shared/http/errors";
 import {

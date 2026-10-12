@@ -1,3 +1,6 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import QRCode from "qrcode";
 
@@ -18,10 +21,12 @@ import type { QrParaCorreo } from "@/lib/email/resend";
 const MARGEN = 48;
 const ALTO_PAGINA = 842; // A4 vertical
 const ANCHO_PAGINA = 595.28;
-/** Alto reservado para cada persona en la tabla. */
-const ALTO_FILA = 132;
-/** Alto que ocupa el encabezado (titulo, fecha y nota) en la primera pagina. */
-const ALTO_ENCABEZADO = 74;
+/** Alto de cada tarjeta de persona. Toda la tarjeta cabe en este alto. */
+const ALTO_TARJETA = 124;
+/** Separación entre tarjetas. */
+const ALTO_FILA = ALTO_TARJETA + 16;
+/** Espacio que ocupa el encabezado en la primera página (banda + título + fecha). */
+const ALTO_ENCABEZADO = 214;
 
 /**
  * Filas por pagina. Se calcula una sola vez con el espacio mas JUSTO (la
@@ -38,8 +43,17 @@ export type DatosPdfQr = {
   /** Fecha ya formateada para mostrar, igual que va en el correo. */
   fecha: string;
   codigos: QrParaCorreo[];
+  /**
+   * Documento del titular. El empleado lo necesita para verificar en recepción
+   * cuando la imagen no se puede leer.
+   */
+  documento?: string | null;
 };
 
+/**
+ * El PDF es la versión imprimible del correo y la que usa el empleado en la
+ * puerta: logo, datos de la reserva y el QR escaneable de cada persona.
+ */
 export async function generarPdfQr(datos: DatosPdfQr): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
 
@@ -47,7 +61,9 @@ export async function generarPdfQr(datos: DatosPdfQr): Promise<Uint8Array> {
   const normal = await doc.embedFont(StandardFonts.Helvetica);
 
   const vino = rgb(0.48, 0.12, 0.24);
-  const gris = rgb(0.35, 0.33, 0.35);
+  const tinta = rgb(0.14, 0.13, 0.14);
+  const gris = rgb(0.42, 0.42, 0.42);
+  const blanco = rgb(1, 1, 1);
 
   const total = datos.codigos.length;
   const paginas = Math.max(1, Math.ceil(total / FILAS_POR_PAGINA));
@@ -57,29 +73,92 @@ export async function generarPdfQr(datos: DatosPdfQr): Promise<Uint8Array> {
     let y = ALTO_PAGINA - MARGEN;
 
     if (p === 0) {
-      page.drawText("Tus codigos QR", {
+      // Franja del logo. Es un PNG blanco, así que necesita fondo oscuro.
+      const ALTO_BANDA = 62;
+      page.drawRectangle({
+        x: 0,
+        y: ALTO_PAGINA - ALTO_BANDA,
+        width: ANCHO_PAGINA,
+        height: ALTO_BANDA,
+        color: vino,
+      });
+
+      try {
+        const bytes = await readFile(join(process.cwd(), "public", "Logo-blanco.png"));
+        const logo = await doc.embedPng(bytes);
+        // El logo mide 640x349: se escala a 132 de ancho para no competir con
+        // los QR, que son lo que hay que escanear.
+        const anchoLogo = 132;
+        page.drawImage(logo, {
+          x: MARGEN,
+          y: ALTO_PAGINA - ALTO_BANDA / 2 - (anchoLogo * 349) / 640 / 2,
+          width: anchoLogo,
+          height: (anchoLogo * 349) / 640,
+        });
+      } catch {
+        page.drawText("OMEGA COMPLEX", {
+          x: MARGEN,
+          y: ALTO_PAGINA - ALTO_BANDA / 2 - 4,
+          size: 13,
+          font: negrita,
+          color: blanco,
+        });
+      }
+
+      // Encabezado. Cada bloque parte de `y` y se avanza con la altura real que
+      // ocupa, en vez de restar números sueltos: así un texto nunca cae dentro
+      // del bloque de abajo.
+      y = ALTO_PAGINA - ALTO_BANDA - 26;
+
+      page.drawText("Códigos de acceso", {
         x: MARGEN,
         y,
         size: 20,
         font: negrita,
-        color: vino,
+        color: tinta,
       });
       y -= 26;
 
-      page.drawText(`Reserva del ${datos.fecha} - ${datos.nombre}`, {
+      page.drawText(
+        `${datos.nombre}${datos.documento ? `  ·  Documento ${datos.documento}` : ""}`,
+        { x: MARGEN, y, size: 11, font: normal, color: gris },
+      );
+      y -= 24;
+
+      // Caja de la fecha. `tope` es su borde superior: todo lo de arriba tiene
+      // que quedar por encima de ese número.
+      const ALTO_CAJA = 46;
+      const topeCaja = y;
+      page.drawRectangle({
         x: MARGEN,
-        y,
-        size: 11,
-        font: normal,
+        y: topeCaja - ALTO_CAJA,
+        width: ANCHO_PAGINA - MARGEN * 2,
+        height: ALTO_CAJA,
+        color: rgb(0.984, 0.969, 0.973),
+      });
+      page.drawRectangle({
+        x: MARGEN,
+        y: topeCaja - ALTO_CAJA,
+        width: 4,
+        height: ALTO_CAJA,
+        color: vino,
+      });
+      page.drawText("FECHA DE LA RESERVA", {
+        x: MARGEN + 16,
+        y: topeCaja - 17,
+        size: 8,
+        font: negrita,
         color: gris,
       });
-      y -= 14;
+      page.drawText(datos.fecha, {
+        x: MARGEN + 16,
+        y: topeCaja - 35,
+        size: 14,
+        font: negrita,
+        color: tinta,
+      });
 
-      page.drawText(
-        "Cada codigo es de un solo uso y solo sirve el dia de la reserva. Presentalo en la puerta de su zona.",
-        { x: MARGEN, y, size: 9, font: normal, color: gris },
-      );
-      y -= ALTO_ENCABEZADO;
+      y = topeCaja - ALTO_CAJA - 16;
     }
 
     const desde = p * FILAS_POR_PAGINA;
@@ -87,16 +166,20 @@ export async function generarPdfQr(datos: DatosPdfQr): Promise<Uint8Array> {
 
     for (let i = desde; i < hasta; i++) {
       const qr = datos.codigos[i];
-      // Se dibuja de abajo hacia arriba: la primera persona queda arriba.
-      const baseFila = y - ALTO_FILA + 18;
+
+      // Geometría de la tarjeta, toda calculada desde `base` (el borde
+      // inferior de la tarjeta). Antes las coordenadas venían sueltas y el
+      // marco del QR se salía de la tarjeta: los textos quedaban encima.
+      const base = y - ALTO_TARJETA;
+      const anchoTarjeta = ANCHO_PAGINA - MARGEN * 2;
 
       page.drawRectangle({
         x: MARGEN,
-        y: baseFila - 12,
-        width: ANCHO_PAGINA - MARGEN * 2,
-        height: ALTO_FILA - 16,
-        borderColor: rgb(0.92, 0.87, 0.88),
-        borderWidth: 1,
+        y: base,
+        width: anchoTarjeta,
+        height: ALTO_TARJETA,
+        borderColor: rgb(0.918, 0.867, 0.882),
+        borderWidth: 1.5,
       });
 
       const png = await QRCode.toBuffer(qr.token, {
@@ -105,34 +188,66 @@ export async function generarPdfQr(datos: DatosPdfQr): Promise<Uint8Array> {
         color: { dark: "#211a1d", light: "#ffffff" },
       });
       const imagen = await doc.embedPng(png);
+
+      // QR centrado verticalmente dentro de la tarjeta.
+      page.drawRectangle({
+        x: MARGEN + 10,
+        y: base + 8,
+        width: 108,
+        height: 108,
+        color: rgb(0.984, 0.969, 0.973),
+      });
       page.drawImage(imagen, {
-        x: MARGEN + 14,
-        y: baseFila + 6,
+        x: MARGEN + 16,
+        y: base + 14,
         width: 96,
         height: 96,
       });
 
-      const textoX = MARGEN + 14 + 96 + 18;
-      let textoY = baseFila + 80;
+      const textoX = MARGEN + 138;
 
-      page.drawText(`${qr.etiqueta} - ${qr.nombre}`, {
+      // Etiqueta de zona, como etiqueta de color y no texto suelto.
+      const anchoEtiqueta = negrita.widthOfTextAtSize(qr.etiqueta, 11) + 22;
+      page.drawRectangle({
         x: textoX,
-        y: textoY,
-        size: 13,
-        font: negrita,
+        y: base + 82,
+        width: anchoEtiqueta,
+        height: 19,
         color: vino,
       });
-      textoY -= 18;
+      page.drawText(qr.etiqueta, {
+        x: textoX + 11,
+        y: base + 87,
+        size: 11,
+        font: negrita,
+        color: rgb(1, 1, 1),
+      });
 
-      page.drawText(`${qr.servicio} / ${qr.zona}`, {
+      page.drawText(qr.nombre, {
         x: textoX,
-        y: textoY,
+        y: base + 58,
+        size: 15,
+        font: negrita,
+        color: tinta,
+      });
+
+      page.drawText(`${qr.servicio}  ·  ${qr.zona}`, {
+        x: textoX,
+        y: base + 39,
         size: 10.5,
         font: normal,
         color: gris,
       });
 
-      y = baseFila - 12;
+      page.drawText("Presentar en la puerta de esta zona", {
+        x: textoX,
+        y: base + 20,
+        size: 8,
+        font: normal,
+        color: rgb(0.6, 0.6, 0.6),
+      });
+
+      y = base - 12;
     }
   }
 

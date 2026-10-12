@@ -40,8 +40,25 @@ describe("sendQrEmail", () => {
     const args = sendMock.mock.calls[0][0];
     expect(args.to).toBe("ana@example.com");
     expect(args.subject).toContain("QR");
-    // Una imagen PNG embebida por código, cada una con su etiqueta y servicio.
-    expect(args.html.match(/data:image\/png/g)?.length).toBe(2);
+
+    // Las imágenes van ADJUNTAS por CID, nunca como `data:` URL: Gmail bloquea
+    // ese esquema y el cliente termina viendo el texto `alt` en vez del QR.
+    expect(args.html).not.toContain("data:image");
+    expect(args.html).toContain('src="cid:qr-1"');
+    expect(args.html).toContain('src="cid:qr-2"');
+
+    const adjuntos = args.attachments ?? [];
+    const qr = adjuntos.filter((a: { content_id: string }) => a.content_id.startsWith("qr-") && !a.content_id.includes("pdf"));
+    expect(qr).toHaveLength(2);
+    expect(qr[0].content_id).toBe("qr-1");
+    expect(qr[0].filename).toBe("qr-1.png");
+    // El tipo MIME es obligatorio o el cliente no renderiza la imagen.
+    expect(qr[0].content_type).toBe("image/png");
+    // El logo tambien viene adjunto, no referenciado por URL.
+    expect(adjuntos.some((a: { content_id: string }) => a.content_id === "logo")).toBe(true);
+    // El PDF vuelve adjunto: es la versión imprimible que usa el empleado.
+    expect(adjuntos.some((a: { filename: string }) => a.filename === "codigos-qr.pdf")).toBe(true);
+
     expect(args.html).toContain("Z1-P01");
     expect(args.html).toContain("Piscina adultos 1");
     expect(args.html).toContain("1 de noviembre de 2026");

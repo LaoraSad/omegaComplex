@@ -256,13 +256,13 @@ export async function hasStripeEvent(eventId: string): Promise<boolean> {
  */
 export async function obtenerContactoQr(
   reservationId: string,
-): Promise<{ email: string; nombre: string; startsAt: Date } | null> {
+): Promise<{ email: string; nombre: string; startsAt: Date; documento: string | null } | null> {
   const row = await db.reservation.findUnique({
     where: { id: reservationId },
     select: {
       startsAt: true,
       customer: {
-        select: { user: { select: { email: true, firstName: true, lastName: true } } },
+        select: { user: { select: { email: true, firstName: true, lastName: true } }, document: true },
       },
     },
   });
@@ -271,6 +271,7 @@ export async function obtenerContactoQr(
     email: row.customer.user.email,
     nombre: `${row.customer.user.firstName} ${row.customer.user.lastName}`.trim(),
     startsAt: row.startsAt,
+    documento: row.customer.document ?? null,
   };
 }
 

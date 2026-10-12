@@ -44,7 +44,13 @@ const ETIQUETA: Record<string, { texto: string; clases: string }> = {
     texto: "Pago rechazado",
     clases: "border-rose-400/30 bg-rose-500/10 text-rose-200",
   },
-  expired: { texto: "Expirada", clases: "border-white/15 bg-white/5 text-white/60" },
+  // La reserva se anula si no se paga dentro de los 10 minutos del bloqueo.
+  // "Expirada" a secas confunde: el cliente ve que la fecha de la reserva sigue
+  // en el futuro y piensa que perdió la reserva. El texto dice qué pasó.
+  expired: {
+    texto: "Sin pagar",
+    clases: "border-white/15 bg-white/5 text-white/60",
+  },
   used: { texto: "Utilizada", clases: "border-white/15 bg-white/5 text-white/60" },
 };
 

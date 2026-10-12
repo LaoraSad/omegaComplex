@@ -16,12 +16,17 @@ import { ConflictError, HttpError, NotFoundError } from "@/shared/http/errors";
 import { db } from "@/shared/lib/db";
 import { env } from "@/shared/lib/env";
 import { getStripe } from "@/shared/lib/stripe";
+import { logger } from "@/shared/lib/logger";
+import { sendQrEmail, type QrParaCorreo } from "@/lib/email/resend";
+import { enviarEvento, n8nConfigurado } from "@/shared/integrations/n8n";
+import { generarPdfQr } from "@/shared/pdf/qr-pdf";
 
 import {
   consumirHoldYTrasladarCupos,
   createPendingPayment,
   liberarCuposDeReserva,
   rejectPayment,
+  obtenerContactoQr,
   settlePayment,
 } from "./payments.repository";
 import type { CreatePaymentInput } from "./payments.schemas";
@@ -90,7 +95,7 @@ function lineItemsDeReserva(
 
   if (blocks.length === 1) {
     const b = blocks[0];
-    const nombres = b.guests.map((g) => g.guest.fullName.trim()).filter(Boolean);
+    const nombres = b.guests.map((g) => g.guest?.fullName?.trim()).filter(Boolean);
     return [
       {
         price_data: {
@@ -114,7 +119,7 @@ function lineItemsDeReserva(
   montos[montos.length - 1] += totalCop - montos.reduce((a, b) => a + b, 0);
 
   return blocks.map((b, i) => {
-    const nombres = b.guests.map((g) => g.guest.fullName.trim()).filter(Boolean);
+    const nombres = b.guests.map((g) => g.guest?.fullName?.trim()).filter(Boolean);
     return {
       price_data: {
         currency: "cop" as const,
@@ -238,11 +243,106 @@ export async function confirmarPagoExitoso(input: {
 
   const emision = await emitirQrDeReserva(payment.reservationId);
   if (!emision.ok) {
-    // El pago ya quedÃ³ liquidado; esto exige revisiÃ³n manual y reintento del
-    // webhook (la emisiÃ³n es idempotente, el reproceso es seguro).
+    // El pago ya quedó liquidado; esto exige revisión manual y reintento del
+    // webhook (la emisión es idempotente, el reproceso es seguro).
     throw new HttpError(500, "QR_SIN_EMITIR", emision.message);
   }
+
+  // El correo se envía desde acá y no desde el webhook a propósito: la reserva
+  // se puede liquidar por más de una vía (webhook de Stripe o recuperación
+  // desde la pantalla de espera) y los QR son la única entrega de los códigos.
+  // Si el envío viviera solo en el webhook, un pago recuperado a mano confirmó
+  // la reserva sin mandarle nada al cliente.
+  //
+  // Los tokens crudos se consumed acá: en la base solo quedan los hashes.
+  await entregarQrPorCorreo(payment.reservationId, emision.emitidos);
+
   return { transitioned: true, emitidos: emision.emitidos };
+}
+
+/**
+ * Manda los QR por correo, por n8n si está configurado y por Resend si no.
+ *
+ * Nunca lanza: el pago ya está liquidado y perderlo por un correo que no salió
+ * sería peor que no enviarlo. Queda registrado para revisión manual.
+ */
+async function entregarQrPorCorreo(
+  reservationId: string,
+  emitidos: QrEmitido[],
+): Promise<void> {
+  try {
+    const contacto = await obtenerContactoQr(reservationId);
+    if (!contacto) return;
+
+    const fecha = contacto.startsAt.toLocaleDateString("es-CO", {
+      timeZone: "America/Bogota",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+    const entregado = await enviarPdfPorN8n({
+      email: contacto.email,
+      nombre: contacto.nombre,
+      fecha,
+      codigos: emitidos,
+      documento: contacto.documento,
+    });
+
+    if (!entregado) {
+      await sendQrEmail(contacto.email, {
+        nombre: contacto.nombre,
+        fecha,
+        codigos: emitidos,
+      });
+    }
+  } catch (error) {
+    logger.error("pago.qr_email_fallido", { reservationId, error });
+  }
+}
+
+/**
+ * Genera el PDF y se lo pasa a n8n, que es quien lo manda. Devuelve si la
+ * entrega quedó hecha, para que el llamador sepa si aplicar el plan B.
+ */
+async function enviarPdfPorN8n(input: {
+  email: string;
+  nombre: string;
+  fecha: string;
+  codigos: QrParaCorreo[];
+  documento?: string | null;
+}): Promise<boolean> {
+  if (!n8nConfigurado()) return false;
+
+  const pdf = await generarPdfQr({
+    nombre: input.nombre,
+    fecha: input.fecha,
+    codigos: input.codigos,
+    documento: input.documento ?? null,
+  });
+
+  const { entregado, motivo } = await enviarEvento("reserva.confirmada", {
+    email: input.email,
+    nombre: input.nombre,
+    fecha: input.fecha,
+    // El PDF va en base64: n8n lo lee, lo adjunta al correo y lo borra.
+    pdfBase64: Buffer.from(pdf).toString("base64"),
+    pdfNombre: `codigos-qr-${input.fecha.replace(/\s+/g, "-")}.pdf`,
+    codigos: input.codigos.map((q) => ({
+      etiqueta: q.etiqueta,
+      nombre: q.nombre,
+      servicio: q.servicio,
+      zona: q.zona,
+      // El token crudo viaja en el evento porque es lo que hay que dibujar en
+      // el QR del PDF; se genera aquí y no se guarda en la base.
+      token: q.token,
+    })),
+  });
+
+  if (!entregado) {
+    logger.warn("pago.n8n_no_entrego_pdf", { motivo });
+  }
+return entregado;
 }
 
 /** Marca el pago como fallido y devuelve los cupos retenidos al inventario. */

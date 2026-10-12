@@ -5,11 +5,16 @@ import { EmptyState } from "@/components/admin/EmptyState";
 import { listCustomerReservations } from "@/features/reservations/reservations.repository";
 import { getSession } from "@/shared/auth/session";
 import MisReservasView from "./MisReservasView";
+import EsperaPago from "./EsperaPago";
 import { toMisReserva } from "./reservas-view";
 
 export const metadata: Metadata = { title: "Mis reservas" };
 
-export default async function MisReservasPage() {
+export default async function MisReservasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ reserva?: string; pago?: string }>;
+}) {
   const session = await getSession();
 
   if (!session) {
@@ -25,6 +30,18 @@ export default async function MisReservasPage() {
             </Link>
           }
         />
+      </div>
+    );
+  }
+
+  // Al volver de Stripe se muestra la espera: la reserva se confirma por webhook
+  // y eso tarda. Sin esta pantalla el usuario ve una reserva a medio confirmar
+  // y no sabe si el pago entró.
+  const { reserva, pago } = await searchParams;
+  if (pago === "exitoso" && reserva) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-10">
+        <EsperaPago reservationId={reserva} />
       </div>
     );
   }
