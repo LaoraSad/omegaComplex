@@ -311,6 +311,20 @@ async function main() {
     },
   ];
 
+  // Mapear slugs antiguos a los nuevos oficiales para preservar reservas y evitar conflictos de FK
+  const mapping = [
+    { oldSlug: "piscina-adultos-1", newSlug: "piscina-de-olas", name: "Piscina de olas" },
+    { oldSlug: "piscina-adultos-2", newSlug: "piscina-tobogan", name: "Piscina Tobogán" },
+    { oldSlug: "piscina-adultos-3", newSlug: "piscina-inodoro", name: "Piscina Inodoro" },
+    { oldSlug: "piscina-adultos-4", newSlug: "piscina-torpedo", name: "Piscina Torpedo" },
+  ];
+  for (const m of mapping) {
+    await prisma.service.updateMany({
+      where: { slug: m.oldSlug },
+      data: { slug: m.newSlug, name: m.name },
+    }).catch(() => {});
+  }
+
   for (const service of services) {
     await prisma.service.upsert({
       where: {

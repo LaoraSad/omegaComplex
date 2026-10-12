@@ -5,6 +5,9 @@ const SERVICE_IMAGES: Record<string, string> = {
   // Piscinas
   "piscina-infantil": "/newassets/piscina-infantil.webp",
   "piscina-de-olas": "/newassets/piscina-olas.webp",
+  "piscina-tobogan": "/newassets/tobogan-piscina-1.webp",
+  "piscina-inodoro": "/newassets/bowl-slide.webp",
+  "piscina-torpedo": "/newassets/tobogan-piscina-3.webp",
   "tobogan": "/newassets/tobogan-piscina-1.webp",
   "inodoro": "/newassets/bowl-slide.webp",
   "torpedo": "/newassets/tobogan-piscina-3.webp",
