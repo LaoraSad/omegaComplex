@@ -33,6 +33,8 @@ function readServiceIds(formData: FormData): string[] {
 
 function revalidateEmployeeViews(id?: string) {
   revalidatePath("/admin/empleados");
+  revalidatePath("/turnos");
+  revalidatePath("/validar");
   if (id) revalidatePath(`/admin/empleados/${id}`);
 }
 
