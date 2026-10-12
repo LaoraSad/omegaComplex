@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import type { CatalogServiceRecord } from '@/features/catalog/catalog.types';
-import { Users, ArrowRight, CalendarPlus } from 'lucide-react';
+import { Users, ArrowRight, CalendarPlus, Compass } from 'lucide-react';
 import { servicePhoto } from '@/components/admin/service-image';
+import PanoramaModal from '@/components/tour/PanoramaModal';
+import PanningImage from '@/components/tour/PanningImage';
 
 interface ServiceCardProps {
   service: CatalogServiceRecord;
@@ -23,14 +25,13 @@ export default function ServiceCard({ service, onElegirFranja }: ServiceCardProp
   return (
     <div className="omega-ring group h-full">
       <div className="omega-ring-inner flex h-full flex-col bg-[#141013] backdrop-blur-sm transition-all duration-300 group-hover:-translate-y-1">
-      <Link href={`/servicios/${service.id}`} className="relative block h-56 overflow-hidden bg-[#0a0103]" aria-label={`Ver ${service.name}`}>
+      <div className="relative block h-56 overflow-hidden bg-[#0a0103]">
         {image ? (
-          <Image
+          <PanoramaModal
             src={image}
-            alt={service.name}
-            fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
-            className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
+            title={service.name}
+            subtitle={service.category.name}
+            trigger={<PanningImage src={image} alt={service.name} />}
           />
         ) : (
           <div className="absolute inset-0 bg-[#211a1d]" aria-hidden="true" />
@@ -39,6 +40,12 @@ export default function ServiceCard({ service, onElegirFranja }: ServiceCardProp
         {/* Overlay sutil para legibilidad de títulos */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/30 pointer-events-none z-10" />
 
+        {/* Badge de Vista 360 */}
+        <span className="absolute top-3 left-3 z-20 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#e3bd74]/95 text-[#1a1214] shadow-md flex items-center gap-1 backdrop-blur-sm pointer-events-none">
+          <Compass className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '10s' }} />
+          <span>Vista 360</span>
+        </span>
+
         {/* Badge de Capacidad oficial */}
         <span className="absolute top-3 right-3 z-20 px-3 py-1 rounded-full text-xs font-bold bg-[#7A1F3D] text-white shadow-xs flex items-center gap-1">
           <Users className="w-3.5 h-3.5" />
@@ -46,15 +53,15 @@ export default function ServiceCard({ service, onElegirFranja }: ServiceCardProp
         </span>
 
         {/* Nombre y categoría sobre la imagen */}
-        <div className="absolute bottom-3 left-4 right-4 z-20 text-white">
-          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#e3bd74] block mb-0.5">
+        <Link href={`/servicios/${service.id}`} className="absolute bottom-3 left-4 right-4 z-20 text-white block group/title">
+          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#e3bd74] block mb-0.5 group-hover/title:underline">
             {service.category.name}
           </span>
           <h3 className="font-black text-xl leading-tight drop-shadow-md text-white">
             {service.name}
           </h3>
-        </div>
-      </Link>
+        </Link>
+      </div>
 
       {/* Cuerpo de la tarjeta */}
       <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
