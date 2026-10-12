@@ -76,6 +76,47 @@ async function main() {
   console.log(`✅ Administrador creado/verificado: ${adminEmail} / ${adminPassword}`);
 
   // =========================
+  // 2.1 EMPLEADOS
+  // =========================
+  const empleadosData = [
+    { email: "empleado1@omegacomplex.com", firstName: "Carlos", lastName: "Pérez", document: "1010101011" },
+    { email: "empleado2@omegacomplex.com", firstName: "María", lastName: "Gómez", document: "1010101022" },
+    { email: "empleado3@omegacomplex.com", firstName: "Andrés", lastName: "Ruiz", document: "1010101033" },
+  ];
+
+  const empPasswordHash = await bcrypt.hash("emp123456", 12);
+  for (const emp of empleadosData) {
+    const user = await prisma.user.upsert({
+      where: { email: emp.email },
+      update: {
+        roleId: employeeRole.id,
+        passwordHash: empPasswordHash,
+        firstName: emp.firstName,
+        lastName: emp.lastName,
+        isActive: true,
+        emailVerified: true,
+      },
+      create: {
+        email: emp.email,
+        passwordHash: empPasswordHash,
+        firstName: emp.firstName,
+        lastName: emp.lastName,
+        roleId: employeeRole.id,
+        isActive: true,
+        emailVerified: true,
+      },
+    });
+
+    await prisma.employee.upsert({
+      where: { userId: user.id },
+      update: { document: emp.document, isActive: true },
+      create: { userId: user.id, document: emp.document, isActive: true },
+    });
+  }
+
+  console.log("✅ Empleados creados/verificados (contraseña predeterminada: emp123456)");
+
+  // =========================
   // 3. CATEGORÍAS
   // =========================
 
