@@ -3,6 +3,8 @@ import bcrypt from "bcryptjs";
 import { createSession } from "@/shared/auth/session";
 import { logger } from "@/shared/lib/logger";
 import { issueVerificationCode } from "./email-flow.service";
+import { registrarIntento, verificarLimiteIntentos } from "./login-rate-limit";
+import { enviarEvento } from "@/shared/integrations/n8n";
 
 import {
   ConflictError,
@@ -91,6 +93,17 @@ export async function register(input: RegisterInput) {
       logger.error("email.verificacion_fallida", { userId: user.id, error });
     }
 
+    // Se le avisa a n8n con el mismo evento que usa el alta con Google, para
+    // que haya un solo camino en el workflow en vez de dos ramas. Aquí el
+    // código de verificación es obligatorio: la cuenta nace sin verificar.
+    await enviarEvento("usuario.registrado", {
+      canal: "manual",
+      email: user.email,
+      nombre: user.firstName,
+      emailVerificado: false,
+      requiereCodigo: true,
+    });
+
     return { email: user.email, verificationEmailSent };
   } catch (error) {
     // Condición de carrera en unique (email/document).
@@ -106,30 +119,53 @@ export async function register(input: RegisterInput) {
   }
 }
 
-export async function login(input: LoginInput) {
-  const user = await findUserByEmail(input.email);
+export async function login(input: LoginInput, ip: string | null = null) {
+    // El límite va ANTES de tocar la contraseña: comprobarlo después dejaría al
+    // atacante sigue gastando CPU en bcrypt aunque ya esté bloqueado.
+    await verificarLimiteIntentos(input.email, ip);
 
-  if (!user) {
-    throw new UnauthorizedError("Credenciales inválidas");
+    const user = await findUserByEmail(input.email);
+
+    if (!user) {
+      // Cuenta inexistente: se registra igual el intento fallido, para que
+      // probar correos al azar también tenga costo para quien lo intente.
+      await registrarIntento(input.email, ip, false);
+      throw new UnauthorizedError("Credenciales inválidas");
+    }
+
+    if (!user.isActive) {
+      await registrarIntento(input.email, ip, false);
+      throw new UnauthorizedError("Usuario inactivo");
+    }
+
+    const passwordValid = await bcrypt.compare(
+      input.password,
+      user.passwordHash,
+    );
+
+    if (!passwordValid) {
+      await registrarIntento(input.email, ip, false);
+      throw new UnauthorizedError("Credenciales inválidas");
+    }
+
+    // Puerta de verificación. El código se envía al registrarse, pero sin este
+    // control nadie lo comprobaba: la cuenta entraba igual. Se revisa DESPUÉS
+    // de validar la contraseña a propósito, para no regalar información sobre
+    // qué correos están registrados (enumeración de cuentas).
+    if (!user.emailVerified) {
+      await registrarIntento(input.email, ip, false);
+      throw new HttpError(
+        403,
+        "EMAIL_NOT_VERIFIED",
+        "Verifica tu correo electrónico para poder entrar. Te enviamos un código que puedes volver a pedir.",
+      );
+    }
+
+    await registrarIntento(input.email, ip, true);
+    await createSession(user.id, user.role.name as "user" | "admin" | "employee");
+
+    return toAuthUser(user);
   }
-
-  if (!user.isActive) {
-    throw new UnauthorizedError("Usuario inactivo");
-  }
-
-  const passwordValid = await bcrypt.compare(
-    input.password,
-    user.passwordHash,
-  );
-
-  if (!passwordValid) {
-    throw new UnauthorizedError("Credenciales inválidas");
-  }
-
-  await createSession(user.id, user.role.name as "user" | "admin" | "employee");
-
-  return toAuthUser(user);
-}
 
 /**
  * Cambio de contraseña con sesión iniciada. Exige la contraseña actual para
