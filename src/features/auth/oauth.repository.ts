@@ -18,6 +18,12 @@ export type OAuthProfile = {
   email: string;
   firstName: string;
   lastName: string;
+  /**
+   * Si el proveedor garantiza que ese correo ya está verificado. Google solo lo
+   * dice `true` cuando el correo pasó la verificación de Google; si viene
+   * `false`, la cuenta nuestra queda pendiente y le toca nuestro propio código.
+   */
+  emailVerified: boolean;
 };
 
 export type OAuthUser = {
@@ -92,8 +98,12 @@ export async function createUserFromOAuth(
         roleId,
         email,
         passwordHash,
-        firstName: profile.firstName,
-        lastName: profile.lastName,
+firstName: profile.firstName,
+          lastName: profile.lastName,
+          // Se respeta lo que respondió Google en vez de marcar `true` a pelo:
+          // si el proveedor no garantiza la verificación, la cuenta queda
+          // pendiente y entra por nuestro propio código.
+          emailVerified: profile.emailVerified,
       },
     });
     await tx.customer.create({ data: { userId: created.id } });
@@ -127,11 +137,22 @@ export async function linkOAuthAccount(
   provider: string,
   profile: OAuthProfile,
 ): Promise<OAuthUser> {
-  await db.oAuthAccount.create({
-    data: { userId, provider, providerAccountId: profile.providerAccountId },
-  });
+await db.oAuthAccount.create({
+      data: { userId, provider, providerAccountId: profile.providerAccountId },
+    });
 
-  const user = await db.user.findUniqueOrThrow({
+    // Vincular no es solo guardar el vinculo. Si la cuenta manual se creo pero
+    // su correo nunca se confirmo, Google acaba de demostrar que la persona
+    // controla ese correo, asi que la cuenta deja de quedar pendiente. Si el
+    // proveedor no lo garantiza, se queda como estaba: el código propio lo hará falta.
+    if (profile.emailVerified) {
+      await db.user.updateMany({
+        where: { id: userId, emailVerified: false },
+        data: { emailVerified: true },
+      });
+    }
+
+    const user = await db.user.findUniqueOrThrow({
     where: { id: userId },
     include: { role: true },
   });

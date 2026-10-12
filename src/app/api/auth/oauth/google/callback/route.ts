@@ -8,26 +8,27 @@ import {
   type OAuthProfile,
 } from "@/features/auth/oauth.repository";
 import { GOOGLE_PROVIDER, OAUTH_STATE_COOKIE } from "@/features/auth/oauth.constants";
-import { googleConfigured, homeFor, startSession } from "@/features/auth/oauth.helpers";
+import {
+  googleConfigured,
+  googleRedirectUri,
+  homeFor,
+  startSession,
+} from "@/features/auth/oauth.helpers";
 import { logger } from "@/shared/lib/logger";
+import { enviarEvento } from "@/shared/integrations/n8n";
 
 // ---------------------------------------------------------------------------
 // Paso 2 del acceso con Google: Google devuelve el codigo de autorizacion.
 //
 //   GET /api/auth/oauth/google/callback?code=...&state=...
 //
-// Que resuelve este archivo (ya funciona):
+// Este archivo resuelve:
 //   - el state anti-CSRF contra la cookie
+//   - el canje del codigo por token y la lectura del perfil
 //   - el login de quien ya venia con Google
 //   - vincular la cuenta de Google a un registro manual del mismo correo
 //   - crear User + Customer + OAuthAccount si es la primera vez
 //   - abrir la sesion y redirigir segun el rol
-//
-// LO QUE FALTA (le toca al equipo): exchangeGoogleCode() al final de este
-// archivo. Hay que cambiar el codigo por un token de acceso contra
-// https://oauth2.googleapis.com/token y leer el perfil en
-// https://www.googleapis.com/oauth2/v3/userinfo. El ejemplo esta completo en el
-// comentario de esa funcion.
 // ---------------------------------------------------------------------------
 
 export async function GET(request: Request): Promise<Response> {
@@ -77,56 +78,112 @@ export async function GET(request: Request): Promise<Response> {
     ? await linkOAuthAccount(byEmail.id, GOOGLE_PROVIDER, profile)
     : await createUserFromOAuth(GOOGLE_PROVIDER, profile);
 
+  // Se le avisa a n8n para que mande el correo de bienvenida. Si Google no
+  // garantiza el correo, la cuenta sigue pendiente: se pide también el código
+  // de verificación propio, igual que en el registro manual.
+  await notificarAltaConGoogle(user, profile.emailVerified);
+
   await startSession(user.id, user.role);
   return Response.redirect(new URL(homeFor(user.role), request.url), 302);
 }
 
 /**
- * PENDIENTE (le toca al equipo): canjear el codigo por un token de acceso y
- * leer el perfil. Es lo unico que falta para que el boton funcione.
+ * Reporta el alta a n8n. No bloquea el acceso: si el workflow falla, el evento
+ * se pierde y queda registrado, pero el usuario ya tiene sesión abierta.
+ */
+async function notificarAltaConGoogle(
+  user: { email: string; firstName: string },
+  verificadoPorGoogle: boolean,
+): Promise<void> {
+  await enviarEvento("usuario.registrado", {
+    canal: "google",
+    email: user.email,
+    nombre: user.firstName,
+    emailVerificado: verificadoPorGoogle,
+    // Si Google no lo verificó, n8n manda el código de verificación nuestro.
+    requiereCodigo: !verificadoPorGoogle,
+  });
+}
+
+/**
+ * Canjea el código de autorización por un token de acceso y lee el perfil.
  *
- *   const res = await fetch("https://oauth2.googleapis.com/token", {
- *     method: "POST",
- *     headers: { "Content-Type": "application/x-www-form-urlencoded" },
- *     body: new URLSearchParams({
- *       code,
- *       client_id: process.env.GOOGLE_CLIENT_ID,
- *       client_secret: process.env.GOOGLE_CLIENT_SECRET,
- *       redirect_uri: googleRedirectUri(),
- *       grant_type: "authorization_code",
- *     }),
- *   });
- *   if (!res.ok) throw new Error(await res.text());
- *   const { access_token } = (await res.json()) as {
- *     access_token?: string;
- *     error?: string;
- *     error_description?: string;
- *   };
+ * Son dos llamadas: primero la de Google que convierte el `code` (de un solo
+ * uso y de vida corta) en un token, y después la que trae los datos del usuario.
  *
- *   const infoRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
- *     headers: { Authorization: `Bearer ${access_token}` },
- *   });
- *   if (!infoRes.ok) throw new Error(await infoRes.text());
- *   const info = (await infoRes.json()) as {
- *     sub?: string;
- *     email?: string;
- *     email_verified?: boolean;
- *     given_name?: string;
- *     family_name?: string;
- *     name?: string;
- *   };
- *
- *   return {
- *     providerAccountId: info.sub ?? "",
- *     email: info.email ?? "",
- *     firstName: info.given_name ?? info.name ?? "",
- *     lastName: info.family_name ?? "",
- *   };
+ * El `redirect_uri` tiene que ser idéntico al que se mandó en la solicitud y al
+ * que esté registrado en Google Cloud; si difiere aunque sea en una barra final,
+ * Google responde `redirect_uri_mismatch`.
  */
 async function exchangeGoogleCode(code: string): Promise<OAuthProfile> {
-  // El `code` es de un solo uso y caduca en minutos: no se registra en logs.
-  void code;
-  throw new Error(
-    "Falta implementar exchangeGoogleCode() en /api/auth/oauth/google/callback/route.ts",
-  );
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error("Faltan GOOGLE_CLIENT_ID o GOOGLE_CLIENT_SECRET");
+  }
+
+  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: googleRedirectUri(),
+      grant_type: "authorization_code",
+    }),
+  });
+
+  if (!tokenRes.ok) {
+    // El cuerpo de Google sí trae `error` y `error_description` legibles. Se
+    // registra el motivo, nunca el `code` ni el token.
+    const detalle = (await tokenRes.json().catch(() => null)) as {
+      error?: string;
+      error_description?: string;
+    } | null;
+    throw new Error(
+      `token: ${detalle?.error ?? tokenRes.status} ${detalle?.error_description ?? ""}`.trim(),
+    );
+  }
+
+  const { access_token: accessToken } = (await tokenRes.json()) as {
+    access_token?: string;
+    error?: string;
+  };
+
+  if (!accessToken) {
+    throw new Error("Google no devolvió un token de acceso");
+  }
+
+  const infoRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!infoRes.ok) {
+    throw new Error(`userinfo: ${infoRes.status}`);
+  }
+
+  const info = (await infoRes.json()) as {
+    sub?: string;
+    email?: string;
+    email_verified?: boolean;
+    given_name?: string;
+    family_name?: string;
+    name?: string;
+  };
+
+  if (!info.sub || !info.email) {
+    throw new Error("El perfil de Google no trae sub o email");
+  }
+
+  return {
+    providerAccountId: info.sub,
+    email: info.email,
+    firstName: info.given_name ?? info.name ?? "",
+    lastName: info.family_name ?? "",
+    // Google solo afirma `true` cuando el correo pasó su propia verificación.
+    // Si no lo dice, la cuenta queda pendiente y entra nuestro código.
+    emailVerified: info.email_verified === true,
+  };
 }
