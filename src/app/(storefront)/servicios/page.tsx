@@ -4,8 +4,6 @@ import { useEffect, useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ServiceCard from '@/components/catalog/ServiceCard';
 import BookingGuide from '@/components/storefront/BookingGuide';
-import { CarritoProvider } from '@/components/storefront/CarritoReserva';
-import { BarraCarrito } from '@/components/storefront/BarraCarrito';
 import { SelectorFranjas } from '@/components/storefront/SelectorFranjas';
 import AmbientBubbles from '@/components/AmbientBubbles';
 import SectionDivider from '@/components/SectionDivider';
@@ -26,11 +24,7 @@ async function readApi<T>(response: Response): Promise<T> {
 }
 
 function ServicesContent() {
-  return (
-    <CarritoProvider>
-      <CatalogoConCarrito />
-    </CarritoProvider>
-  );
+  return <CatalogoConCarrito />;
 }
 
 /** Catálogo + carrito. Va aparte para que el provider envuelva todo el JSX. */
@@ -217,7 +211,6 @@ function CatalogoConCarrito() {
       {elegido && <SelectorFranjas servicio={elegido} onClose={() => setElegido(null)} />}
 
       {/* Barra fija del carrito: vive dentro del contenedor para heredar el tema. */}
-      <BarraCarrito />
       </div>
     </div>
   );

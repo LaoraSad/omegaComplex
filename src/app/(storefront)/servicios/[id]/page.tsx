@@ -8,7 +8,7 @@ import SectionDivider from '@/components/SectionDivider';
 import { servicePhoto } from '@/components/admin/service-image';
 import PanoramaModal from '@/components/tour/PanoramaModal';
 import PanningImage from '@/components/tour/PanningImage';
-import { ReservaModal } from '@/components/storefront/ReservaModal';
+import { SelectorFranjas } from '@/components/storefront/SelectorFranjas';
 import type { CatalogServiceRecord } from '@/features/catalog/catalog.types';
 
 interface ApiResult<T> {
@@ -23,6 +23,11 @@ interface ServiceDetailPageProps {
 const DAYS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
 export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
+  // El provider del carrito vive en el layout: aquí solo va el detalle.
+  return <DetalleServicio params={params} />;
+}
+
+function DetalleServicio({ params }: ServiceDetailPageProps) {
   const { id } = use(params);
   const [service, setService] = useState<CatalogServiceRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -135,8 +140,8 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#e3bd74]">Reservas</p>
               <h2 className="mt-2 text-xl font-black">Reserva en línea</h2>
               <p className="mt-3 text-sm leading-relaxed text-white/60">
-                Elige la fecha y la franja, di cuántas personas asistirán y registra a los acompañantes.
-                Cada persona recibe su propio QR por correo.
+                Elige la fecha y la franja de una hora, di cuántas personas asistirán y registra a
+                los acompañantes. Puedes sumar más zonas al carrito y pagar todo junto.
               </p>
               <button
                 type="button"
@@ -151,13 +156,10 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
         )}
       </main>
 
+      {/* Mismo selector y misma barra que el catálogo: una sola forma de
+          reservar en todo el sitio. El modal viejo se queda sin uso. */}
       {abriendoReserva && service ? (
-        <ReservaModal
-          serviceId={service.id}
-          serviceName={service.name}
-          precioHora={service.price}
-          onClose={() => setAbriendoReserva(false)}
-        />
+        <SelectorFranjas servicio={service} onClose={() => setAbriendoReserva(false)} />
       ) : null}
     </div>
   );

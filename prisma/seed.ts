@@ -299,7 +299,11 @@ async function main() {
   // 5. HORARIOS POR DEFECTO
   // =========================
 
-  const operatingDays = [0, 2, 3, 4, 5, 6];
+  // Los 7 días quedan con horario. El lunes NO es un día de cierre: es el día de
+  // mantenimiento, y ese día se apaga en la lógica de disponibilidad (y se corre
+  // al martes si el lunes es festivo). Si el lunes no tuviera fila, un lunes
+  // festivo aparecería cerrado y sin franjas generadas, que era el bug.
+  const operatingDays = [0, 1, 2, 3, 4, 5, 6];
   const createdServices = await prisma.service.findMany({
     select: { id: true },
   });
