@@ -172,7 +172,7 @@ export default function ValidarView() {
             Queda registrado con tu usuario y la hora exacta. El QR no volvera a servir.
           </p>
           <button type="button" onClick={reset} className={primaryBtn}>
-            Validar otro QR
+            Volver atrás
           </button>
         </div>
       </Card>
@@ -218,7 +218,7 @@ export default function ValidarView() {
 
         {denied ? (
           <button type="button" onClick={reset} className={primaryBtn}>
-            Volver a escanear
+            Volver atrás
           </button>
         ) : (
           <ConfirmPanel
@@ -408,7 +408,7 @@ function ConfirmPanel({
           className={`${primaryBtn} flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60`}
         >
           <Check className="h-4 w-4" />
-          {busy ? "Registrando…" : "Dar acceso"}
+          {busy ? "Registrando…" : "Ya se verificó"}
         </button>
         <button
           type="button"
@@ -416,7 +416,7 @@ function ConfirmPanel({
           disabled={busy}
           className="rounded-xl border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/70 hover:border-white/30 hover:text-white disabled:opacity-60"
         >
-          Cancelar
+          Volver atrás
         </button>
       </div>
     </Card>

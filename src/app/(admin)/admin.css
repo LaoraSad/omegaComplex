@@ -468,6 +468,7 @@
   border: 1px solid var(--admin-border);
   border-radius: var(--admin-radius);
   background: var(--admin-surface);
+  color: var(--admin-text);
 }
 
 .acard-pad {
@@ -487,6 +488,7 @@
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: -0.01em;
+  color: var(--admin-text);
 }
 
 .acard-sub {
@@ -501,6 +503,7 @@
   font-size: 1.05rem;
   font-weight: 750;
   letter-spacing: -0.015em;
+  color: var(--admin-text);
 }
 
 .admin-section-sub {
