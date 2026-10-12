@@ -79,11 +79,13 @@ export type CrearError =
   | "horario_no_disponible"
   | "franja_otro_servicio"
   | "franja_pasada"
+  | "franja_duracion_invalida"
   | "muy_far"
   | "sin_cupos"
   | "horario_chocante"
   | "bloques_pisados"
   | "bloque_repetido"
+  | "asistentes_inconsistentes"
   | "sin_acompanyantes"
   | "ya_reservado";
 
@@ -266,13 +268,25 @@ export async function createReservationWithHold(
   }
 
   const slotPorId = new Map(slots.map((s) => [s.id, s]));
-  const ordenados: { slot: (typeof slots)[number]; error: false | "franja_otro_servicio" }[] = [];
+  // Se conserva el bloque pedido junto a su franja: `personas` y `asistentes`
+  // son datos del cliente, no de la base.
+  const ordenados: {
+    slot: (typeof slots)[number];
+    error: false | "franja_otro_servicio";
+    personas: number;
+    asistentes?: number[];
+  }[] = [];
   for (const b of input.bloques) {
     const slot = slotPorId.get(b.slotId);
     if (!slot) {
       return { ok: false, code: "franja_no_existe", message: "Una de las franjas ya no existe." };
     }
-    ordenados.push({ slot, error: slot.serviceId === b.serviceId ? false : "franja_otro_servicio" });
+    ordenados.push({
+      slot,
+      error: slot.serviceId === b.serviceId ? false : "franja_otro_servicio",
+      personas: b.personas,
+      asistentes: b.asistentes,
+    });
   }
 
   if (ordenados.some((b) => b.error)) {
@@ -330,12 +344,25 @@ export async function createReservationWithHold(
     }
   }
 
-  // Orden cronológico: es como el cliente va a recorrer las zonas y como deben
-  // salir los QR en el PDF.
   ordenados.sort((a, b) => a.slot.startsAt.getTime() - b.slot.startsAt.getTime());
 
   if (ordenados.some((b) => b.slot.startsAt < now)) {
     return { ok: false, code: "franja_pasada", message: "Una de las franjas ya empezó o ya pasó." };
+  }
+
+  // El SCRUM fija franjas de una hora. Se valida contra la base y no se confía en
+  // la pantalla: si alguien configurara un horario que generara franjas de otra
+  // duración, la reserva se rechaza en vez de cobrar mal.
+  const duracionMs = 60 * 60 * 1000;
+  const duracionIncorrecta = ordenados.find(
+    (b) => Math.abs(b.slot.endsAt.getTime() - b.slot.startsAt.getTime() - duracionMs) > 1000,
+  );
+  if (duracionIncorrecta) {
+    return {
+      ok: false,
+      code: "franja_duracion_invalida",
+      message: "Esa franja no es de una hora. Elige otra.",
+    };
   }
 
   // Dos bloques del mismo carrito no pueden pisarse: es la misma persona en dos
@@ -355,20 +382,52 @@ export async function createReservationWithHold(
     }
   }
 
-  // Cada bloque necesita `personas` cupos libres: todas las personas van a
-  // todas las zonas.
-  for (const { slot } of ordenados) {
-    const libres = slot.capacity - slot.bookedCount - slot.heldCount;
-    if (personas > libres) {
+  const todosLosIndices = Array.from({ length: personas }, (_, i: number) => i);
+
+  // Cada bloque necesita tantas personas como las que entran por su puerta.
+  for (const b of ordenados) {
+    const libres = b.slot.capacity - b.slot.bookedCount - b.slot.heldCount;
+    if (b.personas > libres) {
       return {
         ok: false,
         code: "sin_cupos",
         message:
           libres <= 0
-            ? `${slot.service.name} está completa en esa franja.`
-            : `En ${slot.service.name} solo quedan ${libres} cupo(s) para esa franja.`,
+            ? `${b.slot.service.name} está completa en esa franja.`
+            : `En ${b.slot.service.name} solo quedan ${libres} cupo(s) para esa franja.`,
       };
     }
+  }
+
+  // Resolver QUIÉN va a cada zona. El grupo completo es `personas` (titular en
+  // el índice 0); cada bloque declara a quiénes recibe por su puerta. Con esto
+  // una persona puede pasar solo por una zona y entrar en grupo a otra.
+  const asistentesPorBloque = new Map<string, number[]>();
+  for (const b of ordenados) {
+    const indices = b.asistentes ?? todosLosIndices;
+    if (indices.length !== b.personas) {
+      return {
+        ok: false,
+        code: "asistentes_inconsistentes",
+        message: `En ${b.slot.service.name} marcaste ${indices.length} persona(s) pero declaraste ${b.personas}.`,
+      };
+    }
+    if (new Set(indices).size !== indices.length) {
+      return {
+        ok: false,
+        code: "asistentes_inconsistentes",
+        message: `Repetiste una persona en ${b.slot.service.name}.`,
+      };
+    }
+    const fueraDeRango = indices.find((i) => i < 0 || i >= personas);
+    if (fueraDeRango !== undefined) {
+      return {
+        ok: false,
+        code: "asistentes_inconsistentes",
+        message: `Marcaste una persona que no está en la reserva de ${b.slot.service.name}.`,
+      };
+    }
+    asistentesPorBloque.set(b.slot.id, [...indices].sort((a, c) => a - c));
   }
 
   // Antes de bloquear cupos: recuperar los cupos de los holds que ya vencieron,
@@ -377,14 +436,16 @@ export async function createReservationWithHold(
 
   const expiresAt = new Date(now.getTime() + HOLD_MINUTES * 60 * 1000);
 
-  // El cobro es por hora y por zona: la misma persona paga cada franja que pide.
-  const totalCop = ordenados.reduce((suma, { slot }) => {
+  const totalCop = ordenados.reduce((suma, b) => {
     const horas = Math.max(
       1,
-      Math.round((slot.endsAt.getTime() - slot.startsAt.getTime()) / (60 * 60 * 1000)),
+      Math.round((b.slot.endsAt.getTime() - b.slot.startsAt.getTime()) / (60 * 60 * 1000)),
     );
-    return suma + slot.service.price * horas * personas;
+    return suma + b.slot.service.price * horas * b.personas;
   }, 0);
+
+  // El cobro es por hora y **por zona**: cada persona paga solo la franja a la
+  // que asiste. Ir solo a la cancha no cuesta lo mismo que ir con tres amigos.
 
   const unaSolaZona = ordenados.length === 1;
   const primero = ordenados[0].slot;
@@ -400,16 +461,16 @@ export async function createReservationWithHold(
         async (tx) => {
           // Todos o nada: si un solo bloque pierde su cupo, la transacción
           // entera se revierte y no queda ninguna franja retenida a medias.
-          for (const { slot } of ordenados) {
+          for (const b of ordenados) {
             const tomados = await tx.$executeRaw`
               UPDATE "ServiceSlot"
-                 SET "heldCount" = "heldCount" + ${personas}
-               WHERE id = ${slot.id}::uuid
+                 SET "heldCount" = "heldCount" + ${b.personas}
+               WHERE id = ${b.slot.id}::uuid
                  AND "startsAt" > ${now}
-                 AND "capacity" >= "bookedCount" + "heldCount" + ${personas}
+                 AND "capacity" >= "bookedCount" + "heldCount" + ${b.personas}
             `;
             if (tomados !== 1) {
-              throw new CupoAgotado(slot.service.name);
+              throw new CupoAgotado(b.slot.service.name);
             }
           }
 
@@ -463,35 +524,61 @@ export async function createReservationWithHold(
               startsAt: primero.startsAt,
               endsAt: ultimo.endsAt,
               slots: {
-                create: ordenados.map((b) => ({ slotId: b.slot.id, quantity: personas })),
+                create: ordenados.map((b) => ({ slotId: b.slot.id, quantity: b.personas })),
               },
               blocks: {
                 create: ordenados.map((b) => ({
                   serviceId: b.slot.serviceId,
                   startsAt: b.slot.startsAt,
                   endsAt: b.slot.endsAt,
+                  personas: b.personas,
                 })),
               },
               holds: { create: { status: "active", expiresAt } },
-              // El titular se guarda con su reserva; los acompañantes se anexan
-              // aparte para que el PDF salga etiquetado persona por persona.
-              guests: {
-                create: [
-                  {
-                    fullName: `${customer.user.firstName} ${customer.user.lastName}`.trim(),
-                    document: customer.document ?? "SIN DOCUMENTO",
-                    isTitular: true,
-                  },
-                  ...acompañantes.map((g) => ({
-                    fullName: g.fullName,
-                    document: g.document,
-                    isTitular: false,
-                  })),
-                ],
-              },
             },
             select: { id: true },
           });
+
+          // El grupo se crea aparte y EN ORDEN, porque el índice de persona es
+          // lo que usa el cliente para decir quién va a cada zona: 0 es el
+          // titular, 1 el primer acompañante, y así. Por eso no se anida en el
+          // create de la reserva: ahí no se podrían leer los ids generados.
+          const grupo = [
+            {
+              fullName: `${customer.user.firstName} ${customer.user.lastName}`.trim(),
+              document: customer.document ?? "SIN DOCUMENTO",
+              isTitular: true,
+            },
+            ...acompañantes.map((g) => ({
+              fullName: g.fullName,
+              document: g.document,
+              isTitular: false,
+            })),
+          ];
+          const guestIds: string[] = [];
+          for (const persona of grupo) {
+            const creado = await tx.reservationGuest.create({
+              data: { ...persona, reservationId: reserva.id },
+              select: { id: true },
+            });
+            guestIds.push(creado.id);
+          }
+
+          // Quién entra por cada puerta.
+          const bloques = await tx.reservationBlock.findMany({
+            where: { reservationId: reserva.id },
+            select: { id: true, startsAt: true },
+            orderBy: { startsAt: "asc" },
+          });
+          for (const [indice, bloque] of bloques.entries()) {
+            const entrada = ordenados[indice];
+            const indices = asistentesPorBloque.get(entrada.slot.id) ?? [];
+            if (indices.length === 0) continue;
+            await tx.reservationBlockGuest.createMany({
+              data: indices.map((i) => ({ blockId: bloque.id, guestId: guestIds[i] })),
+              skipDuplicates: true,
+            });
+          }
 
           const hold = await tx.reservationHold.findFirstOrThrow({
             where: { reservationId: reserva.id, status: "active" },

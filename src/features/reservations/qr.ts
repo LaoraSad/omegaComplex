@@ -43,10 +43,15 @@ export async function emitirQrDeReserva(reservationId: string): Promise<EmitirRe
     const reserva = await tx.reservation.findUnique({
       where: { id: reservationId },
       include: {
-        guests: { orderBy: [{ isTitular: "desc" }, { fullName: "asc" }] },
         blocks: {
           orderBy: { startsAt: "asc" },
-          include: { service: { select: { name: true, category: { select: { name: true } } } } },
+          include: {
+            service: { select: { name: true, category: { select: { name: true } } } },
+            // Solo las personas que realmente entran por esta puerta. El titular
+            // puede estar en dos zonas (y tener un QR en cada una) mientras que
+            // sus amigos, que solo van a una, tienen un único QR.
+            guests: { include: { guest: { select: { id: true, fullName: true } } } },
+          },
         },
         qrTokens: { select: { id: true, seqNo: true, blockId: true, guestId: true } },
       },
@@ -56,7 +61,7 @@ export async function emitirQrDeReserva(reservationId: string): Promise<EmitirRe
     if (reserva.blocks.length === 0) return { ok: false, message: "La reserva no tiene bloques." };
 
     const yaEmitidos = reserva.qrTokens.length;
-    const esperados = reserva.guests.length * reserva.blocks.length;
+    const esperados = reserva.blocks.reduce((suma, b) => suma + b.guests.length, 0);
     if (yaEmitidos > 0 && yaEmitidos < esperados) {
       return {
         ok: false,
@@ -68,7 +73,11 @@ export async function emitirQrDeReserva(reservationId: string): Promise<EmitirRe
     const emitidos: QrEmitido[] = [];
     for (const [indiceZona, bloque] of reserva.blocks.entries()) {
       const numeroZona = indiceZona + 1;
-      for (const [indicePersona, guest] of reserva.guests.entries()) {
+      // El número de persona es el de SU zona: en la cancha puede ser P01
+      // (el titular, que va solo) y en la piscina P01..P04 (él más los tres
+      // amigos). El empleado escanea en una puerta, así que la numeración tiene
+      // que ser local a cada zona.
+      for (const [indicePersona, inscripcion] of bloque.guests.entries()) {
         const numeroPersona = indicePersona + 1;
         const { token, hash } = nuevoToken();
         await tx.qrToken.create({
@@ -77,13 +86,13 @@ export async function emitirQrDeReserva(reservationId: string): Promise<EmitirRe
             blockId: bloque.id,
             seqNo: numeroPersona,
             tokenHash: hash,
-            guestId: guest.id,
+            guestId: inscripcion.guest.id,
           },
         });
         emitidos.push({
           zona: bloque.service.category.name,
           servicio: bloque.service.name,
-          nombre: guest.fullName,
+          nombre: inscripcion.guest.fullName,
           etiqueta: `Z${numeroZona}-P${String(numeroPersona).padStart(2, "0")}`,
           token,
         });
