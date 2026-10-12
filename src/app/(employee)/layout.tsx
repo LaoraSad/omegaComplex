@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { SignOutButton } from "./SignOutButton";
 import { EmployeeNav } from "./EmployeeNav";
-import { findSessionUserById } from "@/features/auth/auth.repository";
+import { cargarUsuarioDeSesion } from "@/shared/auth/session-user";
 import { findEmployeeByUserId } from "@/features/access/access.repository";
 import { getSession } from "@/shared/auth/session";
 
@@ -23,7 +23,7 @@ export default async function EmployeeLayout({ children }: { children: React.Rea
   if (!session) redirect("/login?next=/validar");
   if (session.role !== "employee" && session.role !== "admin") redirect("/");
 
-  const user = await findSessionUserById(session.userId);
+  const user = await cargarUsuarioDeSesion(session.userId);
   if (!user) redirect("/login?next=/validar");
 
   const employee = await findEmployeeByUserId(session.userId);

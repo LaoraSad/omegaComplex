@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { findSessionUserById } from "@/features/auth/auth.repository";
+import { cargarUsuarioDeSesion } from "@/shared/auth/session-user";
 import { getSession } from "@/shared/auth/session";
 import "./admin.css";
 
@@ -18,7 +18,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!session) redirect("/login?next=/admin");
   if (session.role !== "admin") redirect("/");
 
-  const user = await findSessionUserById(session.userId);
+  const user = await cargarUsuarioDeSesion(session.userId);
   if (!user) redirect("/login?next=/admin");
 
   return (

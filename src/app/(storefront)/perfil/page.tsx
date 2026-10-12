@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, Lock, Mail, Phone, ShieldCheck, UserRound } from "lucide-react";
-import { findSessionUserById } from "@/features/auth/auth.repository";
+import { cargarUsuarioDeSesion } from "@/shared/auth/session-user";
 import { getSession } from "@/shared/auth/session";
 import { ChangePasswordForm } from "./ChangePasswordForm";
 
@@ -26,7 +26,7 @@ export default async function ProfilePage() {
   const session = await getSession();
   if (!session) redirect("/login?next=/perfil");
 
-  const user = await findSessionUserById(session.userId);
+  const user = await cargarUsuarioDeSesion(session.userId);
   if (!user) redirect("/login?next=/perfil");
 
   const roleLabel = ROLE_LABEL[user.role] ?? "Cliente";
