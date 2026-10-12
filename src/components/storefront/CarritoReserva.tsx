@@ -274,6 +274,7 @@ export function CarritoProvider({
 
   const yaEsta = useCallback((slotId: string) => bloques.some((b) => b.slotId === slotId), [bloques]);
 
+
   // El solape real de franjas lo valida el servidor al confirmar, que es quien
   // tiene la verdad de los cupos. Aqui solo se corta el duplicado obvio, para
   // que un doble clic no sume dos veces la misma franja.

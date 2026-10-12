@@ -28,7 +28,6 @@ export function BarraCarrito() {
   } = useCarrito();
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
-  const [listo, setListo] = useState<{ id: string; total: number } | null>(null);
 
   const abierto = bloques.length > 0;
   const acompanantes = datosAcompanantes;
@@ -71,48 +70,60 @@ export function BarraCarrito() {
             asistentes: b.asistentes,
           })),
           personas,
-          acompanantes: acompanantes
+          acompañantes: acompanantes
             .filter((g) => g.fullName.trim())
             .map((g) => ({ fullName: g.fullName.trim(), document: g.document.trim() })),
         }),
       });
       const json = await res.json();
       if (!res.ok) {
+        // Hay que limpiar `enviando` en CADA salida. Con un `return` sin este
+        // reset la pantalla de carga se quedaba pegada para siempre y el
+        // cliente quedaba atrapado sin poder reintentar ni cerrar.
         setError(json?.error?.message ?? 'No fue posible crear la reserva.');
+        setEnviando(false);
         return;
       }
       const reservaId: string = json.data.reservationId;
 
-      // Ir directo a Stripe. Antes había que crear la reserva, saltar a
+      // Ir directo a la pasarela. Antes había que crear la reserva, saltar a
       // /mis-reservas y apretar "Pagar" ahí: dos pantallas para cobrar algo que
       // el cliente ya estaba por pagar.
-      setListo({ id: reservaId, total: json.data.totalCop });
+      //
+      // El salto a Stripe lo hace la página /pagando/[id] desde el servidor.
+      // Antes se hacía con `window.location.assign` desde acá, y si algo fallaba
+      // el cliente se quedaba en esta página con el carrito vacío y sin saber
+      // si le cobraron. Ahora hay una pantalla real en el medio que explica qué
+      // pasó y ofrece reintentar.
       vaciar();
-
-      const pago = await fetch(`/api/reservations/${reservaId}`, { method: 'POST' });
-      if (pago.ok) {
-        const datos = await pago.json();
-        const url = datos?.data?.checkoutUrl as string | undefined;
-        if (url) {
-          window.location.assign(url);
-          return;
-        }
-      } else {
-        // La reserva quedó creada aunque el checkout no arrancara: no se pierde,
-        // el cliente la vuelve a pagar desde /mis-reservas.
-        const detalle = await pago.json().catch(() => null);
-        setError(
-          detalle?.error?.message ??
-            'No pudimos abrir el pago. La reserva quedó guardada: podés pagarla desde Mis reservas.',
-        );
-        cerrarCarrito();
-      }
+      window.location.assign(`/pagando/${reservaId}`);
     } catch {
       setError('No fue posible conectar con el servidor.');
-    } finally {
       setEnviando(false);
     }
   };
+
+  // La pantalla de carga va ANTES del `if (!abierto)`: `vaciar()` deja el
+  // carrito sin bloques y con ese return el aviso se perdía justo cuando más
+  // se necesita.
+  if (enviando) {
+    return (
+      <div
+        role="status"
+        aria-live="assertive"
+        className="fixed inset-0 z-[90] flex flex-col items-center justify-center gap-4 bg-[#0d0a0b]/96 px-6 text-center backdrop-blur-sm"
+      >
+        <Loader2 className="h-10 w-10 animate-spin text-[#e3bd74]" />
+        <p className="text-lg font-black text-white">Preparando tu pago</p>
+        <p className="max-w-sm text-sm text-white/55">
+          Estamos reservando tus zonas y abriendo la pasarela segura de Stripe.
+        </p>
+        <p className="max-w-sm text-xs text-white/35">
+          No cierres esta ventana. Vas a ver la pantalla de pago en un momento.
+        </p>
+      </div>
+    );
+  }
 
   if (!abierto) return null;
 
@@ -135,7 +146,7 @@ export function BarraCarrito() {
         </button>
       </div>
 
-      {carritoAbierto && !listo && (
+      {carritoAbierto && (
         <div
           role="dialog"
           aria-modal="true"
@@ -396,10 +407,19 @@ export function BarraCarrito() {
                       type="button"
                       onClick={confirmar}
                       disabled={enviando || !datosCompletos}
+                      aria-busy={enviando}
                       className="flex flex-[2] items-center justify-center gap-2 rounded-xl bg-[#7a1f3d] py-3 text-sm font-bold text-white transition-colors hover:bg-[#8f2547] disabled:opacity-40 cursor-pointer"
                     >
-                      {enviando && <Loader2 className="h-4 w-4 animate-spin" />}
-                      {datosCompletos ? 'Confirmar y pagar' : `Faltan datos de ${faltanDatos}`}
+                      {enviando ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Preparando el pago…
+                        </>
+                      ) : datosCompletos ? (
+                        'Confirmar y pagar'
+                      ) : (
+                        `Faltan datos de ${faltanDatos}`
+                      )}
                     </button>
                   ) : (
                     <Link
@@ -415,26 +435,6 @@ export function BarraCarrito() {
           </div>
       )}
 
-      {listo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#141013] p-6 text-center shadow-2xl">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#e3bd74]">
-              Reserva creada
-            </p>
-            <h2 className="mt-1 text-xl font-black text-white">Listo</h2>
-            <p className="mt-2 text-sm text-white/65">
-              Te bloqueamos las zonas por 10 minutos para que completes el pago.
-            </p>
-            <p className="mt-4 text-2xl font-black tabular-nums text-[#e3bd74]">{cop(listo.total)}</p>
-            <a
-              href="/mis-reservas"
-              className="mt-6 block rounded-xl bg-[#7a1f3d] py-3 text-sm font-bold text-white transition-colors hover:bg-[#8f2547]"
-            >
-              Ver mis reservas
-            </a>
-          </div>
-        </div>
-      )}
-    </>
+      </>
   );
 }
