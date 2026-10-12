@@ -34,9 +34,21 @@ const reservaBase = {
   id: "res-1",
   status: "pending_payment",
   totalCop: 24000,
+  quantity: 2,
   startsAt: new Date("2026-11-01T13:00:00Z"),
   endsAt: new Date("2026-11-01T14:00:00Z"),
   service: { name: "Piscina adultos 1" },
+  // El checkout ahora arma una lÃ­nea por zona y nombra a las personas, asÃ­ que
+  // la reserva que devuelve el mock tiene que traer esas relaciones.
+  blocks: [
+    {
+      startsAt: new Date("2026-11-01T13:00:00Z"),
+      endsAt: new Date("2026-11-01T14:00:00Z"),
+      personas: 2,
+      service: { name: "Piscina adultos 1", category: { name: "Piscinas" } },
+      guests: [{ guest: { fullName: "Titular" } }, { guest: { fullName: "Ana" } }],
+    },
+  ],
 };
 
 const inputBase = {
@@ -69,16 +81,40 @@ describe("createCheckoutSession", () => {
     mocks.db.payment.update.mockResolvedValue({});
   });
 
-  it("crea la sesión de Stripe con el total real y guarda el pago pendiente", async () => {
+  it("envía el monto en centavos, que es la unidad que espera Stripe", async () => {
+    // Regresión: mandar pesos hacía que Stripe leyera 100.000 como $1.000,00 COP
+    // y lo rechazara con `amount_too_small`.
+    mocks.db.reservation.findUnique.mockResolvedValue({ ...reservaBase, totalCop: 100000 });
+    const { stripe, create } = stripeFake();
+
+    await createCheckoutSession({ ...inputBase, amountCop: 100000 }, stripe);
+
+    const args = create.mock.calls[0][0];
+    expect(args.line_items[0].price_data.unit_amount).toBe(10000000);
+  });
+
+  it("mantiene el guardado en pesos aunque Stripe reciba centavos", async () => {
+    mocks.db.reservation.findUnique.mockResolvedValue({ ...reservaBase, totalCop: 148000 });
+    const { stripe } = stripeFake();
+
+    await createCheckoutSession({ ...inputBase, amountCop: 148000 }, stripe);
+
+    expect(mocks.repository.createPendingPayment).toHaveBeenCalledWith(
+      expect.objectContaining({ amountCop: 148000 }),
+    );
+  });
+    it("crea la sesión de Stripe con el total real y guarda el pago pendiente", async () => {
     const { stripe, create } = stripeFake();
     const result = await createCheckoutSession(inputBase, stripe);
 
     expect(create).toHaveBeenCalledOnce();
     const args = create.mock.calls[0][0];
     expect(args.currency).toBe("cop");
-    expect(args.line_items[0].price_data.unit_amount).toBe(24000);
+    // Stripe recibe centavos, no pesos: 24.000 COP van como 2.400.000.
+    expect(args.line_items[0].price_data.unit_amount).toBe(2400000);
     expect(mocks.repository.createPendingPayment).toHaveBeenCalledWith({
       reservationId: "res-1",
+      // El pago se guarda en pesos, que es como trabaja el resto del sistema.
       amountCop: 24000,
       stripeSessionId: "cs_test_1",
       method: "card",
@@ -97,7 +133,7 @@ describe("createCheckoutSession", () => {
     expect(mocks.repository.createPendingPayment).not.toHaveBeenCalled();
   });
 
-  it("lanza 404 si la reserva no existe y 409 si no está pendiente o sin hold", async () => {
+  it("lanza 404 si la reserva no existe y 409 si no estÃ¡ pendiente o sin hold", async () => {
     mocks.db.reservation.findUnique.mockResolvedValue(null);
     await expect(createCheckoutSession(inputBase, stripeFake().stripe)).rejects.toBeInstanceOf(
       NotFoundError,
