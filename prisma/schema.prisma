@@ -31,7 +31,7 @@ model User {
   lastName     String
   phone        String?
   isActive     Boolean  @default(true)
-  emailVerified Boolean @default(true)
+  emailVerified Boolean @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -176,6 +176,24 @@ model PasswordReset {
   user User @relation(fields: [userId], references: [id])
 }
 
+// Intentos de inicio de sesión, para limitar la fuerza bruta.
+//
+// El login no deja rastro en ninguna otra tabla (a diferencia de la verificación
+// de correo, que sí cuenta sobre EmailVerification), así que necesita registro
+// propio. Se indexa por correo y por IP para poder bloquear los dos ataques
+// distintos: muchas contraseñas contra una cuenta, y una misma contraseña
+// contra muchas cuentas.
+model LoginAttempt {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String // en minúsculas, como lo normaliza loginSchema
+  ip        String? // puede ser null si la petición no trae cabecera de origen
+  success   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ip, createdAt])
+}
+
 // ========= CATÁLOGO Y DISPONIBILIDAD =========
 
 model ServiceSchedule {
@@ -281,9 +299,11 @@ model ReservationGuest {
   isTitular     Boolean @default(false)
 
   reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
-  // Un QR por zona, no uno solo: quien reservó piscina y baloncesto entra con dos
-  // códigos distintos, uno para cada puerta. De ahí que ya no sea 1 a 1.
+  // Un QR por persona y por zona: quien reservó piscina y baloncesto entra con dos
+  // códigos distintos, uno para cada puerta.
   qrTokens    QrToken[]
+  // Zonas a las que asiste esta persona.
+  blocks      ReservationBlockGuest[]
 
   @@index([reservationId])
 }
@@ -384,10 +404,15 @@ model ReservationBlock {
   serviceId     String   @db.Uuid
   startsAt      DateTime
   endsAt        DateTime
+  // Cuántas personas asisten a ESTA zona. Antes `personas` era único para toda
+  // la reserva y se repetía en cada bloque: alguien que va solo a la cancha y
+  // con tres amigos a la piscina terminaba reteniendo 4 cupos en las dos zonas.
+  personas      Int      @default(1)
   createdAt     DateTime @default(now())
 
   reservation Reservation @relation(fields: [reservationId], references: [id])
   service     Service     @relation(fields: [serviceId], references: [id])
+  guests      ReservationBlockGuest[]
   qrTokens    QrToken[]
 
   // El solape se busca por cliente y por ventana; este indice lo cubre.
@@ -395,4 +420,22 @@ model ReservationBlock {
   @@index([serviceId, startsAt])
   // Un mismo bloque no puede repetirse dentro de una reserva.
   @@unique([reservationId, serviceId, startsAt])
+}
+
+// Quién entra a qué zona.
+//
+// La reserva guarda el grupo completo (titular + acompañantes) y esta tabla
+// dice qué parte del grupo pasa por cada puerta. Es lo que permite que el
+// titular tenga un QR por zona y cada amigo solo tenga el suyo.
+model ReservationBlockGuest {
+  blockId String @db.Uuid
+  guestId String @db.Uuid
+
+  block  ReservationBlock  @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  guest  ReservationGuest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  // Una persona no repite dentro de la misma zona.
+  @@id([blockId, guestId])
+  // Para armar el PDF zone por zone.
+  @@index([guestId])
 }

@@ -8,7 +8,7 @@ import { AuthError } from "@/components/auth/AuthError";
 import { SocialLoginButton } from "@/components/auth/SocialLoginButton";
 import { AuthInput } from "@/components/auth/AuthInput";
 import { PasswordInput } from "@/components/auth/PasswordInput";
-import { getAuthErrorMessage, login } from "@/lib/api/auth";
+import { AuthApiError, getAuthErrorMessage, login, resendVerificationEmail } from "@/lib/api/auth";
 
 type LoginFormValues = {
   email: string;
@@ -54,6 +54,11 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps = {}) {
   const [values, setValues] = useState<LoginFormValues>(initialValues);
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [error, setError] = useState("");
+  // Cuando el servidor responde EMAIL_NOT_VERIFIED se ofrece reenviar el
+  // código: es el caso en el que el cliente no puede avanzar por sí mismo.
+  const [correoSinVerificar, setCorreoSinVerificar] = useState<string | null>(null);
+  const [reenviando, setReenviando] = useState(false);
+  const [aviso, setAviso] = useState("");
   const [loading, setLoading] = useState(false);
 
   function updateField(field: keyof LoginFormValues, value: string) {
@@ -64,6 +69,8 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps = {}) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setCorreoSinVerificar(null);
+    setAviso("");
 
     const nextErrors = validate(values);
     setErrors(nextErrors);
@@ -84,22 +91,53 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps = {}) {
       router.refresh();
     } catch (caughtError: unknown) {
       setError(getAuthErrorMessage(caughtError, "No se pudo iniciar sesión. Intenta de nuevo."));
+      if (caughtError instanceof AuthApiError && caughtError.code === "EMAIL_NOT_VERIFIED") {
+        setCorreoSinVerificar(values.email.trim().toLowerCase());
+      }
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleResend() {
+    if (!correoSinVerificar) return;
+    setReenviando(true);
+    setAviso("");
+    try {
+      await resendVerificationEmail(correoSinVerificar);
+      setAviso("Te enviamos un código nuevo. Revisa la bandeja de entrada y la carpeta de spam.");
+    } catch (caughtError: unknown) {
+      setAviso(getAuthErrorMessage(caughtError, "No se pudo reenviar el código."));
+    } finally {
+      setReenviando(false);
     }
   }
 
   return (
     <form className="auth-form" noValidate onSubmit={handleSubmit}>
       {error ? <AuthError>{error}</AuthError> : null}
-      {error === "Debes verificar tu correo electrónico antes de iniciar sesión." ? (
-        <Link
-          className="auth-link"
-          href={`/verify-email?email=${encodeURIComponent(values.email.trim())}`}
-        >
-          Reenviar código de verificación
-        </Link>
+      {/* El servidor responde 403 + EMAIL_NOT_VERIFIED cuando la cuenta existe
+          pero sin confirmar. Se decide por el código, no por el texto: comparar
+          contra el mensaje se rompe en cuanto se le cambia una palabra. */}
+      {correoSinVerificar ? (
+        <div className="auth-actions">
+          <button
+            type="button"
+            className="auth-link"
+            onClick={handleResend}
+            disabled={reenviando}
+          >
+            {reenviando ? "Reenviando…" : "Reenviar código de verificación"}
+          </button>
+          <Link
+            className="auth-link"
+            href={`/verify-email?email=${encodeURIComponent(correoSinVerificar)}`}
+          >
+            Ingresar el código
+          </Link>
+        </div>
       ) : null}
+      {aviso ? <p className="auth-hint">{aviso}</p> : null}
 
       <AuthInput
         autoComplete="email"
