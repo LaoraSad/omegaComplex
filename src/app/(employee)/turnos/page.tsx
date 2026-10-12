@@ -7,6 +7,8 @@ import { findEmployeeByUserId, listEmployeeShifts } from "@/features/access/acce
 import { getSession } from "@/shared/auth/session";
 
 export const metadata: Metadata = { title: "Mis zonas" };
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const DAY_LABELS: Record<number, string> = {
   0: "Dom",

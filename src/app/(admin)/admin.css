@@ -3,23 +3,23 @@
    Tailwind v4 ya esta disponible globalmente; aqui van tokens y patrones. */
 
 .admin-scope {
-  --admin-bg: #f6f4f3;
-  --admin-surface: #ffffff;
-  --admin-surface-soft: #faf8f7;
-  --admin-border: #e8e1de;
-  --admin-border-soft: #f0e9e6;
-  --admin-hairline: #ece5e2;
-  --admin-text: #211a1d;
-  --admin-muted: #6f625e;
-  --admin-faint: #a89c97;
+  --admin-bg: #0e0b0d;
+  --admin-surface: #141013;
+  --admin-surface-soft: rgba(255, 255, 255, 0.03);
+  --admin-border: rgba(255, 255, 255, 0.1);
+  --admin-border-soft: rgba(255, 255, 255, 0.05);
+  --admin-hairline: rgba(255, 255, 255, 0.08);
+  --admin-text: #ffffff;
+  --admin-muted: rgba(255, 255, 255, 0.6);
+  --admin-faint: rgba(255, 255, 255, 0.35);
   --admin-primary: #7a1f3d;
-  --admin-primary-hover: #641831;
-  --admin-primary-soft: #f6e8ed;
-  --admin-gold: #c8a96b;
-  --admin-ink: #201418;
-  --admin-ink-soft: #2c2025;
-  --admin-ink-muted: #b9a8a4;
-  --admin-radius: 14px;
+  --admin-primary-hover: #8f2547;
+  --admin-primary-soft: rgba(122, 31, 61, 0.25);
+  --admin-gold: #e3bd74;
+  --admin-ink: #141013;
+  --admin-ink-soft: #1e161a;
+  --admin-ink-muted: rgba(255, 255, 255, 0.4);
+  --admin-radius: 16px;
   --admin-sidebar-w: 280px;
   --admin-topbar-h: 68px;
   min-height: 100svh;
@@ -1182,7 +1182,7 @@ a.atimeline-link:hover {
   min-height: 2.6rem;
   border: 1px solid var(--admin-border);
   border-radius: 10px;
-  background: var(--admin-surface);
+  background: rgba(255, 255, 255, 0.04);
   padding: 0.55rem 0.75rem;
   color: var(--admin-text);
   font-size: 0.85rem;
@@ -1259,7 +1259,7 @@ a.atimeline-link:hover {
 }
 
 .atable tbody tr:hover {
-  background: #fbf9f8;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .atable .anum {
@@ -1367,13 +1367,13 @@ a.atimeline-link:hover {
   position: relative;
   overflow: hidden;
   border-radius: 8px;
-  background: var(--admin-border-soft);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .askeleton::after {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 70%), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
   content: "";
   animation: askimmer 1.4s ease-in-out infinite;
   transform: translateX(-100%);
