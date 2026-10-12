@@ -92,8 +92,11 @@ export async function createUserWithCustomer(data: {
         firstName: data.firstName.trim(),
         lastName: data.lastName.trim(),
         phone: data.phone.trim(),
-        roleId: data.roleId,
-        emailVerified: true,
+roleId: data.roleId,
+          // Nace SIN verificar. Marcarlo aquí como true hacía que la cuenta
+          // entrara sin comprobar el código que se envía a continuación, que es
+          // justo lo que reportaba el bug de registro sin verificación.
+          emailVerified: false,
       },
       include: {
         role: true,
