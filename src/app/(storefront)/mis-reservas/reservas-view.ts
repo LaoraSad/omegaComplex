@@ -70,7 +70,7 @@ export function toMisReserva(r: CustomerReservation, now = new Date()): MisReser
   const vigente = r.qrTokens.filter((q) => q.status === "active").length;
   const esFutura = r.endsAt >= now;
 
-  let estado = r.status;
+  let estado: string = r.status;
   if (estado === "confirmed") {
     if (usados > 0 || r.status === "used") {
       estado = "used";

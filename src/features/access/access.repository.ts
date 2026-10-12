@@ -125,7 +125,7 @@ export async function findQrByTokenHash(tokenArg: string): Promise<QrLookup | nu
     seqNo: true,
     status: true,
     usedAt: true,
-    _count: { select: { accesses: { where: { result: "allowed" } } } },
+    _count: { select: { accesses: { where: { result: "allowed" as const } } } },
     block: {
       select: {
         id: true,
@@ -166,16 +166,10 @@ export async function findQrByTokenHash(tokenArg: string): Promise<QrLookup | nu
   }
 
   if (!token) {
-    const resToken = await db.qrToken.findFirst({
-      where: {
-        OR: [
-          { reservationId: trimmed },
-          { id: { startsWith: trimmed } }
-        ]
-      },
+    token = await db.qrToken.findFirst({
+      where: { reservationId: trimmed },
       select: selectFields,
     });
-    if (resToken) token = resToken;
   }
 
   if (!token) return null;
