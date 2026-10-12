@@ -185,7 +185,13 @@ describe("email auth flows", () => {
       where: { id: "reset-1", usedAt: null },
       data: { usedAt: expect.any(Date) },
     });
-    expect(errorLog).toHaveBeenCalledWith("[email] No se pudo enviar el correo de recuperación");
+    // El código registra con el logger estructurado, no con console.error. Se
+    // comprueba que el evento quede registrado y que el detalle del proveedor
+    // NO se filtre en el log, porque puede contener datos de la solicitud.
+    expect(errorLog).toHaveBeenCalledTimes(1);
+    const [linea] = errorLog.mock.calls[0];
+    expect(linea).toContain("email.recuperacion_fallida");
+    expect(linea).not.toContain("private provider detail");
     errorLog.mockRestore();
   });
 
