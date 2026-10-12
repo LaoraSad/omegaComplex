@@ -51,7 +51,8 @@ const ETIQUETA: Record<string, { texto: string; clases: string }> = {
     texto: "Sin pagar",
     clases: "border-white/15 bg-white/5 text-white/60",
   },
-  used: { texto: "Utilizada", clases: "border-white/15 bg-white/5 text-white/60" },
+  used: { texto: "Usada", clases: "border-blue-400/30 bg-blue-500/10 text-blue-200" },
+  vencida: { texto: "Expirada", clases: "border-white/15 bg-white/5 text-white/60" },
 };
 
 export function etiquetaEstado(estado: string) {
@@ -67,10 +68,22 @@ export function etiquetaEstado(estado: string) {
 export function toMisReserva(r: CustomerReservation, now = new Date()): MisReserva {
   const usados = r.qrTokens.filter((q) => q.status === "used").length;
   const vigente = r.qrTokens.filter((q) => q.status === "active").length;
+  const esFutura = r.endsAt >= now;
+
+  let estado = r.status;
+  if (estado === "confirmed") {
+    if (usados > 0 || r.status === "used") {
+      estado = "used";
+    } else if (!esFutura) {
+      estado = "vencida";
+    }
+  } else if (estado === "used" || usados > 0) {
+    estado = "used";
+  }
 
   return {
     id: r.id,
-    estado: r.status,
+    estado,
     serviceId: r.serviceId,
     nombreServicio: r.service.name,
     nombreCategoria: r.service.category.name,
@@ -82,9 +95,9 @@ export function toMisReserva(r: CustomerReservation, now = new Date()): MisReser
     qrEmitidos: r.qrTokens.length,
     qrUsados: usados,
     qrReferencia: vigente > 0 ? `#${r.qrTokens.find((q) => q.status === "active")!.seqNo}` : null,
-    qrVigente: vigente > 0,
+    qrVigente: vigente > 0 && esFutura,
     pagado: r.payments.some((p) => p.status === "succeeded"),
-    esFutura: r.endsAt >= now,
+    esFutura,
   };
 }
 
