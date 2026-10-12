@@ -66,8 +66,16 @@ export async function archiveCategory(id: string): Promise<CategoryRecord | null
 	});
 }
 
+const OFFICIAL_POOL_SLUGS = [
+	"piscina-infantil",
+	"piscina-de-olas",
+	"piscina-tobogan",
+	"piscina-inodoro",
+	"piscina-torpedo",
+];
+
 export async function listCatalogServices(categorySlug?: string): Promise<CatalogServiceRecord[]> {
-	return db.service.findMany({
+	const services = (await db.service.findMany({
 		where: {
 			category: {
 				is: {
@@ -81,15 +89,26 @@ export async function listCatalogServices(categorySlug?: string): Promise<Catalo
 			category: { select: { id: true, name: true, slug: true } },
 			serviceSchedules: { orderBy: { dayOfWeek: "asc" } },
 		},
-	}) as Promise<CatalogServiceRecord[]>;
+	})) as CatalogServiceRecord[];
+
+	if (categorySlug === "piscinas") {
+		return services.filter((s) => OFFICIAL_POOL_SLUGS.includes(s.slug));
+	}
+	return services.filter((s) => s.category.slug !== "piscinas" || OFFICIAL_POOL_SLUGS.includes(s.slug));
 }
 
 export async function getCatalogService(id: string): Promise<CatalogServiceRecord | null> {
-	return db.service.findFirst({
+	const service = (await db.service.findFirst({
 		where: { id, category: { is: { isActive: true } } },
 		include: {
 			category: { select: { id: true, name: true, slug: true } },
 			serviceSchedules: { orderBy: { dayOfWeek: "asc" } },
 		},
-	}) as Promise<CatalogServiceRecord | null>;
+	})) as CatalogServiceRecord | null;
+
+	if (!service) return null;
+	if (service.category.slug === "piscinas" && !OFFICIAL_POOL_SLUGS.includes(service.slug)) {
+		return null;
+	}
+	return service;
 }
