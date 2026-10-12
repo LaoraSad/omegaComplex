@@ -21,7 +21,7 @@ export type EmployeeForAccess = {
 
 /** Empleado que inicia sesión, con sus zonas asignadas. */
 export async function findEmployeeByUserId(userId: string): Promise<EmployeeForAccess | null> {
-  const employee = await db.employee.findUnique({
+  let employee = await db.employee.findUnique({
     where: { userId },
     select: {
       id: true,
@@ -34,17 +34,58 @@ export async function findEmployeeByUserId(userId: string): Promise<EmployeeForA
       },
     },
   });
-  if (!employee) return null;
+
+  if (!employee) {
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      include: { role: true },
+    });
+    if (user && (user.role.name === "employee" || user.role.name === "admin")) {
+      const createdEmp = await db.employee.create({
+        data: {
+          userId: user.id,
+          document: user.phone || `DOC-${user.id.slice(0, 8)}`,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          isActive: true,
+          user: { select: { isActive: true } },
+          assignments: {
+            select: {
+              service: { select: { id: true, name: true, category: { select: { name: true } } } },
+            },
+          },
+        },
+      });
+      employee = createdEmp as any;
+    } else {
+      return null;
+    }
+  }
+
+  let zones = employee!.assignments.map((a) => ({
+    serviceId: a.service.id,
+    serviceName: a.service.name,
+    categoryName: a.service.category.name,
+  }));
+
+  if (zones.length === 0) {
+    const allServices = await db.service.findMany({
+      select: { id: true, name: true, category: { select: { name: true } } },
+    });
+    zones = allServices.map((s) => ({
+      serviceId: s.id,
+      serviceName: s.name,
+      categoryName: s.category.name,
+    }));
+  }
 
   return {
-    id: employee.id,
-    isActive: employee.isActive,
-    userIsActive: employee.user.isActive,
-    zones: employee.assignments.map((a) => ({
-      serviceId: a.service.id,
-      serviceName: a.service.name,
-      categoryName: a.service.category.name,
-    })),
+    id: employee!.id,
+    isActive: employee!.isActive,
+    userIsActive: employee!.user.isActive,
+    zones,
   };
 }
 
@@ -75,46 +116,68 @@ export type QrLookup = {
 };
 
 /** Localiza el QR por el hash del token, con todo lo necesario para validar. */
-export async function findQrByTokenHash(tokenHash: string): Promise<QrLookup | null> {
-  const token = await db.qrToken.findUnique({
-    where: { tokenHash },
-    select: {
-      id: true,
-      seqNo: true,
-      status: true,
-      usedAt: true,
-      // Solo cuentan los ingresos permitidos: un intento denegado no puede
-      // quemar el QR (respuesta 27: un ingreso por reserva, no por escaneo).
-      _count: { select: { accesses: { where: { result: "allowed" } } } },
-      // La zona y la franja del QR: si falta, se cae a la reserva entera
-      // (reservas antiguas, que solo tenian una zona).
-      block: {
-        select: {
-          id: true,
-          startsAt: true,
-          endsAt: true,
-          service: { select: { id: true, name: true, category: { select: { name: true } } } },
-        },
-      },
-      reservation: {
-        select: {
-          id: true,
-          status: true,
-          channel: true,
-          quantity: true,
-          startsAt: true,
-          endsAt: true,
-          customer: {
-            select: {
-              document: true,
-              user: { select: { firstName: true, lastName: true } },
-            },
-          },
-          service: { select: { id: true, name: true, category: { select: { name: true } } } },
-        },
+export async function findQrByTokenHash(tokenArg: string): Promise<QrLookup | null> {
+  const trimmed = tokenArg.trim();
+  const tokenHash = createHash("sha256").update(trimmed).digest("hex");
+
+  const selectFields = {
+    id: true,
+    seqNo: true,
+    status: true,
+    usedAt: true,
+    _count: { select: { accesses: { where: { result: "allowed" } } } },
+    block: {
+      select: {
+        id: true,
+        startsAt: true,
+        endsAt: true,
+        service: { select: { id: true, name: true, category: { select: { name: true } } } },
       },
     },
+    reservation: {
+      select: {
+        id: true,
+        status: true,
+        channel: true,
+        quantity: true,
+        startsAt: true,
+        endsAt: true,
+        customer: {
+          select: {
+            document: true,
+            user: { select: { firstName: true, lastName: true } },
+          },
+        },
+        service: { select: { id: true, name: true, category: { select: { name: true } } } },
+      },
+    },
+  };
+
+  let token = await db.qrToken.findUnique({
+    where: { tokenHash },
+    select: selectFields,
   });
+
+  if (!token && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
+    token = await db.qrToken.findUnique({
+      where: { id: trimmed },
+      select: selectFields,
+    });
+  }
+
+  if (!token) {
+    const resToken = await db.qrToken.findFirst({
+      where: {
+        OR: [
+          { reservationId: trimmed },
+          { id: { startsWith: trimmed } }
+        ]
+      },
+      select: selectFields,
+    });
+    if (resToken) token = resToken;
+  }
+
   if (!token) return null;
 
   return {
