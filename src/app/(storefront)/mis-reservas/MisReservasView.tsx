@@ -60,12 +60,12 @@ export default function MisReservasView({ reservas }: Props) {
     }
   }
 
-  const futuras = reservas.filter(
-    (r) => r.esFutura && r.estado !== "used" && r.estado !== "expired",
-  );
-  const historial = reservas.filter(
-    (r) => !r.esFutura || r.estado === "used" || r.estado === "expired",
-  );
+  const futuras = reservas
+    .filter((r) => r.esFutura && r.estado !== "used" && r.estado !== "expired" && r.estado !== "vencida")
+    .sort((a, b) => a.inicia.localeCompare(b.inicia));
+  const historial = reservas
+    .filter((r) => !r.esFutura || r.estado === "used" || r.estado === "expired" || r.estado === "vencida")
+    .sort((a, b) => b.inicia.localeCompare(a.inicia));
   const pendientes = reservas.filter((r) => r.estado === "pending_payment");
   const visibles = pestana === "futuras" ? futuras : historial;
 
