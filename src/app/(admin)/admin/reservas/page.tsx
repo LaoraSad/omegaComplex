@@ -173,7 +173,7 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
                   return (
                     <tr key={r.id}>
                       <td>
-                        <span className="block font-bold text-[#211a1d]">
+                        <span className="block font-bold text-white">
                           {fullName(r.customer.user.firstName, r.customer.user.lastName)}
                         </span>
                         <span className="block text-xs text-[#6f625e]">

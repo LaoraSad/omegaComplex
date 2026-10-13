@@ -138,7 +138,7 @@ export default async function AccesosPage({ searchParams }: AccesosPageProps) {
                 {result.rows.map((a) => (
                   <tr key={a.id}>
                     <td className="anum whitespace-nowrap text-[0.8rem]">{formatDateTime(a.accessedAt)}</td>
-                    <td className="font-bold text-[#211a1d]">
+                    <td className="font-bold text-white">
                       {fullName(
                         a.qrToken.reservation.customer.user.firstName,
                         a.qrToken.reservation.customer.user.lastName,

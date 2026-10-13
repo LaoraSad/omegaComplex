@@ -37,7 +37,7 @@ export function ConfirmDialog({
             <span
               aria-hidden="true"
               className="akpi-icon"
-              style={{ background: "#fdeef1", borderColor: "#f3cdd5", color: "#a1203a" }}
+              style={{ background: "rgba(122, 31, 61, 0.15)", borderColor: "rgba(122, 31, 61, 0.4)", color: "#e3bd74" }}
             >
               <TriangleAlert className="h-5 w-5" strokeWidth={1.9} />
             </span>

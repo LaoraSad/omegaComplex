@@ -243,7 +243,7 @@ export function ScheduleDeleteButton({ serviceId, dayOfWeek, label }: { serviceI
 
 export function BlockFormHeader() {
   return (
-    <p className="flex items-center gap-2 text-sm font-bold text-[#211a1d]">
+    <p className="flex items-center gap-2 text-sm font-bold text-white">
       <CalendarPlus className="h-4 w-4 text-[#7a1f3d]" />
       Nuevo bloqueo
     </p>

@@ -82,7 +82,7 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
               {initials(employee.user.firstName, employee.user.lastName)}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-[#211a1d]">{name}</p>
+              <p className="truncate text-sm font-bold text-white">{name}</p>
               <p className="truncate text-xs text-[#6f625e]">{employee.user.email}</p>
             </div>
           </div>
@@ -100,8 +100,8 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
               <dd className="anum font-semibold">{formatNumber(employee._count.accesses)}</dd>
             </div>
           </dl>
-          <div className="mt-4 rounded-[10px] bg-[#faf8f7] p-3">
-            <p className="mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider text-[#6f625e]">
+          <div className="mt-4 rounded-[10px] bg-[#1a1519] p-3">
+            <p className="mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider text-white/60">
               <MapPin className="h-3 w-3" /> Zonas
             </p>
             {assignedIds.length > 0 ? (
@@ -171,7 +171,7 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
                       <td className="anum whitespace-nowrap text-[0.8rem]">
                         {formatDateTime(a.accessedAt)}
                       </td>
-                      <td className="font-bold text-[#211a1d]">
+                      <td className="font-bold text-white">
                         {fullName(
                           a.qrToken.reservation.customer.user.firstName,
                           a.qrToken.reservation.customer.user.lastName,

@@ -90,7 +90,7 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
         <section aria-label="Fotografía y capacidad" className="acard overflow-hidden xl:col-span-3">
-          <div className="relative aspect-[16/9] w-full bg-[#e8f1ed]">
+          <div className="relative aspect-[16/9] w-full bg-[#1a1519]">
             {photo ? (
               <Image
                 src={photo}
@@ -101,18 +101,18 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
                 className="object-cover"
               />
             ) : (
-              <span className="grid h-full w-full place-items-center text-[#317a75]">
+              <span className="grid h-full w-full place-items-center text-emerald-400">
                 <Waves className="h-10 w-10" strokeWidth={1.5} />
               </span>
             )}
           </div>
           <div className="acard-pad">
-            <dl className="grid grid-cols-3 gap-2 rounded-[10px] bg-[#faf8f7] p-3 text-center">
+            <dl className="grid grid-cols-3 gap-2 rounded-[10px] bg-[#1a1519] p-3 text-center">
               <div>
                 <dt className="text-[0.66rem] font-bold uppercase tracking-wider text-[#6f625e]">Capacidad</dt>
                 <dd className="anum text-base font-extrabold">{formatNumber(service.capacity)}</dd>
               </div>
-              <div className="border-x border-[#e8e1de]">
+              <div className="border-x border-[#2a2226]">
                 <dt className="text-[0.66rem] font-bold uppercase tracking-wider text-[#6f625e]">Precio</dt>
                 <dd className="anum text-base font-extrabold">{formatCOP(service.price)}</dd>
               </div>
@@ -135,7 +135,7 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
                       key={d}
                       title={sc ? `${DAY_LABELS[d]}: ${sc.openTime}–${sc.closeTime}` : `${DAY_LABELS[d]}: cerrado`}
                       className={`rounded-md border px-0.5 py-1 text-center ${
-                        sc ? "border-[#e3c3cf] bg-[#f6e8ed]" : "border-[#f0e9e6] bg-[#faf8f7]"
+                        sc ? "border-[#3a2530] bg-[#2a1520]" : "border-[#2a2226] bg-[#1a1519]"
                       }`}
                     >
                       <span className="block text-[0.6rem] font-bold text-[#6f625e]">{DAY_LABELS[d]}</span>

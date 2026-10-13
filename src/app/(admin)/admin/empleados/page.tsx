@@ -60,7 +60,7 @@ export default async function EmpleadosPage({ searchParams }: EmpleadosPageProps
                   {initials(e.user.firstName, e.user.lastName)}
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-[#211a1d]">
+                  <p className="truncate text-sm font-bold text-white">
                     <Link
                       href={`/admin/empleados/${e.id}`}
                       className="hover:text-[#7a1f3d] hover:underline"
@@ -91,7 +91,7 @@ export default async function EmpleadosPage({ searchParams }: EmpleadosPageProps
                   <dd className="anum font-semibold">{formatNumber(e._count.accesses)}</dd>
                 </div>
               </dl>
-              <div className="rounded-[10px] bg-[#faf8f7] p-3">
+              <div className="rounded-[10px] bg-[#1a1519] p-3">
                 <p className="mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider text-[#6f625e]">
                   <MapPin className="h-3 w-3" /> Zona asignada
                 </p>
