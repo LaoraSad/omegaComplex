@@ -6,7 +6,9 @@ import { ArrowLeft, CalendarClock, Compass, CreditCard, Users } from 'lucide-rea
 import AmbientBubbles from '@/components/AmbientBubbles';
 import SectionDivider from '@/components/SectionDivider';
 import { servicePhoto } from '@/components/admin/service-image';
+import { panorama360 } from '@/components/admin/panorama-image';
 import PanoramaModal from '@/components/tour/PanoramaModal';
+import Tour360 from '@/components/tour/Tour360';
 import PanningImage from '@/components/tour/PanningImage';
 import { SelectorFranjas } from '@/components/storefront/SelectorFranjas';
 import type { CatalogServiceRecord } from '@/features/catalog/catalog.types';
@@ -63,6 +65,7 @@ function DetalleServicio({ params }: ServiceDetailPageProps) {
     ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(service.price)
     : '';
   const image = service ? servicePhoto(service.slug) : null;
+  const panorama = service ? panorama360(service.slug) : null;
 
   return (
     <div className="omega-dark-section relative min-h-screen overflow-hidden bg-[#0e0b0d] text-white">
@@ -84,7 +87,14 @@ function DetalleServicio({ params }: ServiceDetailPageProps) {
             <section className="space-y-6">
               <div className="overflow-hidden rounded-xl border border-white/10 bg-[#141013]">
                 <div className="relative h-80 overflow-hidden rounded-2xl border border-white/10 bg-black shadow-inner">
-                  {image ? (
+                  {panorama && image ? (
+                    <Tour360
+                      src={panorama}
+                      title={service.name}
+                      subtitle={service.category.name}
+                      trigger={<PanningImage src={image} alt={service.name} />}
+                    />
+                  ) : image ? (
                     <PanoramaModal
                       src={image}
                       title={service.name}
@@ -98,7 +108,11 @@ function DetalleServicio({ params }: ServiceDetailPageProps) {
                 {image ? (
                   <div className="flex items-center gap-2 text-xs font-semibold text-white/55">
                     <Compass className="h-4 w-4 text-[#e3bd74]" />
-                    <span>Inspecciona la imagen con el cursor o amplíala.</span>
+                    <span>
+                      {panorama
+                        ? 'Toca la imagen para recorrerla en 360°.'
+                        : 'Inspecciona la imagen con el cursor o amplíala.'}
+                    </span>
                   </div>
                 ) : null}
                 <div className="space-y-4 p-6 sm:p-8">

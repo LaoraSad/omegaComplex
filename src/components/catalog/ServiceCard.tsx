@@ -5,7 +5,6 @@ import Image from 'next/image';
 import type { CatalogServiceRecord } from '@/features/catalog/catalog.types';
 import { Users, ArrowRight, CalendarPlus, Compass } from 'lucide-react';
 import { servicePhoto } from '@/components/admin/service-image';
-import PanoramaModal from '@/components/tour/PanoramaModal';
 import PanningImage from '@/components/tour/PanningImage';
 
 interface ServiceCardProps {
@@ -26,16 +25,19 @@ export default function ServiceCard({ service, onElegirFranja }: ServiceCardProp
     <div className="omega-ring group h-full">
       <div className="omega-ring-inner flex h-full flex-col bg-[#141013] backdrop-blur-sm transition-all duration-300 group-hover:-translate-y-1">
       <div className="relative block h-56 overflow-hidden bg-[#0a0103]">
-        {image ? (
-          <PanoramaModal
-            src={image}
-            title={service.name}
-            subtitle={service.category.name}
-            trigger={<PanningImage src={image} alt={service.name} />}
-          />
-        ) : (
-          <div className="absolute inset-0 bg-[#211a1d]" aria-hidden="true" />
-        )}
+        {/* La imagen lleva al detalle: ahí se abre el tour 360. El modal de
+            imagen ampliada ya no tiene sentido con el visor 3D. */}
+        <Link
+          href={`/servicios/${service.id}`}
+          className="absolute inset-0 z-0"
+          aria-label={`Ver detalle de ${service.name}`}
+        >
+          {image ? (
+            <PanningImage src={image} alt={service.name} />
+          ) : (
+            <div className="absolute inset-0 bg-[#211a1d]" aria-hidden="true" />
+          )}
+        </Link>
 
         {/* Overlay sutil para legibilidad de títulos */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/30 pointer-events-none z-10" />
