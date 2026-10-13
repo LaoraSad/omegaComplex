@@ -73,7 +73,7 @@ export default async function PagandoPage({
 
     throw new Error("Stripe no devolvió una URL de pago");
   } catch (error) {
-    // `redirect()` lanza una excepción interna para cortin�ar el flujo: no es
+    // `redirect()` lanza una excepción interna para cortinar el flujo: no es
     // un fallo, hay que dejarla pasar.
     if (isRedirect(error)) throw error;
 

@@ -1,11 +1,11 @@
-// LÃ³gica de cobro con Stripe: checkout, confirmaciÃ³n y rechazo.
+// Lógica de cobro con Stripe: checkout, confirmación y rechazo.
 //
-// Regla de oro (SCRUM secciÃ³n 13): la reserva NO se considera pagada porque el
-// navegador volviÃ³ a la app, sino cuando el webhook oficial de Stripe confirma
-// el pago. Este mÃ³dulo orquesta ese ciclo:
+// Regla de oro (SCRUM sección 13): la reserva NO se considera pagada porque el
+// navegador volvió a la app, sino cuando el webhook oficial de Stripe confirma
+// el pago. Este módulo orquesta ese ciclo:
 //
-//   reserva pending_payment â†’ checkout â†’ webhook â†’ pago succeeded
-//     â†’ hold consumed + cupos a booked + QR emitidos (persona x zona).
+//   reserva pending_payment ’ checkout ’ webhook ’ pago succeeded
+//     ’ hold consumed + cupos a booked + QR emitidos (persona x zona).
 //
 // Todo es idempotente: los pasos condicionales (updateMany por estado, QR por
 // conteo) hacen que reprocesar un evento sea un no-op seguro.
@@ -32,7 +32,7 @@ import {
 import type { CreatePaymentInput } from "./payments.schemas";
 import type { StripeCheckoutSessionResult } from "./payments.types";
 
-/** Cliente mÃ­nimo de Stripe que usa este mÃ³dulo (inyectable en pruebas). */
+/** Cliente mínimo de Stripe que usa este módulo (inyectable en pruebas). */
 export type StripeCheckoutClient = Pick<Stripe, "checkout">;
 
 /** Hora 24 h en America/Bogota, para el texto del checkout. */
@@ -55,18 +55,18 @@ function fechaBogota(d: Date): string {
 }
 
 /**
- * Arma las lÃ­neas del checkout: una por zona.
+ * Arma las líneas del checkout: una por zona.
  *
  /**
- * Convierte pesos a la unidad mÃ­nima que espera la API de Stripe.
+ * Convierte pesos a la unidad mínima que espera la API de Stripe.
  *
  * Stripe NO recibe pesos: recibe centavos. El peso colombiano tiene dos
- * decimales en su API, asÃ­ que 100.000 COP se envÃ­an como 10.000.000. Sin esta
- * conversiÃ³n Stripe interpreta 100.000 como $1.000,00 y ademÃ¡s lo rechaza con
- * `amount_too_small`, porque ese monto no alcanza el mÃ­nimo de la cuenta.
+ * decimales en su API, así que 100.000 COP se envían como 10.000.000. Sin esta
+ * conversión Stripe interpreta 100.000 como $1.000,00 y además lo rechaza con
+ * `amount_too_small`, porque ese monto no alcanza el mínimo de la cuenta.
  *
  * Todo el resto del sistema (base de datos, correos, pantallas) trabaja en
- * pesos enteros; la conversiÃ³n ocurre solo al hablar con Stripe.
+ * pesos enteros; la conversión ocurre solo al hablar con Stripe.
  */
 function aCentimos(cop: number): number {
   return Math.round(cop * 100);
@@ -75,8 +75,8 @@ function aCentimos(cop: number): number {
 /**
  * El reparto NO es proporcional a las horas: es proporcional a las personas que
  * entran por cada puerta. Ir solo a la cancha no puede costar lo mismo que ir
- * con tres amigos a la piscina, aunque ambas franjas duren una hora. La Ãºltima
- * lÃ­nea absorbe el redondeo para que la suma cuadre con el total de la reserva.
+ * con tres amigos a la piscina, aunque ambas franjas duren una hora. La última
+ * línea absorbe el redondeo para que la suma cuadre con el total de la reserva.
  */
 function lineItemsDeReserva(
   reserva: {
@@ -101,10 +101,10 @@ function lineItemsDeReserva(
         price_data: {
           currency: "cop",
           product_data: {
-            name: `Reserva Omega Complex Â· ${b.service.name}`,
+            name: `Reserva Omega Complex · ${b.service.name}`,
             description:
-              `${fechaBogota(b.startsAt)} Â· ${horaBogota(b.startsAt)} a ${horaBogota(b.endsAt)}` +
-              (nombres.length ? ` Â· ${nombres.join(", ")}` : ` Â· ${b.personas} persona(s)`),
+              `${fechaBogota(b.startsAt)} · ${horaBogota(b.startsAt)} a ${horaBogota(b.endsAt)}` +
+              (nombres.length ? ` · ${nombres.join(", ")}` : ` · ${b.personas} persona(s)`),
           },
           unit_amount: aCentimos(totalCop),
         },
@@ -124,11 +124,11 @@ function lineItemsDeReserva(
       price_data: {
         currency: "cop" as const,
         product_data: {
-          name: `${b.service.name} Â· ${b.service.category.name}`,
+          name: `${b.service.name} · ${b.service.category.name}`,
           description:
-            `${fechaBogota(b.startsAt)} Â· ${horaBogota(b.startsAt)} a ${horaBogota(b.endsAt)}` +
-            ` Â· ${b.personas} ${b.personas === 1 ? "persona" : "personas"}` +
-            (nombres.length ? ` Â· ${nombres.join(", ")}` : ""),
+            `${fechaBogota(b.startsAt)} · ${horaBogota(b.startsAt)} a ${horaBogota(b.endsAt)}` +
+            ` · ${b.personas} ${b.personas === 1 ? "persona" : "personas"}` +
+            (nombres.length ? ` · ${nombres.join(", ")}` : ""),
         },
         unit_amount: aCentimos(montos[i]),
       },
@@ -152,8 +152,8 @@ export async function createCheckoutSession(
       endsAt: true,
       service: { select: { name: true } },
       // Una reserva puede abarcar varias zonas. El checkout de Stripe tiene que
-      // mostrarlas todas: antes solo aparecÃ­a `service.name`, que es el primer
-      // bloque, y el cliente pagaba sin ver que tambiÃ©n estaba reservando la
+      // mostrarlas todas: antes solo aparecía `service.name`, que es el primer
+      // bloque, y el cliente pagaba sin ver que también estaba reservando la
       // segunda zona.
       blocks: {
         orderBy: { startsAt: "asc" },
@@ -163,7 +163,7 @@ export async function createCheckoutSession(
           personas: true,
           service: { select: { name: true, category: { select: { name: true } } } },
           // Los nombres de quienes entran por esa puerta: es lo que se imprime
-          // en la lÃ­nea del cobro.
+          // en la línea del cobro.
           guests: { select: { guest: { select: { fullName: true } } } },
         },
       },
@@ -172,9 +172,9 @@ export async function createCheckoutSession(
   });
   if (!reserva) throw new NotFoundError("Reserva no encontrada");
   if (reserva.status !== "pending_payment") {
-    throw new ConflictError(`Esta reserva estÃ¡ ${reserva.status} y no se puede pagar.`);
+    throw new ConflictError(`Esta reserva está ${reserva.status} y no se puede pagar.`);
   }
-  // El monto real lo define el servidor: el body podrÃ­a venir manipulado.
+  // El monto real lo define el servidor: el body podría venir manipulado.
   if (input.amountCop !== reserva.totalCop) {
     throw new ConflictError("El monto no coincide con el total de la reserva.");
   }
@@ -184,7 +184,7 @@ export async function createCheckoutSession(
     select: { id: true },
   });
   if (!hold) {
-    throw new ConflictError("El bloqueo de 10 minutos expirÃ³. Vuelve a crear la reserva.");
+    throw new ConflictError("El bloqueo de 10 minutos expiró. Vuelve a crear la reserva.");
   }
 
   const lineas = lineItemsDeReserva(reserva);
@@ -202,7 +202,7 @@ export async function createCheckoutSession(
   });
 
   if (!session.url) {
-    throw new HttpError(502, "CHECKOUT_SIN_URL", "Stripe no devolviÃ³ la URL de pago.");
+    throw new HttpError(502, "CHECKOUT_SIN_URL", "Stripe no devolvió la URL de pago.");
   }
 
   // Idempotente por stripeSessionId: un reintento del cliente no duplica el cobro.

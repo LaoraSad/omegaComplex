@@ -49,7 +49,7 @@ const reservaBase = {
   startsAt: new Date("2026-11-01T13:00:00Z"),
   endsAt: new Date("2026-11-01T14:00:00Z"),
   service: { name: "Piscina adultos 1" },
-  // El checkout ahora arma una lÃ­nea por zona y nombra a las personas, asÃ­ que
+  // El checkout ahora arma una línea por zona y nombra a las personas, así que
   // la reserva que devuelve el mock tiene que traer esas relaciones.
   blocks: [
     {
@@ -144,7 +144,7 @@ describe("createCheckoutSession", () => {
     expect(mocks.repository.createPendingPayment).not.toHaveBeenCalled();
   });
 
-  it("lanza 404 si la reserva no existe y 409 si no estÃ¡ pendiente o sin hold", async () => {
+  it("lanza 404 si la reserva no existe y 409 si no está pendiente o sin hold", async () => {
     mocks.db.reservation.findUnique.mockResolvedValue(null);
     await expect(createCheckoutSession(inputBase, stripeFake().stripe)).rejects.toBeInstanceOf(
       NotFoundError,
