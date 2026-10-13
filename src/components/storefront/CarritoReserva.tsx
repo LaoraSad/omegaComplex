@@ -57,6 +57,12 @@ type CarritoCtx = {
   acompanantes: Acompanantes;
   /** Si hay sesión. Lo pasa el layout, que es servidor. */
   haySesion: boolean;
+  /** Aviso de error del carrito (p. ej. solape rechazado por el servidor). */
+  error: string;
+  /** Limpia el aviso de error. Se llama al cerrar el carrito o al cambiar zonas. */
+  limpiarError: () => void;
+  /** Escribe el aviso de error (p. rechazo del servidor al pagar). */
+  setError: (mensaje: string) => void;
   agregar: (
     b: Omit<BloqueCarrito, 'clave' | 'personas' | 'asistentes'> &
       Partial<Pick<BloqueCarrito, 'personas' | 'asistentes'>>,
@@ -225,6 +231,7 @@ export function CarritoProvider({
   const [personas, setPersonasState] = useState(1);
   const [acompanantes, setAcompanantes] = useState<Acompanantes>([]);
   const [carritoAbierto, setCarritoAbierto] = useState(false);
+  const [error, setError] = useState('');
 
   const todos = useMemo(
     () => Array.from({ length: personas }, (_, i) => i),
@@ -323,16 +330,20 @@ export function CarritoProvider({
           `${x.fecha}${x.etiquetaHora}`.localeCompare(`${y.fecha}${y.etiquetaHora}`),
         ),
       );
+      // Agregar una zona limpia el aviso anterior: el cliente ya cambió algo.
+      setError('');
       return { ok: true };
     },
     [bloques, todos, precioPorDefecto],
   );
 
   const quitar = useCallback((clave: string) => {
+    setError('');
     setBloques((prev) => prev.filter((b) => b.clave !== clave));
   }, []);
 
   const vaciar = useCallback(() => {
+    setError('');
     setBloques([]);
     setPersonasState(1);
     setAcompanantes([]);
@@ -342,6 +353,7 @@ export function CarritoProvider({
   // El grupo es el máximo de personas de cualquier zona: es el titular más los
   // acompañantes que se hayan registrado.
   const setPersonas = useCallback((n: number) => {
+    setError('');
     const nuevo = Math.min(50, Math.max(1, Math.floor(n)));
     setPersonasState(nuevo);
     // Crecer el grupo mete a los nuevos en todas las zonas que ya tenían a todo
@@ -358,6 +370,7 @@ export function CarritoProvider({
 
   /** Cambia cuántas personas entran por una zona: agrega o quita por el final. */
   const setPersonasZona = useCallback((clave: string, n: number) => {
+    setError('');
     setBloques((prev) =>
       prev.map((b) => {
         if (b.clave !== clave) return b;
@@ -385,6 +398,7 @@ export function CarritoProvider({
 
   /** Marca o desmarca a una persona del grupo para una zona concreta. */
   const alternarAsistente = useCallback((clave: string, indice: number) => {
+    setError('');
     setBloques((prev) =>
       prev.map((b) => {
         if (b.clave !== clave) return b;
@@ -406,7 +420,15 @@ export function CarritoProvider({
   );
 
   const abrirCarrito = useCallback(() => setCarritoAbierto(true), []);
-  const cerrarCarrito = useCallback(() => setCarritoAbierto(false), []);
+  const cerrarCarrito = useCallback(() => {
+    // Al cerrar se limpia el aviso: si no, al volver a abrir seguía mostrando
+    // el rechazo anterior aunque el cliente ya hubiera cambiado de horario o
+    // quitado la zona que chocaba.
+    setError('');
+    setCarritoAbierto(false);
+  }, []);
+
+  const limpiarError = useCallback(() => setError(''), []);
 
   const valor: CarritoCtx = {
     bloques,
@@ -415,6 +437,9 @@ export function CarritoProvider({
     totalCop,
     acompanantes,
     haySesion,
+    error,
+    limpiarError,
+    setError,
     agregar,
     quitar,
     vaciar,

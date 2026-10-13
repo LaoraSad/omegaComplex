@@ -10,7 +10,7 @@ import { X, Minus, Plus, Loader2, Users, Lock } from 'lucide-react';
 import { cop, fechaCorta, formatoHora, useCarrito } from './CarritoReserva';
 
 export function BarraCarrito() {
-  const {
+const {
     bloques,
     personas,
     totalCop,
@@ -23,25 +23,12 @@ export function BarraCarrito() {
     abrirCarrito,
     cerrarCarrito,
     haySesion,
+    error,
+    setError,
     acompanantes: datosAcompanantes,
     escribirAcompanante,
   } = useCarrito();
   const [enviando, setEnviando] = useState(false);
-  const [error, setError] = useState('');
-
-  // Al cerrar el carrito se limpia el aviso: si no, al volver a abrir seguía
-    // mostrando el rechazo anterior aunque el cliente ya hubiera cambiado de
-    // horario o quitado la zona que chocaba.
-    useEffect(() => {
-      if (!carritoAbierto) setError('');
-    }, [carritoAbierto]);
-
-    // Y también al tocar el carrito: si el cliente quita la zona que chocaba o
-    // cambia de horario, el rechazo anterior ya no aplica.
-    const cantidadZonas = bloques.length;
-    useEffect(() => {
-      setError('');
-    }, [cantidadZonas]);
 
   const abierto = bloques.length > 0;
   const acompanantes = datosAcompanantes;
