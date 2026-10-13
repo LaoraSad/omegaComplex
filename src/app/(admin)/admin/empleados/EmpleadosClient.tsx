@@ -31,7 +31,7 @@ function ZonePicker({ groups, selected, onToggle, idPrefix }: ZonePickerProps) {
   return (
     <fieldset className="space-y-3">
       <legend className="alabel">
-        Zonas asignadas <span className="font-normal text-[#6f625e]">(obligatorio)</span>
+        Zonas asignadas <span className="font-normal text-[#b8aca6]">(obligatorio)</span>
       </legend>
       <p className="afield-hint">
         El empleado solo valida QR de estas instalaciones. Si el QR corresponde a otra zona, debe
@@ -39,7 +39,7 @@ function ZonePicker({ groups, selected, onToggle, idPrefix }: ZonePickerProps) {
       </p>
       {groups.map((group) => (
         <div key={group.categoryId} className="rounded-[10px] border border-[#2a2226] p-3">
-          <p className="mb-2 text-[0.7rem] font-bold uppercase tracking-wider text-[#6f625e]">
+          <p className="mb-2 text-[0.7rem] font-bold uppercase tracking-wider text-[#b8aca6]">
             {group.categoryName}
           </p>
           <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
@@ -68,7 +68,7 @@ function ZonePicker({ groups, selected, onToggle, idPrefix }: ZonePickerProps) {
           </ul>
         </div>
       ))}
-      <p className="text-xs font-semibold text-[#6f625e]">
+      <p className="text-xs font-semibold text-[#b8aca6]">
         {selected.length === 1
           ? "1 zona seleccionada."
           : `${selected.length} zonas seleccionadas.`}
@@ -149,7 +149,7 @@ export function CreateEmployeeForm({ groups }: { groups: ZoneGroup[] }) {
             Crea las credenciales y asigna las zonas que podrá validar.
           </p>
         </div>
-        <UserPlus className="h-5 w-5 text-[#7a1f3d]" />
+        <UserPlus className="h-5 w-5 text-[#e3bd74]" />
       </div>
 
       <form action={handleSubmit} className="space-y-4">
@@ -408,7 +408,7 @@ export function EmployeeZoneEditor({
             Solo podrá validar QR de las instalaciones seleccionadas.
           </p>
         </div>
-        <MapPin className="h-5 w-5 text-[#7a1f3d]" />
+        <MapPin className="h-5 w-5 text-[#e3bd74]" />
       </div>
       <form action={handleSubmit} className="space-y-4">
         <ZonePicker
@@ -454,7 +454,7 @@ export function EmployeePasswordForm({ employeeId }: { employeeId: string }) {
           <h2 className="acard-title">Contraseña</h2>
           <p className="acard-sub">Restablece la clave con la que inicia sesión.</p>
         </div>
-        <KeyRound className="h-5 w-5 text-[#7a1f3d]" />
+        <KeyRound className="h-5 w-5 text-[#e3bd74]" />
       </div>
       <form action={handleSubmit} className="afilters">
         <div className="afield afield-grow">

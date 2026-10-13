@@ -83,7 +83,7 @@ export default async function ClientesPage({ searchParams }: ClientesPageProps) 
                     <td className="anum">{c.document ?? "—"}</td>
                     <td>
                       <span className="block max-w-56 truncate">{c.user.email}</span>
-                      <span className="block text-xs text-[#6f625e]">{c.user.phone ?? "Sin teléfono"}</span>
+                      <span className="block text-xs text-[#b8aca6]">{c.user.phone ?? "Sin teléfono"}</span>
                     </td>
                     <td className="anum whitespace-nowrap text-[0.8rem]">
                       {c.birthDate ? formatDate(c.birthDate) : "—"}

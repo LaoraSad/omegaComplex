@@ -176,13 +176,13 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
                         <span className="block font-bold text-white">
                           {fullName(r.customer.user.firstName, r.customer.user.lastName)}
                         </span>
-                        <span className="block text-xs text-[#6f625e]">
+                        <span className="block text-xs text-[#b8aca6]">
                           {r.customer.document ?? r.customer.user.email}
                         </span>
                       </td>
                       <td>
                         <span className="block font-semibold">{r.service.name}</span>
-                        <span className="block text-xs text-[#6f625e]">{r.service.category.name}</span>
+                        <span className="block text-xs text-[#b8aca6]">{r.service.category.name}</span>
                       </td>
                       <td className="anum whitespace-nowrap text-[0.8rem]">{formatDateTime(r.startsAt)}</td>
                       <td className="anum">{formatNumber(r.quantity)}</td>
