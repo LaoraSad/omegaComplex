@@ -19,20 +19,32 @@ export type EmployeeForAccess = {
   zones: Array<{ serviceId: string; serviceName: string; categoryName: string }>;
 };
 
+/** Fila de empleado con la misma proyección en findUnique y en create. */
+type EmployeeAccessRow = {
+  id: string;
+  isActive: boolean;
+  user: { isActive: boolean };
+  assignments: Array<{
+    service: { id: string; name: string; category: { name: string } };
+  }>;
+};
+
+const employeeAccessSelect = {
+  id: true,
+  isActive: true,
+  user: { select: { isActive: true } },
+  assignments: {
+    select: {
+      service: { select: { id: true, name: true, category: { select: { name: true } } } },
+    },
+  },
+} as const;
+
 /** Empleado que inicia sesión, con sus zonas asignadas. */
 export async function findEmployeeByUserId(userId: string): Promise<EmployeeForAccess | null> {
-  let employee = await db.employee.findUnique({
+  let employee: EmployeeAccessRow | null = await db.employee.findUnique({
     where: { userId },
-    select: {
-      id: true,
-      isActive: true,
-      user: { select: { isActive: true } },
-      assignments: {
-        select: {
-          service: { select: { id: true, name: true, category: { select: { name: true } } } },
-        },
-      },
-    },
+    select: employeeAccessSelect,
   });
 
   if (!employee) {
@@ -41,30 +53,20 @@ export async function findEmployeeByUserId(userId: string): Promise<EmployeeForA
       include: { role: true },
     });
     if (user && (user.role.name === "employee" || user.role.name === "admin")) {
-      const createdEmp = await db.employee.create({
+      employee = await db.employee.create({
         data: {
           userId: user.id,
           document: user.phone || `DOC-${user.id.slice(0, 8)}`,
           isActive: true,
         },
-        select: {
-          id: true,
-          isActive: true,
-          user: { select: { isActive: true } },
-          assignments: {
-            select: {
-              service: { select: { id: true, name: true, category: { select: { name: true } } } },
-            },
-          },
-        },
+        select: employeeAccessSelect,
       });
-      employee = createdEmp as any;
     } else {
       return null;
     }
   }
 
-  let zones = employee!.assignments.map((a) => ({
+  let zones = employee.assignments.map((a) => ({
     serviceId: a.service.id,
     serviceName: a.service.name,
     categoryName: a.service.category.name,
@@ -82,9 +84,9 @@ export async function findEmployeeByUserId(userId: string): Promise<EmployeeForA
   }
 
   return {
-    id: employee!.id,
-    isActive: employee!.isActive,
-    userIsActive: employee!.user.isActive,
+    id: employee.id,
+    isActive: employee.isActive,
+    userIsActive: employee.user.isActive,
     zones,
   };
 }
