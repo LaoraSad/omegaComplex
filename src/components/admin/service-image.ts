@@ -8,11 +8,11 @@ const SERVICE_IMAGES: Record<string, string> = {
   "piscina-tobogan": "/newassets/tobogan-piscina-1.webp",
   "piscina-inodoro": "/newassets/bowl-slide.webp",
   "piscina-torpedo": "/newassets/torpedo.webp",
-  // Canchas de microfútbol (2 con micro-sintetica_360 y 2 con cubierta_360)
+  // Canchas de microfútbol (2 con micro-sintetica y 2 con cubierta)
   "cancha-microfutbol-1": "/newassets/micro-sintetica_360.webp",
   "cancha-microfutbol-2": "/newassets/micro-sintetica_360.webp",
-  "cancha-microfutbol-3": "/newassets/cubierta_360.webp",
-  "cancha-microfutbol-4": "/newassets/cubierta_360.webp",
+  "cancha-microfutbol-3": "/newassets/cubierta.webp",
+  "cancha-microfutbol-4": "/newassets/cubierta.webp",
   // Otras instalaciones
   "cancha-futbol": "/newassets/futbol-11.webp",
   "polideportiva-1": "/newassets/poli-multi.webp",
