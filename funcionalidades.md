@@ -1,4 +1,4 @@
-﻿# Omega Complex - Documento técnico funcional
+# Omega Complex - Documento técnico funcional
 
 Documento de referencia para estudiar el sistema antes de la auditoría. Cubre qué hace la aplicación, cómo está construida y por qué se tomaron las decisiones técnicas.
 
@@ -24,7 +24,7 @@ La regla de negocio central es que **el inventario de cupos se resuelve en Postg
 npx tsc --noEmit   ->  0 errores
 npm run lint       ->  0 errores, 10 warnings (preexistentes)
 npm run build      ->  49 páginas generadas
-npx vitest run     ->  102 tests, 0 fallos
+npx vitest run     ->  120 tests, 0 fallos
 ```
 
 ---
@@ -33,8 +33,7 @@ npx vitest run     ->  102 tests, 0 fallos
 
 | Capa | Tecnología | Versión |
 | --- | --- | --- |
-| Framework | Next.js (App Router, Turbopack) | 16.3.6 |
-| UI | React | 19.2.8 |
+| Framework | Next.js (App Router) | 16.3.6 |
 | Lenguaje | TypeScript | estricto |
 | Base de datos | PostgreSQL (Supabase) | — |
 | ORM | Prisma | 6.19.3 |
@@ -55,7 +54,7 @@ npx vitest run     ->  102 tests, 0 fallos
 @prisma/client        bcryptjs        class-variance-authority  clsx
 date-fns              dotenv          jose                      lucide-react
 motion                next            pdf-lib                   qrcode
-react / react-dom    react-day-picker react-hook-form          recharts
+react-day-picker      react-hook-form          recharts
 resend               sharp           sonner                    stripe
 tailwind-merge       zod             zustand                   axios
 ```
