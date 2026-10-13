@@ -5,6 +5,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import QRCode from "qrcode";
 
 import type { QrParaCorreo } from "@/lib/email/resend";
+import { formatShortCode } from "@/features/access/short-code";
 
 /**
  * Arma el PDF con los QR de una reserva.
@@ -239,13 +240,32 @@ export async function generarPdfQr(datos: DatosPdfQr): Promise<Uint8Array> {
         color: gris,
       });
 
-      page.drawText("Presentar en la puerta de esta zona", {
-        x: textoX,
-        y: base + 20,
-        size: 8,
-        font: normal,
-        color: rgb(0.6, 0.6, 0.6),
-      });
+      // Código corto: respaldo para cuando la cámara de la puerta falla. Es el
+      // mismo acceso que el QR, así que el empleado lo teclea y sigue validando.
+      if (qr.codigoCorto) {
+        page.drawText("Si la cámara falla, dicta este código:", {
+          x: textoX,
+          y: base + 24,
+          size: 8,
+          font: normal,
+          color: rgb(0.6, 0.6, 0.6),
+        });
+        page.drawText(formatShortCode(qr.codigoCorto), {
+          x: textoX,
+          y: base + 9,
+          size: 11,
+          font: negrita,
+          color: tinta,
+        });
+      } else {
+        page.drawText("Presentar en la puerta de esta zona", {
+          x: textoX,
+          y: base + 20,
+          size: 8,
+          font: normal,
+          color: rgb(0.6, 0.6, 0.6),
+        });
+      }
 
       y = base - 12;
     }

@@ -6,6 +6,8 @@ import { join } from "node:path";
 import QRCode from "qrcode";
 import { Resend } from "resend";
 
+import { formatShortCode } from "@/features/access/short-code";
+
 let resendClient: Resend | undefined;
 
 function getClient(): Resend {
@@ -190,6 +192,12 @@ export type QrParaCorreo = {
   nombre: string;
   /** Token crudo: es lo que el empleado escanea. Solo existe en este momento. */
   token: string;
+  /**
+   * Código corto transcribible. Es el mismo acceso que el token: si a la
+   * puerta la cámara falla, el cliente dicta este código y el empleado lo
+   * teclea en lugar de quedarse sin poder entrar.
+   */
+  codigoCorto?: string;
 };
 
 /**
@@ -248,6 +256,14 @@ export async function sendQrEmail(
             </td></tr>
           <tr><td align="center" style="padding:8px 16px 0;color:#242124;font-size:16px;font-weight:bold">${escapeHtml(qr.nombre)}</td></tr>
           <tr><td align="center" style="padding:3px 16px 14px;color:#6b6b6b;font-size:13px">${escapeHtml(qr.servicio)} &middot; ${escapeHtml(qr.zona)}</td></tr>
+          ${
+            qr.codigoCorto
+              ? `<tr><td align="center" style="padding:0 16px 14px">
+                  <span style="display:inline-block;padding:5px 10px;border:1px dashed #b9a6ac;border-radius:6px;color:#4b4447;font-family:Menlo,Consolas,monospace;font-size:14px;font-weight:bold;letter-spacing:2px">${escapeHtml(formatShortCode(qr.codigoCorto))}</span>
+                  <p style="margin:6px 0 0;color:#8a8085;font-size:11px">Si la cámara del empleado falla, dicta este código.</p>
+                </td></tr>`
+              : ""
+          }
         </table>`;
     }),
   );

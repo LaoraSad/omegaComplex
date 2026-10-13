@@ -18,7 +18,8 @@ export type DenialCode =
   | "franja_no_iniciada"
   | "acceso_ya_registrado"
   | "empleado_inactivo"
-  | "empleado_sin_zona";
+  | "empleado_sin_zona"
+  | "denegado_por_empleado";
 
 export type DenialReason = {
   code: DenialCode;
@@ -42,8 +43,14 @@ export type ReservationSummary = {
   quantity: number;
   startsAt: Date;
   endsAt: Date;
+  /** Quien hizo y pago la reserva. Puede no ser quien presenta el QR. */
   customerName: string;
   customerDocument: string | null;
+  /** Quien trae el QR: el titular o uno de sus acompañantes. Es el nombre que
+   *  el empleado debe comprobar contra la persona que tiene enfrente. */
+  personName: string;
+  personDocument: string | null;
+  personIsTitular: boolean;
   zone: ZoneInfo;
 };
 
@@ -66,6 +73,8 @@ export type AccessLookup = {
 export type AccessGrant = {
   accessId: string;
   accessedAt: Date;
+  /** Quien ingreso: la persona del QR, no necesariamente el titular. */
+  personName: string;
   customerName: string;
   zone: ZoneInfo;
 };
