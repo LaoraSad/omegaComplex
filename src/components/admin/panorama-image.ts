@@ -18,8 +18,8 @@ const PANORAMAS_360: Record<string, string> = {
   // Canchas de microfútbol
   "cancha-microfutbol-1": "/newassets/micro-sintetica_360.webp",
   "cancha-microfutbol-2": "/newassets/micro-sintetica_360.webp",
-  "cancha-microfutbol-3": "/newassets/cubierta_360.webp",
-  "cancha-microfutbol-4": "/newassets/cubierta_360.webp",
+  "cancha-microfutbol-3": "/newassets/cubierta.webp",
+  "cancha-microfutbol-4": "/newassets/cubierta.webp",
 
   // Otras instalaciones
   "cancha-futbol": "/newassets/futbol-11.webp",
