@@ -277,13 +277,36 @@ export function CarritoProvider({
 
   // El solape real de franjas lo valida el servidor al confirmar, que es quien
   // tiene la verdad de los cupos. Aqui solo se corta el duplicado obvio, para
-  // que un doble clic no sume dos veces la misma franja.
+  // que un doble clic no sume dos veces la misma franja, y el solape de
+  // horarios entre zonas: sin esto el cliente llenaba el carrito con dos
+  // horarios que se pisan y se enteraba al pagar, cuando ya habia elegido
+  // todo lo demas.
   const agregar = useCallback<CarritoCtx['agregar']>(
     (b) => {
       if (bloques.some((x) => x.slotId === b.slotId)) {
         return { ok: false, message: 'Esa franja ya está en tu carrito.' };
       }
       const clave = `${b.serviceId}|${b.slotId}`;
+      // Dos zonas no pueden pisarse en el tiempo: un solape de minutos ya es un
+      // choque. Se compara contra cada bloque del carrito de la misma fecha.
+      const inicioNuevo = new Date(b.etiquetaHora).getTime();
+      const finNuevo = new Date(b.etiquetaFin).getTime();
+      const choque = bloques.find((x) => {
+        if (x.fecha !== b.fecha) return false;
+        const inicio = new Date(x.etiquetaHora).getTime();
+        const fin = new Date(x.etiquetaFin).getTime();
+        return inicioNuevo < fin && inicio < finNuevo;
+      });
+      if (choque) {
+        return {
+          ok: false,
+          message:
+            `${b.fecha === choque.fecha ? '' : 'Otro día: '}` +
+            `${choque.serviceName} ${formatoHora(new Date(choque.etiquetaHora))} a ` +
+            `${formatoHora(new Date(choque.etiquetaFin))} ya está en tu carrito. ` +
+            'Elige otro horario o quita esa zona primero.',
+        };
+      }
       // Una zona nueva entra con el grupo completo por defecto: es lo más común
       // y el cliente puede desmarcar a quien no vaya a esa puerta.
       const asistentes = b.asistentes ?? todos;
