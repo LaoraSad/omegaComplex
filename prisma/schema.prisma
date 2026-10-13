@@ -357,6 +357,10 @@ model QrToken {
   // antiguas, que aun no han pasado por la emision de QR.
   blockId       String?   @db.Uuid
   tokenHash     String    @unique
+  // Codigo corto de 8 simbolos (p. ej. K7M2-XQP4) para escribirlo a mano si la
+  // camara del empleado falla. Es el mismo acceso que el token, no uno nuevo.
+  // Nulo en los QR emitidos antes de existira esta columna.
+  shortCode     String?   @unique
   // Numeracion legible dentro de la zona: el PDF imprime algo como Z2-P03
   // (zona 2, persona 3) para que el empleado identifique a quien escanea.
   seqNo         Int       @default(1)
