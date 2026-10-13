@@ -3,7 +3,7 @@ import {
   findEmployeeByUserId,
   findQrByTokenHash,
   grantAccess,
-  hashAccessToken,
+  marcarQrExpirado,
   type EmployeeForAccess,
 } from "./access.repository";
 import type {
@@ -41,7 +41,7 @@ export async function lookupAccess(rawToken: string, employee: EmployeeForAccess
   }
 
   // 1. El QR debe existir.
-  const qr = await findQrByTokenHash(hashAccessToken(rawToken));
+  const qr = await findQrByTokenHash(rawToken);
   if (!qr) {
     return denied("qr_invalido", "Este codigo QR no pertenece a ninguna reserva.");
   }
@@ -57,6 +57,11 @@ export async function lookupAccess(rawToken: string, employee: EmployeeForAccess
     endsAt: qr.endsAt,
     customerName: `${qr.customerFirstName} ${qr.customerLastName}`.trim(),
     customerDocument: qr.customerDocument,
+    // Quien trae el QR. Puede no ser quien hizo la reserva: si unscritieron tres
+    // amigos, cada uno lleva su propio QR y el empleado debe ver a esa persona.
+    personName: qr.guestName,
+    personDocument: qr.guestDocument,
+    personIsTitular: qr.guestIsTitular,
     // Un QR sin bloque es de una reserva de una sola zona: se usa el servicio de la
     // reserva. Con bloque, manda el bloque (piscina != baloncesto).
     zone: qr.serviceId
@@ -137,6 +142,9 @@ export async function lookupAccess(rawToken: string, employee: EmployeeForAccess
     };
   }
   if (now > qr.endsAt) {
+    // La franja ya no sirve: se marca el QR como expirado para que el panel de
+    // reservas lo muestre como tal y no como "activo y sin usar".
+    await marcarQrExpirado(qr.qrTokenId);
     return {
       outcome: "denied",
       reservation: summary,
@@ -179,7 +187,7 @@ export async function confirmAccess(input: {
     return { ok: false, code: "empleado_inactivo", message: "Tu usuario esta desactivado." };
   }
 
-  const qr = await findQrByTokenHash(hashAccessToken(input.rawToken));
+  const qr = await findQrByTokenHash(input.rawToken);
   if (!qr) {
     return { ok: false, code: "qr_invalido", message: "Este codigo QR no pertenece a ninguna reserva." };
   }
@@ -214,6 +222,7 @@ export async function confirmAccess(input: {
     grant: {
       accessId: granted.accessId,
       accessedAt: granted.accessedAt,
+      personName: previous.reservation.personName,
       customerName: previous.reservation.customerName,
       zone: previous.reservation.zone,
     },
@@ -226,7 +235,7 @@ export async function recordDenial(input: {
   employee: EmployeeForAccess;
   reason: string;
 }): Promise<void> {
-  const qr = await findQrByTokenHash(hashAccessToken(input.rawToken));
+  const qr = await findQrByTokenHash(input.rawToken);
   if (!qr) return;
   await grantAccess({
     qrTokenId: qr.qrTokenId,
@@ -234,6 +243,49 @@ export async function recordDenial(input: {
     result: "denied",
     denialReason: input.reason,
   });
+}
+
+/**
+ * El empleado decide que esta persona no entra, aunque el QR sea valido: no
+ * reconoce a quien lo presenta, la zona esta cerrada o hay una restriccion que el
+ * sistema no conoce. Queda registrado con su motivo y el QR se consume, para que
+ * no se pueda intentar de nuevo en otra puerta.
+ */
+export async function denyAccess(input: {
+  rawToken: string;
+  employee: EmployeeForAccess;
+  reason: string;
+}): Promise<
+  | { ok: true; denial: { code: DenialCode; message: string } }
+  | { ok: false; code: DenialCode; message: string }
+> {
+  if (!input.employee.isActive || !input.employee.userIsActive) {
+    return { ok: false, code: "empleado_inactivo", message: "Tu usuario esta desactivado." };
+  }
+
+  const qr = await findQrByTokenHash(input.rawToken);
+  if (!qr) {
+    return { ok: false, code: "qr_invalido", message: "Este codigo QR no pertenece a ninguna reserva." };
+  }
+
+  const motivo = input.reason.trim() || "Denegado por el empleado en puerta.";
+  const registrado = await grantAccess({
+    qrTokenId: qr.qrTokenId,
+    employeeId: input.employee.id,
+    result: "denied",
+    denialReason: motivo,
+    consumeQr: true,
+  });
+
+  if (!registrado.ok) {
+    return {
+      ok: false,
+      code: "qr_ya_utilizado",
+      message: "Este QR ya se uso en otra puerta. No se puede denegar de nuevo.",
+    };
+  }
+
+  return { ok: true, denial: { code: "denegado_por_empleado", message: motivo } };
 }
 
 // ---------------------------------------------------------------------------
