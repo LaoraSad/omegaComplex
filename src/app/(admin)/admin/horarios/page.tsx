@@ -64,14 +64,14 @@ export default async function HorariosPage() {
                     <tr key={s.id}>
                       <td>
                         <span className="block font-bold text-white">{s.name}</span>
-                        <span className="block text-xs text-[#6f625e]">{s.category.name}</span>
+                        <span className="block text-xs text-[#b8aca6]">{s.category.name}</span>
                       </td>
                       {DAY_ORDER.map((d) => {
                         const sc = byDay.get(d);
                         return (
                           <td key={d} className="anum text-center text-xs">
                             {sc ? (
-                              <span className="font-semibold text-[#7a1f3d]">
+                              <span className="font-semibold text-[#e3bd74]">
                                 {sc.openTime.slice(0, 5)}–{sc.closeTime.slice(0, 5)}
                               </span>
                             ) : (
@@ -145,7 +145,7 @@ export default async function HorariosPage() {
                     <p className="truncate text-sm font-bold text-white">
                       {c.service ? c.service.name : "Todo el complejo"}
                     </p>
-                    <p className="text-xs text-[#6f625e]">
+                    <p className="text-xs text-[#b8aca6]">
                       {formatDate(c.dateFrom)} → {formatDate(c.dateTo)} · {c.reason}
                     </p>
                   </div>
@@ -162,12 +162,12 @@ export default async function HorariosPage() {
           )}
           {past.length > 0 ? (
             <details className="mt-3">
-              <summary className="cursor-pointer text-xs font-bold text-[#7a1f3d]">
+              <summary className="cursor-pointer text-xs font-bold text-[#e3bd74]">
                 Ver historial ({past.length})
               </summary>
               <ul className="mt-2 divide-y divide-[#f0e9e6]">
                 {past.map((c) => (
-                  <li key={c.id} className="py-2 text-xs text-[#6f625e]">
+                  <li key={c.id} className="py-2 text-xs text-[#b8aca6]">
                     <span className="font-semibold text-white">
                       {c.service ? c.service.name : "Todo el complejo"}
                     </span>{" "}

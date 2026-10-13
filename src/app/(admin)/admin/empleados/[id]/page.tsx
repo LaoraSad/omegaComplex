@@ -83,20 +83,20 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
             </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-bold text-white">{name}</p>
-              <p className="truncate text-xs text-[#6f625e]">{employee.user.email}</p>
+              <p className="truncate text-xs text-[#b8aca6]">{employee.user.email}</p>
             </div>
           </div>
           <dl className="mt-4 space-y-2 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-[#6f625e]">Documento</dt>
+              <dt className="text-[#b8aca6]">Documento</dt>
               <dd className="anum font-semibold">{employee.document}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-[#6f625e]">Teléfono</dt>
+              <dt className="text-[#b8aca6]">Teléfono</dt>
               <dd className="font-semibold">{employee.user.phone ?? "—"}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-[#6f625e]">Accesos validados</dt>
+              <dt className="text-[#b8aca6]">Accesos validados</dt>
               <dd className="anum font-semibold">{formatNumber(employee._count.accesses)}</dd>
             </div>
           </dl>
@@ -149,7 +149,7 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
               Cada QR que validó este empleado, con fecha y hora exacta.
             </p>
           </div>
-          <ScanLine className="h-5 w-5 text-[#7a1f3d]" />
+          <ScanLine className="h-5 w-5 text-[#e3bd74]" />
         </div>
 
         {accesses.rows.length > 0 ? (
@@ -176,7 +176,7 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
                           a.qrToken.reservation.customer.user.firstName,
                           a.qrToken.reservation.customer.user.lastName,
                         )}
-                        <span className="block text-xs font-normal text-[#6f625e]">
+                        <span className="block text-xs font-normal text-[#b8aca6]">
                           Doc. {a.qrToken.reservation.customer.document}
                         </span>
                       </td>
@@ -185,7 +185,7 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
                       <td>
                         <StatusBadge kind="access" value={a.result} />
                         {a.denialReason ? (
-                          <span className="block text-xs text-[#6f625e]">{a.denialReason}</span>
+                          <span className="block text-xs text-[#b8aca6]">{a.denialReason}</span>
                         ) : null}
                       </td>
                     </tr>

@@ -63,12 +63,12 @@ export default async function EmpleadosPage({ searchParams }: EmpleadosPageProps
                   <p className="truncate text-sm font-bold text-white">
                     <Link
                       href={`/admin/empleados/${e.id}`}
-                      className="hover:text-[#7a1f3d] hover:underline"
+                      className="hover:text-[#e3bd74] hover:underline"
                     >
                       {fullName(e.user.firstName, e.user.lastName)}
                     </Link>
                   </p>
-                  <p className="truncate text-xs text-[#6f625e]">{e.user.email}</p>
+                  <p className="truncate text-xs text-[#b8aca6]">{e.user.email}</p>
                 </div>
                 <span
                   className={`abadge ml-auto ${e.user.isActive && e.isActive ? "abadge-emerald" : "abadge-slate"}`}
@@ -79,20 +79,20 @@ export default async function EmpleadosPage({ searchParams }: EmpleadosPageProps
               </div>
               <dl className="space-y-1.5 text-sm">
                 <div className="flex justify-between gap-4">
-                  <dt className="text-[#6f625e]">Documento</dt>
+                  <dt className="text-[#b8aca6]">Documento</dt>
                   <dd className="anum font-semibold">{e.document}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-[#6f625e]">Teléfono</dt>
+                  <dt className="text-[#b8aca6]">Teléfono</dt>
                   <dd className="font-semibold">{e.user.phone ?? "—"}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-[#6f625e]">Accesos validados</dt>
+                  <dt className="text-[#b8aca6]">Accesos validados</dt>
                   <dd className="anum font-semibold">{formatNumber(e._count.accesses)}</dd>
                 </div>
               </dl>
               <div className="rounded-[10px] bg-[#1a1519] p-3">
-                <p className="mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider text-[#6f625e]">
+                <p className="mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider text-[#b8aca6]">
                   <MapPin className="h-3 w-3" /> Zona asignada
                 </p>
                 {e.assignments.length > 0 ? (

@@ -170,7 +170,7 @@ export function CategoriesClient({ initialCategories }: { initialCategories: Cat
                         <input aria-label="Descripción" className="ainput" value={editDescription} onChange={(event) => setEditDescription(event.target.value)} maxLength={500} />
                       </form>
                     ) : (
-                      <><span className="block font-bold">{category.name}</span><span className="block text-xs text-[#6f625e]">{category.description || "Sin descripción"}</span></>
+                      <><span className="block font-bold">{category.name}</span><span className="block text-xs text-[#b8aca6]">{category.description || "Sin descripción"}</span></>
                     )}
                   </td>
                   <td className="font-mono text-xs">{category.slug}</td>
@@ -197,7 +197,7 @@ export function CategoriesClient({ initialCategories }: { initialCategories: Cat
                   </td>
                 </tr>
               ))}
-              {categories.length === 0 ? <tr><td colSpan={5} className="py-8 text-center text-sm text-[#6f625e]">Aún no hay categorías registradas.</td></tr> : null}
+              {categories.length === 0 ? <tr><td colSpan={5} className="py-8 text-center text-sm text-[#b8aca6]">Aún no hay categorías registradas.</td></tr> : null}
             </tbody>
           </table>
         </div>

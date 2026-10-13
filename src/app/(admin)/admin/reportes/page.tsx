@@ -79,7 +79,7 @@ export default async function ReportesPage() {
                 <p className="akpi-label">{c.title}</p>
                 <p className="akpi-value">
                   {formatNumber(c.count)}{" "}
-                  <span className="text-sm font-semibold text-[#6f625e]">{c.unit}</span>
+                  <span className="text-sm font-semibold text-[#b8aca6]">{c.unit}</span>
                 </p>
                 <p className="akpi-context">{c.text}</p>
               </div>

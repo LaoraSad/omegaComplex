@@ -109,21 +109,21 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
           <div className="acard-pad">
             <dl className="grid grid-cols-3 gap-2 rounded-[10px] bg-[#1a1519] p-3 text-center">
               <div>
-                <dt className="text-[0.66rem] font-bold uppercase tracking-wider text-[#6f625e]">Capacidad</dt>
+                <dt className="text-[0.66rem] font-bold uppercase tracking-wider text-[#b8aca6]">Capacidad</dt>
                 <dd className="anum text-base font-extrabold">{formatNumber(service.capacity)}</dd>
               </div>
               <div className="border-x border-[#2a2226]">
-                <dt className="text-[0.66rem] font-bold uppercase tracking-wider text-[#6f625e]">Precio</dt>
+                <dt className="text-[0.66rem] font-bold uppercase tracking-wider text-[#b8aca6]">Precio</dt>
                 <dd className="anum text-base font-extrabold">{formatCOP(service.price)}</dd>
               </div>
               <div>
-                <dt className="text-[0.66rem] font-bold uppercase tracking-wider text-[#6f625e]">Ocupación hoy</dt>
+                <dt className="text-[0.66rem] font-bold uppercase tracking-wider text-[#b8aca6]">Ocupación hoy</dt>
                 <dd className="anum text-base font-extrabold">
                   {occupancy !== null ? `${occupancy}%` : "—"}
                 </dd>
               </div>
             </dl>
-            <p className="mt-3 flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider text-[#6f625e]">
+            <p className="mt-3 flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider text-[#b8aca6]">
               <Users className="h-3 w-3" /> Horario semanal
             </p>
             {service.serviceSchedules.length > 0 ? (
@@ -138,8 +138,8 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
                         sc ? "border-[#3a2530] bg-[#2a1520]" : "border-[#2a2226] bg-[#1a1519]"
                       }`}
                     >
-                      <span className="block text-[0.6rem] font-bold text-[#6f625e]">{DAY_LABELS[d]}</span>
-                      <span className={`block text-[0.6rem] font-semibold ${sc ? "text-[#7a1f3d]" : "text-[#a89c97]"}`}>
+                      <span className="block text-[0.6rem] font-bold text-[#b8aca6]">{DAY_LABELS[d]}</span>
+                      <span className={`block text-[0.6rem] font-semibold ${sc ? "text-[#e3bd74]" : "text-[#a89c97]"}`}>
                         {sc ? sc.openTime.slice(0, 5) : "—"}
                       </span>
                     </li>
@@ -174,7 +174,7 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
                       <span className="block truncate text-sm font-bold">
                         {fullName(r.customer.user.firstName, r.customer.user.lastName)}
                       </span>
-                      <span className="block truncate text-xs text-[#6f625e]">
+                      <span className="block truncate text-xs text-[#b8aca6]">
                         {formatDateTime(r.startsAt)} · {formatNumber(r.quantity)}{" "}
                         {r.quantity === 1 ? "cupo" : "cupos"}
                       </span>
@@ -212,7 +212,7 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
                     a.qrToken.reservation.customer.user.firstName,
                     a.qrToken.reservation.customer.user.lastName,
                   )}{" "}
-                  <span className="font-normal text-[#6f625e]">
+                  <span className="font-normal text-[#b8aca6]">
                     · {formatDateTime(a.accessedAt)} · QR #{a.qrToken.seqNo}
                   </span>
                 </span>

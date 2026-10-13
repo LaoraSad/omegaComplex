@@ -60,19 +60,19 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
             <h2 className="acard-title">Cliente</h2>
             <dl className="mt-2 space-y-1.5 text-sm">
               <div className="flex justify-between gap-4">
-                <dt className="text-[#6f625e]">Nombre</dt>
+                <dt className="text-[#b8aca6]">Nombre</dt>
                 <dd className="font-semibold">{fullName(r.customer.user.firstName, r.customer.user.lastName)}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-[#6f625e]">Documento</dt>
+                <dt className="text-[#b8aca6]">Documento</dt>
                 <dd className="font-semibold">{r.customer.document ?? "—"}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-[#6f625e]">Correo</dt>
+                <dt className="text-[#b8aca6]">Correo</dt>
                 <dd className="max-w-[60%] truncate font-semibold">{r.customer.user.email}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-[#6f625e]">Teléfono</dt>
+                <dt className="text-[#b8aca6]">Teléfono</dt>
                 <dd className="font-semibold">{r.customer.user.phone ?? "—"}</dd>
               </div>
             </dl>
@@ -81,26 +81,26 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
             <h2 className="acard-title">Servicio y horario</h2>
             <dl className="mt-2 space-y-1.5 text-sm">
               <div className="flex justify-between gap-4">
-                <dt className="text-[#6f625e]">Servicio</dt>
+                <dt className="text-[#b8aca6]">Servicio</dt>
                 <dd className="font-semibold">{r.service.name}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-[#6f625e]">Categoría</dt>
+                <dt className="text-[#b8aca6]">Categoría</dt>
                 <dd className="font-semibold">{r.service.category.name}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-[#6f625e]">Fecha</dt>
+                <dt className="text-[#b8aca6]">Fecha</dt>
                 <dd className="font-semibold">{formatDate(r.startsAt)}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-[#6f625e]">Hora</dt>
+                <dt className="text-[#b8aca6]">Hora</dt>
                 <dd className="font-semibold">
                   {formatTime(r.startsAt)} – {formatTime(r.endsAt)}
                 </dd>
               </div>
               {r.creator ? (
                 <div className="flex justify-between gap-4">
-                  <dt className="text-[#6f625e]">Venta física por</dt>
+                  <dt className="text-[#b8aca6]">Venta física por</dt>
                   <dd className="font-semibold">
                     {fullName(r.creator.firstName, r.creator.lastName)}
                   </dd>
@@ -119,7 +119,7 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
                 <li key={p.id} className="flex items-center justify-between gap-3 py-2.5">
                   <div>
                     <p className="anum text-sm font-bold">{formatCOP(p.amountCop)}</p>
-                    <p className="text-xs text-[#6f625e]">
+                    <p className="text-xs text-[#b8aca6]">
                       <StatusBadge kind="paymentMethod" value={p.method} /> · {formatDateTime(p.createdAt)}
                       {p.paidAt ? ` · pagado ${formatDateTime(p.paidAt)}` : ""}
                     </p>
@@ -129,7 +129,7 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
               ))}
             </ul>
           ) : (
-            <p className="mt-3 text-sm text-[#6f625e]">Esta reserva no tiene pagos registrados.</p>
+            <p className="mt-3 text-sm text-[#b8aca6]">Esta reserva no tiene pagos registrados.</p>
           )}
         </section>
       </div>
@@ -158,7 +158,7 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
                   <ul className="mt-2 space-y-1.5">
                     {qr.accesses.map((a) => (
                       <li key={a.id} className="flex items-center justify-between gap-2 text-xs">
-                        <span className="text-[#6f625e]">
+                        <span className="text-[#b8aca6]">
                           {formatDateTime(a.accessedAt)} ·{" "}
                           {fullName(a.employee.user.firstName, a.employee.user.lastName)}
                           {a.denialReason ? ` · ${a.denialReason}` : ""}
@@ -168,7 +168,7 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-2 text-xs text-[#6f625e]">
+                  <p className="mt-2 text-xs text-[#b8aca6]">
                     {qr.status === "active"
                       ? "Aún no se ha usado este código."
                       : qr.usedAt
@@ -180,7 +180,7 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-[#6f625e]">Esta reserva aún no tiene códigos QR emitidos.</p>
+          <p className="text-sm text-[#b8aca6]">Esta reserva aún no tiene códigos QR emitidos.</p>
         )}
       </section>
     </div>

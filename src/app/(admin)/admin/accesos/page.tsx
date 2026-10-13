@@ -150,7 +150,7 @@ export default async function AccesosPage({ searchParams }: AccesosPageProps) {
                     <td>
                       <StatusBadge kind="access" value={a.result} />
                       {a.denialReason ? (
-                        <span className="block text-xs text-[#6f625e]">{a.denialReason}</span>
+                        <span className="block text-xs text-[#b8aca6]">{a.denialReason}</span>
                       ) : null}
                     </td>
                   </tr>
