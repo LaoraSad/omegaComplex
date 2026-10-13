@@ -20,7 +20,7 @@ export function TableSkeleton({ rows = 6, cols = 5 }: { rows?: number; cols?: nu
       <div className="space-y-0 p-4">
         <div className="askeleton mb-3 h-4 w-1/3" />
         {Array.from({ length: rows }).map((_, r) => (
-          <div key={r} className="flex gap-3 border-t border-[#f0e9e6] py-3 first:border-t-0">
+          <div key={r} className="flex gap-3 border-t border-[#2a2226] py-3 first:border-t-0">
             {Array.from({ length: cols }).map((_, c) => (
               <div
                 key={c}

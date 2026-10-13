@@ -13,7 +13,7 @@ export function StatCard({ label, value, context, icon: Icon, accent }: StatCard
   return (
     <div
       className="acard acard-pad"
-      style={accent ? { borderColor: "#e3c3cf", background: "#fdf7f9" } : undefined}
+      style={accent ? { borderColor: "rgba(122, 31, 61, 0.5)", background: "rgba(122, 31, 61, 0.12)" } : undefined}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">

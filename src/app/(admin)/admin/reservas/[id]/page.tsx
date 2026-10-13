@@ -77,7 +77,7 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
               </div>
             </dl>
           </div>
-          <div className="border-t border-[#f0e9e6] pt-4">
+          <div className="border-t border-[#2a2226] pt-4">
             <h2 className="acard-title">Servicio y horario</h2>
             <dl className="mt-2 space-y-1.5 text-sm">
               <div className="flex justify-between gap-4">
@@ -149,7 +149,7 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
         {r.qrTokens.length > 0 ? (
           <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {r.qrTokens.map((qr) => (
-              <li key={qr.id} className="rounded-[10px] border border-[#f0e9e6] bg-[#faf8f7] p-3.5">
+              <li key={qr.id} className="rounded-[10px] border border-[#2a2226] bg-[#1a1519] p-3.5">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-bold">QR #{qr.seqNo}</p>
                   <StatusBadge kind="qr" value={qr.status} />

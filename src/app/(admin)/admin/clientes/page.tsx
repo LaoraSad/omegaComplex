@@ -77,7 +77,7 @@ export default async function ClientesPage({ searchParams }: ClientesPageProps) 
               <tbody>
                 {rows.map((c) => (
                   <tr key={c.id}>
-                    <td className="font-bold text-[#211a1d]">
+                    <td className="font-bold text-white">
                       {fullName(c.user.firstName, c.user.lastName)}
                     </td>
                     <td className="anum">{c.document ?? "—"}</td>

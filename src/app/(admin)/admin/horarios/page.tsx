@@ -63,7 +63,7 @@ export default async function HorariosPage() {
                   return (
                     <tr key={s.id}>
                       <td>
-                        <span className="block font-bold text-[#211a1d]">{s.name}</span>
+                        <span className="block font-bold text-white">{s.name}</span>
                         <span className="block text-xs text-[#6f625e]">{s.category.name}</span>
                       </td>
                       {DAY_ORDER.map((d) => {
@@ -104,15 +104,15 @@ export default async function HorariosPage() {
           </div>
           <ScheduleForm services={options} />
           {services.map((service) => (
-            <div key={service.id} className="mt-4 border-t border-[#f0e9e6] pt-3">
+            <div key={service.id} className="mt-4 border-t border-[#2a2226] pt-3">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="font-bold text-[#211a1d]">{service.name}</span>
+                <span className="font-bold text-white">{service.name}</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {DAY_ORDER.map((day) => {
                   const schedule = service.serviceSchedules.find((s) => s.dayOfWeek === day);
                   return (
-                    <div key={`${service.id}-${day}`} className="inline-flex items-center gap-2 rounded-full border border-[#e9dfdc] bg-[#fffaf8] px-2.5 py-1 text-xs text-[#4d413f]">
+                    <div key={`${service.id}-${day}`} className="inline-flex items-center gap-2 rounded-full border border-[#2a2226] bg-[#1a1519] px-2.5 py-1 text-xs text-white/80">
                       <span className="font-semibold">{DAY_LABELS[day]}</span>
                       {schedule ? (
                         <>
@@ -142,7 +142,7 @@ export default async function HorariosPage() {
               {upcoming.map((c) => (
                 <li key={c.id} className="flex items-center gap-3 py-2.5">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold text-[#211a1d]">
+                    <p className="truncate text-sm font-bold text-white">
                       {c.service ? c.service.name : "Todo el complejo"}
                     </p>
                     <p className="text-xs text-[#6f625e]">
@@ -168,7 +168,7 @@ export default async function HorariosPage() {
               <ul className="mt-2 divide-y divide-[#f0e9e6]">
                 {past.map((c) => (
                   <li key={c.id} className="py-2 text-xs text-[#6f625e]">
-                    <span className="font-semibold text-[#211a1d]">
+                    <span className="font-semibold text-white">
                       {c.service ? c.service.name : "Todo el complejo"}
                     </span>{" "}
                     · {formatDate(c.dateFrom)} → {formatDate(c.dateTo)} · {c.reason}

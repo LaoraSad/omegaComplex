@@ -38,7 +38,7 @@ function ZonePicker({ groups, selected, onToggle, idPrefix }: ZonePickerProps) {
         directinglo al lugar correcto.
       </p>
       {groups.map((group) => (
-        <div key={group.categoryId} className="rounded-[10px] border border-[#e8e1de] p-3">
+        <div key={group.categoryId} className="rounded-[10px] border border-[#2a2226] p-3">
           <p className="mb-2 text-[0.7rem] font-bold uppercase tracking-wider text-[#6f625e]">
             {group.categoryName}
           </p>
@@ -49,7 +49,7 @@ function ZonePicker({ groups, selected, onToggle, idPrefix }: ZonePickerProps) {
                 <li key={service.id}>
                   <label
                     htmlFor={inputId}
-                    className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-[#faf8f7]"
+                    className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-[#1a1519]"
                   >
                     <input
                       id={inputId}
