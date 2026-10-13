@@ -2,11 +2,12 @@
 // Claves canónicas = slugs del seed (prisma/seed.ts). Se conservan alias
 // históricos para no romper referencias antiguas.
 const SERVICE_IMAGES: Record<string, string> = {
-  // Piscinas (Torpedo no tiene imagen)
+  // Piscinas
   "piscina-infantil": "/newassets/piscina-infantil.webp",
   "piscina-de-olas": "/newassets/piscina-olas.webp",
   "piscina-tobogan": "/newassets/tobogan-piscina-1.webp",
   "piscina-inodoro": "/newassets/bowl-slide.webp",
+  "piscina-torpedo": "/newassets/torpedo.webp",
   // Canchas de microfútbol (2 con micro-sintetica_360 y 2 con cubierta_360)
   "cancha-microfutbol-1": "/newassets/micro-sintetica_360.webp",
   "cancha-microfutbol-2": "/newassets/micro-sintetica_360.webp",
