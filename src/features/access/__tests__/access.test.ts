@@ -3,16 +3,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   findQrByTokenHash: vi.fn(),
   grantAccess: vi.fn(),
+  marcarQrExpirado: vi.fn(),
 }));
 
 vi.mock("../access.repository", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/access/access.repository")>()),
   findQrByTokenHash: mocks.findQrByTokenHash,
   grantAccess: mocks.grantAccess,
+  marcarQrExpirado: mocks.marcarQrExpirado,
 }));
 
 import {
   confirmAccess,
+  denyAccess,
   lookupAccess,
   recordDenial,
 } from "../access.service";
@@ -44,6 +47,9 @@ function qrBase(overrides: Partial<QrLookup> = {}): QrLookup {
     customerFirstName: "Ana",
     customerLastName: "López",
     customerDocument: "12345",
+    guestName: "Ana López",
+    guestDocument: "12345",
+    guestIsTitular: true,
     serviceId: "svc-1",
     serviceName: "Piscina adultos 1",
     categoryName: "Piscinas",
@@ -142,6 +148,8 @@ it("deniega fecha distinta, franja no iniciada y franja terminada", async () => 
       await expect(lookupAccess("t", empleado)).resolves.toMatchObject({
         denial: { code: "franja_terminada" },
       });
+      // El QR queda expirado para que el panel no lo muestre como activo.
+      expect(mocks.marcarQrExpirado).toHaveBeenCalledWith("qr-1");
     });
 
   it("permite en zona y avisa fuera de zona sin denegar", async () => {
@@ -195,6 +203,105 @@ describe("confirmAccess", () => {
     mocks.grantAccess.mockResolvedValue({ ok: false, reason: "qr_consumido" });
     const result = await confirmAccess({ rawToken: "t", employee: empleado });
     expect(result).toMatchObject({ ok: false, code: "qr_ya_utilizado" });
+  });
+});
+
+describe("denyAccess", () => {
+  it("registra la denegación y consume el QR", async () => {
+    mocks.findQrByTokenHash.mockResolvedValue(qrBase());
+    mocks.grantAccess.mockResolvedValue({ ok: true, accessId: "acc-1", accessedAt: new Date() });
+
+    const result = await denyAccess({
+      rawToken: "t",
+      employee: empleado,
+      reason: "La persona no coincide con la ficha",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      denial: {
+        code: "denegado_por_empleado",
+        message: "La persona no coincide con la ficha",
+      },
+    });
+    // El QR se consume: si no, el mismo código rebotaría en otra puerta.
+    expect(mocks.grantAccess).toHaveBeenCalledWith({
+      qrTokenId: "qr-1",
+      employeeId: "emp-1",
+      result: "denied",
+      denialReason: "La persona no coincide con la ficha",
+      consumeQr: true,
+    });
+  });
+
+  it("pone un motivo por defecto si el empleado no escribe ninguno", async () => {
+    mocks.findQrByTokenHash.mockResolvedValue(qrBase());
+    mocks.grantAccess.mockResolvedValue({ ok: true, accessId: "acc-2", accessedAt: new Date() });
+
+    const result = await denyAccess({ rawToken: "t", employee: empleado, reason: "   " });
+    expect(result.ok).toBe(true);
+    expect(mocks.grantAccess).toHaveBeenCalledWith(
+      expect.objectContaining({ denialReason: "Denegado por el empleado en puerta." }),
+    );
+  });
+
+  it("no hace nada si el empleado está inactivo", async () => {
+    const result = await denyAccess({
+      rawToken: "t",
+      employee: { ...empleado, isActive: false },
+      reason: "x",
+    });
+    expect(result).toMatchObject({ ok: false, code: "empleado_inactivo" });
+    expect(mocks.grantAccess).not.toHaveBeenCalled();
+  });
+
+  it("avisa si otro empleado ya consumió el QR", async () => {
+    mocks.findQrByTokenHash.mockResolvedValue(qrBase());
+    mocks.grantAccess.mockResolvedValue({ ok: false, reason: "qr_consumido" });
+
+    const result = await denyAccess({ rawToken: "t", employee: empleado, reason: "x" });
+    expect(result).toMatchObject({ ok: false, code: "qr_ya_utilizado" });
+  });
+});
+
+describe("ficha de la persona", () => {
+  it("muestra a quien trae el QR, no al titular de la reserva", async () => {
+    mocks.findQrByTokenHash.mockResolvedValue(
+      qrBase({
+        customerFirstName: "Ana",
+        customerLastName: "López",
+        customerDocument: "12345",
+        guestName: "Carlos Ruiz",
+        guestDocument: "CC777",
+        guestIsTitular: false,
+      }),
+    );
+
+    const lookup = await lookupAccess("t", empleado);
+    expect(lookup.outcome).toBe("allowed");
+    expect(lookup.reservation?.personName).toBe("Carlos Ruiz");
+    expect(lookup.reservation?.personDocument).toBe("CC777");
+    expect(lookup.reservation?.personIsTitular).toBe(false);
+    // El titular sigue visible: el empleado puede contrastar con la reserva.
+    expect(lookup.reservation?.customerName).toBe("Ana López");
+  });
+});
+
+describe("franja que todavía no empieza", () => {
+  it("dice que espere en vez de simplemente denegar", async () => {
+    mocks.findQrByTokenHash.mockResolvedValue(
+      qrBase({
+        startsAt: new Date(HORA_FIJA.getTime() + 60 * 60_000),
+        endsAt: new Date(HORA_FIJA.getTime() + 120 * 60_000),
+      }),
+    );
+
+    const lookup = await lookupAccess("t", empleado);
+    expect(lookup.outcome).toBe("denied");
+    expect(lookup.denial?.code).toBe("franja_no_iniciada");
+    expect(lookup.denial?.message).toContain("esperar");
+    // La ficha viaja igual: el empleado ve de quién es el código.
+    expect(lookup.reservation?.personName).toBe("Ana López");
   });
 });
 

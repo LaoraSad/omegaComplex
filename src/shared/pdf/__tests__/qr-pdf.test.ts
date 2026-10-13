@@ -1,10 +1,44 @@
 import { describe, expect, it } from "vitest";
+import { inflateSync } from "node:zlib";
 
 import { generarPdfQr } from "../qr-pdf";
 
 /** El PDF se valida por su estructura binaria: cabecera, trailer, paginas y tamano. */
 function pdfComoTexto(pdf: Uint8Array): string {
   return Buffer.from(pdf).toString("latin1");
+}
+
+/**
+ * Texto realmente dibujado en la pagina.
+ *
+ * Los flujos de contenido van comprimidos y los textos se escriben como
+ * operandos hexadecimales (`<436F6469676F73> Tj`), asi que hay que inflar y
+ * luego traducir esos hex a texto para poder buscar dentro. Las imagenes son
+ * flujos que no son Flate valido y `inflateSync` las descarta solo.
+ */
+function textoDibujado(pdf: Uint8Array): string {
+  const buf = Buffer.from(pdf);
+  let salida = "";
+  let i = 0;
+  while (i < buf.length) {
+    const inicio = buf.indexOf("stream", i, "latin1");
+    if (inicio === -1) break;
+    let desde = inicio + "stream".length;
+    if (buf[desde] === 0x0d) desde++;
+    if (buf[desde] === 0x0a) desde++;
+    const hasta = buf.indexOf("endstream", desde, "latin1");
+    if (hasta === -1) break;
+    try {
+      salida += inflateSync(buf.subarray(desde, hasta)).toString("latin1");
+    } catch {
+      // No es un flujo de texto (es una imagen): se ignora.
+    }
+    i = hasta + "endstream".length;
+  }
+
+  return salida.replace(/<([0-9A-Fa-f\s]+)>/g, (_, hex: string) =>
+    Buffer.from(hex.replace(/\s+/g, ""), "hex").toString("latin1"),
+  );
 }
 
 /** Cuenta las paginas reales del documento. */
@@ -33,6 +67,8 @@ async function imagenesPorQr(n: number): Promise<number> {
   return contarImagenes(lleno) - contarImagenes(vacio);
 }
 
+const codigosValidos = ["K7M2XQP4", "B93TQWE2", "M5KDXAP7", "T9WH4NRY", "X2PQ7EKM", "W6RBYF3C", "H8JMD2NX", "P4KWT9QC", "D3VSG7YM", "Q7NKB5XP", "T2HMW6RF", "V9DXC4PN"];
+
 const codigos = (n: number) =>
   Array.from({ length: n }, (_, i) => ({
     etiqueta: `Z${Math.floor(i / 2) + 1}-P${String((i % 2) + 1).padStart(2, "0")}`,
@@ -40,6 +76,7 @@ const codigos = (n: number) =>
     zona: i % 2 === 0 ? "Zona A" : "Zona B",
     nombre: `Persona ${i + 1}`,
     token: `token-secreto-${i}-abcdef123456`,
+    codigoCorto: codigosValidos[i % codigosValidos.length],
   }));
 
 describe("generador de PDF de QR", () => {
@@ -87,6 +124,21 @@ describe("generador de PDF de QR", () => {
     // Lo que importa es que las 12 personas quepan con salto de página.
     expect(contarPaginas(uno)).toBe(1);
     expect(contarPaginas(muchos)).toBeGreaterThan(1);
+  });
+
+  it("imprime el código corto para escribirlo si la cámara falla", async () => {
+    const pdf = await generarPdfQr({ nombre: "Ana", fecha: "12 oct", codigos: codigos(1) });
+    const texto = textoDibujado(pdf);
+    expect(texto).toContain("K7M2-XQP4");
+    expect(texto).toContain("Si la cámara falla");
+    expect(texto).toContain("dicta este código");
+  });
+
+  it("conserva el texto de persona y zona junto al código", async () => {
+    const pdf = await generarPdfQr({ nombre: "Ana", fecha: "f", codigos: codigos(1) });
+    const texto = textoDibujado(pdf);
+    expect(texto).toContain("Persona 1");
+    expect(texto).toContain("Z1-P01");
   });
 
   it("no rompe con una reserva sin QR", async () => {

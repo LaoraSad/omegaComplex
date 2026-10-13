@@ -5,11 +5,13 @@ import { ok } from "@/shared/http/api-response";
 import { requireRole } from "@/shared/auth/require-role";
 import {
   firstIssue,
+  denyRequestSchema,
   grantRequestSchema,
   validateRequestSchema,
 } from "@/features/access/access.schemas";
 import {
   confirmAccess,
+  denyAccess,
   getEmployeeAccessContext,
   lookupAccess,
   recordDenial,
@@ -18,14 +20,15 @@ import {
 // ---------------------------------------------------------------------------
 // Control de acceso del empleado (SCRUM secciones 15 a 19).
 //
-// Dos pasos obligatorios, nunca automaticos:
-//   POST /api/access/validate           -> consulta: ficha de la reserva
-//   POST /api/access/validate?action=confirm -> el empleado da el acceso
+// Tres pasos obligatorios, nunca automáticos:
+//   POST /api/access/validate                  -> consulta: ficha de la reserva
+//   POST /api/access/validate?action=confirm   -> el empleado da el acceso
+//   POST /api/access/validate?action=deny      -> el empleado lo rechaza
 // ---------------------------------------------------------------------------
 
 export const POST = handler(async (req) => {
   const session = await requireRole("employee", "admin");
-  const isConfirm = new URL(req.url).searchParams.get("action") === "confirm";
+  const action = new URL(req.url).searchParams.get("action");
   const body: unknown = await req.json().catch(() => null);
 
   const employee = await getEmployeeAccessContext(session.userId);
@@ -36,7 +39,27 @@ export const POST = handler(async (req) => {
     );
   }
 
-  if (!isConfirm) {
+  if (action === "deny") {
+    const parsed = denyRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        ok({ outcome: "denied", denial: { code: "qr_invalido", message: firstIssue(parsed.error) } }),
+      );
+    }
+
+    const result = await denyAccess({
+      rawToken: parsed.data.token,
+      employee,
+      reason: parsed.data.reason ?? "",
+    });
+
+    if (!result.ok) {
+      return NextResponse.json(ok({ outcome: "denied", denial: { code: result.code, message: result.message } }));
+    }
+    return NextResponse.json(ok({ outcome: "denied", denial: result.denial }));
+  }
+
+  if (action !== "confirm") {
     const parsed = validateRequestSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(

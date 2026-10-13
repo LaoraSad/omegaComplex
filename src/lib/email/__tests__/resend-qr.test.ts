@@ -19,8 +19,8 @@ process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
 import { sendQrEmail } from "@/lib/email/resend";
 
 const codigos = [
-  { etiqueta: "Z1-P01", servicio: "Piscina adultos 1", zona: "Piscinas", nombre: "Ana López", token: "token-crudo-1" },
-  { etiqueta: "Z2-P01", servicio: "Cancha de fútbol", zona: "Canchas", nombre: "Ana López", token: "token-crudo-2" },
+  { etiqueta: "Z1-P01", servicio: "Piscina adultos 1", zona: "Piscinas", nombre: "Ana López", token: "token-crudo-1", codigoCorto: "K7M2XQP4" },
+  { etiqueta: "Z2-P01", servicio: "Cancha de fútbol", zona: "Canchas", nombre: "Ana López", token: "token-crudo-2", codigoCorto: "B93TQWE2" },
 ];
 
 describe("sendQrEmail", () => {
@@ -62,6 +62,32 @@ describe("sendQrEmail", () => {
     expect(args.html).toContain("Z1-P01");
     expect(args.html).toContain("Piscina adultos 1");
     expect(args.html).toContain("1 de noviembre de 2026");
+  });
+
+  it("incluye el código corto transcribible de respaldo", async () => {
+    await sendQrEmail("ana@example.com", {
+      nombre: "Ana López",
+      fecha: "1 de noviembre de 2026",
+      codigos,
+    });
+    const args = sendMock.mock.calls[0][0];
+
+    // Con guion, porque es como lo ve el cliente y como lo dicta.
+    expect(args.html).toContain("K7M2-XQP4");
+    expect(args.html).toContain("B93T-QWE2");
+    // Y se explica para qué sirve: si la cámara de la puerta falla.
+    expect(args.html).toContain("cámara");
+  });
+
+  it("no rompe cuando el QR es antiguo y no tiene código corto", async () => {
+    await sendQrEmail("ana@example.com", {
+      nombre: "Ana",
+      fecha: "hoy",
+      codigos: [{ etiqueta: "Z1-P01", servicio: "Piscina", zona: "Piscinas", nombre: "Ana", token: "t" }],
+    });
+    const args = sendMock.mock.calls[0][0];
+    expect(args.html).toContain("Z1-P01");
+    expect(args.html).not.toContain("dicta este código");
   });
 
   it("escapa HTML en nombres y propaga el error de Resend", async () => {
