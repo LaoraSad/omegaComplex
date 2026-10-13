@@ -15,13 +15,13 @@
 
 <br />
 
-![Next.js](https://img.shields.io/badge/Next.js-App_Router-1F1F1F?style=flat-square&logo=next.js&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-16.3.6-1F1F1F?style=flat-square&logo=next.js&logoColor=white)
 ![React](https://img.shields.io/badge/React-19.2-1F1F1F?style=flat-square&logo=react&logoColor=61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-Strict-1F1F1F?style=flat-square&logo=typescript&logoColor=3178C6)
 ![Tailwind](https://img.shields.io/badge/Tailwind-v4-1F1F1F?style=flat-square&logo=tailwindcss&logoColor=06B6D4)
 ![Prisma](https://img.shields.io/badge/Prisma-6.19-1F1F1F?style=flat-square&logo=prisma&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-1F1F1F?style=flat-square&logo=postgresql&logoColor=4169E1)
-![Stripe](https://img.shields.io/badge/Stripe-Payments-1F1F1F?style=flat-square&logo=stripe&logoColor=635BFF)
+![Stripe](https://img.shields.io/badge/Stripe-23-1F1F1F?style=flat-square&logo=stripe&logoColor=635BFF)
 
 </div>
 
@@ -105,17 +105,20 @@ flowchart LR
 | -------------------------- | ------------- |
 | Registro                   | **Disponible** |
 | Inicio de sesión           | **Disponible** |
+| Acceso con Google          | **Disponible** |
+| Verificación de correo     | **Disponible** |
 | Consulta de servicios      | **Disponible** |
 | Consulta de disponibilidad | **Disponible** |
-| Perfil                     | **Disponible** |
-| Recuperación de contraseña | **Disponible** |
-| Verificación de correo     | **Disponible** |
-| Cambio de contraseña       | **Disponible** |
-| Reservas                   | **Disponible** |
+| Carrito multi-zona         | **Disponible** |
+| Personas por zona          | **Disponible** |
+| Acompañantes               | **Disponible** |
 | Pagos (Stripe)             | **Disponible** |
 | Código QR por correo       | **Disponible** |
+| PDF de QR adjunto          | **Disponible** |
 | Mis reservas               | **Disponible** |
-| Historial de reservas      | **Disponible** |
+| Perfil                     | **Disponible** |
+| Recuperación de contraseña | **Disponible** |
+| Cambio de contraseña       | **Disponible** |
 
 </details>
 
@@ -147,6 +150,8 @@ flowchart LR
 | Gestión de horarios      | **Disponible** |
 | Gestión de reservas      | **Disponible** |
 | Gestión de empleados     | **Disponible** |
+| Gestión de clientes      | **Disponible** |
+| Exportación CSV          | **Disponible** |
 | Información operativa    | **Disponible** |
 
 </details>
@@ -211,15 +216,15 @@ flowchart TB
 
 ### Comunicación HTTP
 
-El cliente web usa `fetch` con sobres `{ data, error }` (`src/lib/api/*`) contra los Route Handlers del mismo proyecto. No hay backend externo. (`axios` sigue declarado como dependencia pero ningún módulo lo importa.)
+El cliente web usa `fetch` con sobres `{ data, error }` (`src/lib/api/*`) contra los Route Handlers del mismo proyecto. No hay backend externo.
 
 ```mermaid
 %%{init: {'theme':'base','themeVariables':{'primaryColor':'#7A1F3D','primaryTextColor':'#F5F5F5','lineColor':'#C8A96B'}}}%%
 flowchart LR
-    Component["React Component"] --> Axios --> API["/api/*"] --> Service["Feature Service"] --> Repository --> DB[("PostgreSQL")]
+    Component["React Component"] --> API["/api/*"] --> Service["Feature Service"] --> Repository --> DB[("PostgreSQL")]
     classDef primary fill:#7A1F3D,color:#fff,stroke:#7A1F3D;
     classDef accent fill:#C8A96B,color:#1F1F1F,stroke:#C8A96B;
-    class Component,Axios,API primary;
+    class Component,API primary;
     class Service,Repository accent;
 ```
 
@@ -231,20 +236,22 @@ flowchart LR
 ```text
 src/
 ├── app/
-│   ├── (auth)/          change-password (en perfil), forgot-password, login, register, reset-password, verify-email
+│   ├── (auth)/          change-password, forgot-password, login, register, reset-password, verify-email
 │   ├── (customer)/      reservas
 │   ├── (employee)/      validar, turnos
-│   ├── (storefront)/    mis-reservas, perfil, servicios
+│   ├── (storefront)/    dashboard, informacion, inicio, mis-reservas, pagando, perfil, piscinas, servicios
 │   ├── (public)/        landing
 │   ├── (admin)/         panel: reservas, accesos, categorías, servicios, horarios, empleados, clientes, reportes
-│   └── api/             access, admin/export, auth, availability, categories, cron/holds, payments, pools, reservations, services
+│   └── api/
+             access, admin/export, auth, availability, categories, cron/holds,
+             payments, pools, reservations, services
 │
 ├── components/          auth, admin, catalog, public, storefront
-├── features/            access, admin, auth, availability, catalog, payments, reservations (+ qr)
+├── features/            access, admin, auth, availability, catalog, payments, reservations, schedules
 ├── lib/                 api, email
-├── shared/              auth, http, lib (db, env, logger, stripe)
+├── shared/              auth, http, integrations, pdf, lib (db, env, logger, stripe)
 ├── types/               auth
-└── middleware.ts        protección por rol (JWT sin BD)
+└── proxy.ts             protección por rol (JWT sin BD)
 ```
 
 </details>
@@ -263,25 +270,26 @@ src/
 
 | Categoría      | Tecnología                          |
 | -------------- | ----------------------------------- |
-| Framework      | Next.js App Router                  |
+| Framework      | Next.js 16.3 App Router (Turbopack) |
 | Frontend       | React 19.2                          |
 | Lenguaje       | TypeScript 5, modo estricto         |
 | Estilos        | Tailwind CSS v4, shadcn/ui          |
 | Iconografía    | Lucide React                        |
 | Animaciones    | Motion                              |
 | Formularios    | React Hook Form, Zod                |
-| Cliente HTTP   | Axios                               |
+| Cliente HTTP   | fetch nativo                        |
 | Estado global  | Zustand                             |
 | Fechas         | date-fns, React Day Picker          |
 | Notificaciones | Sonner                              |
-| QR             | qrcode.react                        |
+| QR             | qrcode (PNG), pdf-lib (PDF)         |
 | Gráficas       | Recharts                            |
 | Backend        | Next.js Route Handlers              |
 | ORM            | Prisma 6.19                         |
 | Base de datos  | PostgreSQL / Supabase               |
 | Autenticación  | jose, bcryptjs                      |
-| Pagos          | Stripe                              |
-| Pruebas        | Vitest, Playwright                  |
+| Pagos          | Stripe 23                           |
+| Correo         | Resend 6                            |
+| Pruebas        | Vitest 5, Playwright                |
 
 <img src="./docs/assets/divider.svg" width="100%" alt="" />
 
@@ -289,13 +297,15 @@ src/
 
 ### Autenticación y roles
 
-Omega Complex implementa autenticación propia con `bcryptjs` para contraseñas y `jose` para JWT de 7 días, guardados en cookies `HttpOnly` con `SameSite=Lax`. Un middleware protege las rutas y aplica autorización por rol.
+Omega Complex implementa autenticación propia con `bcryptjs` para contraseñas y `jose` para JWT de 7 días, guardados en cookies `HttpOnly` con `SameSite=Lax`. Un `proxy.ts` protege las rutas y aplica autorización por rol.
 
 | Rol           | Área                   | Ruta de entrada       |
 | ------------- | ---------------------- | --------------------- |
 | Usuario       | Cliente                | `/`                   |
 | Empleado      | Validación de acceso   | `/validar`            |
 | Administrador | Administración         | `/admin`              |
+
+El registro exige verificación de correo antes de permitir el acceso (`403 EMAIL_NOT_VERIFIED`). La verificación se revisa **después** de validar la contraseña, para no regalar información sobre qué correos están registrados.
 
 ### Reservas
 
@@ -311,9 +321,17 @@ La disponibilidad de un servicio es el resultado de combinar servicio, fecha, ho
 
 > Si un lunes es festivo, el mantenimiento se desplaza al martes.
 
+### Carrito
+
+El carrito vive en `sessionStorage` (no `localStorage`): sobrevive a la navegación del login en la misma pestaña, pero desaparece al cerrarla y no se comparte entre ventanas. Caduca a las 2 horas y se borra al confirmar la reserva.
+
+Va amarrado al `usuarioId` de la sesión: si otra cuenta entra en la misma pestaña, lo guardado se descarta en vez de mostrarse.
+
 ### Pagos
 
 Stripe es el proveedor de pagos. El estado de una reserva **no** se confirma por el retorno del navegador tras el checkout: **el webhook es la fuente de verdad**.
+
+Los montos se envían en **centavos** (unidad mínima de la moneda), no en pesos.
 
 ```mermaid
 %%{init: {'theme':'base','themeVariables':{'actorBkg':'#7A1F3D','actorTextColor':'#F5F5F5','actorBorder':'#7A1F3D','signalColor':'#7A1F3D','noteBkgColor':'#C8A96B'}}}%%
@@ -325,13 +343,15 @@ sequenceDiagram
 
     C->>A: Crear reserva temporal
     A->>DB: Crear bloqueo
-    A-->>C: Sesión de pago
+    A-->>C: Redirigir a /pagando/[id]
+    C->>A: Página de pago (servidor)
+    A->>S: Checkout Session
+    S-->>C: Pasarela de pago
     C->>S: Completar pago
     S-->>C: Resultado del checkout
     S->>A: Webhook
-    A->>DB: Actualizar Payment
-    A->>DB: Confirmar reserva
-    DB-->>C: Estado confirmado
+    A->>DB: Confirmar reserva + QR
+    A->>C: Correo con QR
 ```
 
 ### Control de acceso
@@ -366,7 +386,7 @@ Base: mismo origen, prefijo `/api`. Todas las respuestas usan el formato `{ "dat
 | Método | Ruta | Descripción |
 |---|---|---|
 | POST | `/api/auth/register` | Crea `User` + `Customer`, deja sesión activa (`201`) |
-| POST | `/api/auth/login` | Inicia sesión (`200`) |
+| POST | `/api/auth/login` | Inicia sesión (`200`), con rate limiting |
 | POST | `/api/auth/logout` | Cierra sesión e invalida la cookie |
 | GET | `/api/auth/me` | Usuario actual (`401` sin sesión) |
 | POST | `/api/auth/change-password` | Cambia la contraseña con sesión (exige la actual) |
@@ -384,13 +404,14 @@ Base: mismo origen, prefijo `/api`. Todas las respuestas usan el formato `{ "dat
 | GET · POST | `/api/reservations` | Lista propias y crea reservas con hold |
 | GET | `/api/reservations/[id]` | Detalle propio con QR y pagos |
 | POST | `/api/reservations/[id]` | Crea la Checkout Session de Stripe |
+| GET | `/api/reservations/[id]/estado-pago` | Estado del pago (consulta a Stripe si es necesario) |
 | POST | `/api/payments/webhook` | Webhook de Stripe (fuente de verdad del pago) |
 | POST | `/api/access/validate` | Consulta de QR en puerta |
 | POST | `/api/access/validate?action=confirm` | El empleado confirma el ingreso |
 | GET | `/api/admin/export` | Exportación CSV (solo admin) |
 | GET | `/api/cron/holds` | Libera holds vencidos (requiere `CRON_SECRET`) |
 
-Códigos: `200` OK · `201` creado · `400` validación · `401` no autenticado · `403` rol insuficiente · `404` no encontrado · `409` conflicto (email/documento duplicado) · `501` no implementado · `500` error interno.
+Códigos: `200` OK · `201` creado · `400` validación · `401` no autenticado · `403` rol insuficiente o correo sin verificar · `404` no encontrado · `409` conflicto · `503` servicio no disponible · `500` error interno.
 
 ### Modelo de datos
 
@@ -398,7 +419,7 @@ Fuente de verdad: `prisma/schema.prisma` (PostgreSQL). Resumen por dominio:
 
 | Dominio | Modelos |
 |---|---|
-| Identidad | `Role`, `User`, `Customer` (documento único, fecha de nacimiento), `Employee`, `OAuthAccount`, `EmailVerification`, `PasswordReset` |
+| Identidad | `Role`, `User`, `Customer` (documento único, fecha de nacimiento), `Employee`, `OAuthAccount`, `EmailVerification`, `PasswordReset`, `LoginAttempt` |
 | Catálogo | `Category`, `Service`, `ServiceSchedule`, `ServiceClosure`, `ServiceSlot` (cupos y bloqueos por franja) |
 | Reservas | `Reservation` (estado, canal, cantidad, total), `ReservationBlock` (tramo por zona), `ReservationSlot`, `ReservationGuest` (titular + acompañantes), `ReservationHold` (bloqueo temporal con expiración) |
 | Pagos | `Payment` (método, estado, ids de Stripe), `StripeEvent` (idempotencia por `eventId`) |
@@ -425,7 +446,7 @@ La interfaz busca una estética deportiva, moderna, elegante y profesional. El d
 
 ## Instalación
 
-**Requisitos:** Node.js, npm y una base de datos PostgreSQL o Supabase.
+**Requisitos:** Node.js 20+, npm y una base de datos PostgreSQL o Supabase.
 
 ```bash
 # 1. Clonar
@@ -455,7 +476,7 @@ La aplicación queda disponible en `http://localhost:3000`.
 
 | Variable                | Descripción                               |
 | ----------------------- | ----------------------------------------- |
-| `DATABASE_URL`          | Conexión PostgreSQL (+`?connection_limit=3` en dev) |
+| `DATABASE_URL`          | Conexión PostgreSQL (+`?connection_limit=5&pool_timeout=20` recomendado) |
 | `JWT_SECRET`            | Secreto utilizado para firmar JWT         |
 | `STRIPE_SECRET_KEY`     | Clave privada de Stripe                   |
 | `STRIPE_WEBHOOK_SECRET` | Firma del webhook                         |
@@ -463,32 +484,12 @@ La aplicación queda disponible en `http://localhost:3000`.
 | `RESEND_FROM_EMAIL`     | Remitente verificado en Resend            |
 | `NEXT_PUBLIC_APP_URL`   | URL pública (links de correo y Stripe)    |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth con Google            |
-| `CRON_SECRET`           | Bearer del cron de holds (obligatorio)    |
+| `N8N_WEBHOOK_URL`       | Webhook de n8n (vacío = todo por Resend)  |
+| `N8N_WEBHOOK_SECRET`   | Firma HMAC de los eventos a n8n           |
+| `CRON_SECRET`           | Bearer del cron de holds                  |
 | `ADMIN_*`               | Variables relacionadas con administración |
 
 Los valores reales nunca deben almacenarse en el repositorio.
-
-</details>
-
-<details>
-<summary><strong>API</strong></summary>
-
-<br />
-
-La API forma parte del mismo proyecto Next.js, en `src/app/api/`. No se requiere un backend externo ni `NEXT_PUBLIC_API_URL`.
-
-```text
-/api/auth/*
-/api/access/validate
-/api/availability
-/api/categories
-/api/services
-/api/pools
-/api/reservations
-/api/payments/webhook
-/api/admin/export
-/api/cron/holds
-```
 
 </details>
 
@@ -521,7 +522,7 @@ flowchart LR
 %%{init: {'theme':'base','themeVariables':{'primaryColor':'#7A1F3D','primaryTextColor':'#F5F5F5','lineColor':'#C8A96B'}}}%%
 flowchart LR
     A[Requerimiento] --> B[Analizar dominio] --> C[Tipos] --> D[Validación Zod] --> E[Service] --> F[Repository]
-    F --> G[API] --> H[UI con Axios] --> I[Loading, error, success] --> J[Tests] --> K[Lint y build]
+    F --> G[API] --> H[UI] --> I[Loading, error, success] --> J[Tests] --> K[Lint y build]
     classDef primary fill:#7A1F3D,color:#fff,stroke:#7A1F3D;
     classDef accent fill:#C8A96B,color:#1F1F1F,stroke:#C8A96B;
     class A,B,C,D,E,F primary;
@@ -550,8 +551,7 @@ features/
 ```bash
 npm run lint
 npm run build
-npm test
-npm run test:e2e
+npm run test
 ```
 
 | Herramienta | Cobertura                               |
@@ -573,23 +573,24 @@ npm run test:e2e
 * JWT con `jose`.
 * Cookies `HttpOnly` y `SameSite=Lax`.
 * Validación con Zod.
-* Middleware de autorización.
-* Control de acceso basado en roles.
+* `proxy.ts` de autorización por rol.
+* Rate limiting en login (10 fallos / 15 min por correo, 30 por IP).
 * Variables sensibles mediante `.env`.
 * Firma de webhook de Stripe verificada + idempotencia por `eventId`.
 * QR de un solo uso (hash SHA-256, consumo atómico en BD).
 * Correo transaccional (Resend) + recuperación y verificación.
-* Logging JSON de eventos críticos (`shared/lib/logger`, sin secretos).
+* Logging JSON de eventos críticos (sin secretos).
+* `ServiceUnavailableError` (503) si la base no responde, sin exponer detalles internos.
 
 </td>
 <td width="50%" valign="top">
 
 **Pendiente antes de producción**
 
-* Rate limiting.
 * Mover la BD a una región cercana (hoy `us-west-2`, ~270 ms por consulta).
 * Pruebas E2E de flujos críticos.
-* PDF descargable de QR (hoy se envían por correo).
+* Job programado para expirar holds (hoy es reactivo al consultar).
+* Verificación del calendario de festivos contra el oficial.
 
 </td>
 </tr>
@@ -605,7 +606,7 @@ timeline
     title Omega Complex
     section Foundation
         Arquitectura : Next.js : Prisma : PostgreSQL
-        Authentication : JWT : Roles : Middleware
+        Authentication : JWT : Roles : proxy.ts
     section Core
         Catalog : Servicios : Instalaciones
         Availability : Horarios : Capacidad
@@ -627,11 +628,16 @@ timeline
 
 **Incluido**
 
-* Autenticación y roles.
+* Autenticación y roles (manual + Google).
+* Verificación de correo obligatoria.
 * Catálogo, servicios e instalaciones.
-* Disponibilidad.
-* Reservas y pagos.
+* Disponibilidad con calendario y festivos.
+* Carrito multi-zona con personas por zona.
+* Pagos con Stripe y webhook.
 * QR y control de acceso.
+* PDF imprimible de QR.
+* Correo transaccional con plantillas.
+* n8n como capa de automatización (opcional).
 * Gestión administrativa.
 
 </td>
