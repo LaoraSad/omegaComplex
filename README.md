@@ -16,7 +16,6 @@
 <br />
 
 ![Next.js](https://img.shields.io/badge/Next.js-16.3.6-1F1F1F?style=flat-square&logo=next.js&logoColor=white)
-![React](https://img.shields.io/badge/React-19.2-1F1F1F?style=flat-square&logo=react&logoColor=61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-Strict-1F1F1F?style=flat-square&logo=typescript&logoColor=3178C6)
 ![Tailwind](https://img.shields.io/badge/Tailwind-v4-1F1F1F?style=flat-square&logo=tailwindcss&logoColor=06B6D4)
 ![Prisma](https://img.shields.io/badge/Prisma-6.19-1F1F1F?style=flat-square&logo=prisma&logoColor=white)
@@ -175,7 +174,7 @@ Omega Complex se organiza por dominios mediante **vertical slices**. Cada featur
 ```mermaid
 %%{init: {'theme':'base','themeVariables':{'primaryColor':'#7A1F3D','primaryTextColor':'#F5F5F5','primaryBorderColor':'#7A1F3D','lineColor':'#C8A96B'}}}%%
 flowchart TB
-    UI["Next.js / React"] --> Routes["App Router"]
+    UI["Next.js"] --> Routes["App Router"]
     Routes --> API["Route Handlers"]
 
     subgraph Features["Features por dominio"]
@@ -221,7 +220,7 @@ El cliente web usa `fetch` con sobres `{ data, error }` (`src/lib/api/*`) contra
 ```mermaid
 %%{init: {'theme':'base','themeVariables':{'primaryColor':'#7A1F3D','primaryTextColor':'#F5F5F5','lineColor':'#C8A96B'}}}%%
 flowchart LR
-    Component["React Component"] --> API["/api/*"] --> Service["Feature Service"] --> Repository --> DB[("PostgreSQL")]
+    Component["Componente"] --> API["/api/*"] --> Service["Feature Service"] --> Repository --> DB[("PostgreSQL")]
     classDef primary fill:#7A1F3D,color:#fff,stroke:#7A1F3D;
     classDef accent fill:#C8A96B,color:#1F1F1F,stroke:#C8A96B;
     class Component,API primary;
@@ -262,7 +261,7 @@ src/
 
 <div align="center">
 
-<img src="https://skillicons.dev/icons?i=nextjs,react,ts,tailwind,prisma,postgres,supabase,vitest,playwright,docker&perline=10" alt="Tecnologías principales" />
+<img src="https://skillicons.dev/icons?i=nextjs,ts,tailwind,prisma,postgres,supabase,vitest,playwright,docker&perline=10" alt="Tecnologías principales" />
 
 </div>
 
@@ -270,8 +269,7 @@ src/
 
 | Categoría      | Tecnología                          |
 | -------------- | ----------------------------------- |
-| Framework      | Next.js 16.3 App Router (Turbopack) |
-| Frontend       | React 19.2                          |
+| Framework      | Next.js 16.3 App Router |
 | Lenguaje       | TypeScript 5, modo estricto         |
 | Estilos        | Tailwind CSS v4, shadcn/ui          |
 | Iconografía    | Lucide React                        |
