@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { db } from "@/shared/lib/db";
+import { looksLikeShortCode, normalizeShortCode } from "@/features/access/short-code";
 
 // ---------------------------------------------------------------------------
 // Persistencia del control de acceso.
@@ -111,16 +112,27 @@ export type QrLookup = {
   customerFirstName: string;
   customerLastName: string;
   customerDocument: string | null;
+  /** Persona a la que pertenece este QR. Es la que debe estar en la puerta. */
+  guestName: string;
+  guestDocument: string | null;
+  guestIsTitular: boolean;
   serviceId: string | null;
   serviceName: string;
   categoryName: string;
   accessCount: number;
 };
 
-/** Localiza el QR por el hash del token, con todo lo necesario para validar. */
-export async function findQrByTokenHash(tokenArg: string): Promise<QrLookup | null> {
-  const trimmed = tokenArg.trim();
-  const tokenHash = createHash("sha256").update(trimmed).digest("hex");
+/**
+ * Localiza el QR a partir de lo que el empleado entrega.
+ *
+ * Acepta el token crudo que viene dentro de la imagen del QR y también el código
+ * corto transcribible (por si la cámara falla). El hash se calcula una sola vez
+ * aquí: la base de datos solo guarda el SHA-256, nunca el token en claro.
+ */
+export async function findQrByTokenHash(rawArg: string): Promise<QrLookup | null> {
+  const trimmed = rawArg.trim();
+  const tokenHash = hashAccessToken(trimmed);
+  const shortCode = normalizeShortCode(trimmed);
 
   const selectFields = {
     id: true,
@@ -128,6 +140,9 @@ export async function findQrByTokenHash(tokenArg: string): Promise<QrLookup | nu
     status: true,
     usedAt: true,
     _count: { select: { accesses: { where: { result: "allowed" as const } } } },
+    // La persona que trae el QR. Si por lo que sea no estuviera enlazada, se
+    // cae al titular de la reserva para no dejar la ficha vacía.
+    guest: { select: { fullName: true, document: true, isTitular: true } },
     block: {
       select: {
         id: true,
@@ -160,14 +175,27 @@ export async function findQrByTokenHash(tokenArg: string): Promise<QrLookup | nu
     select: selectFields,
   });
 
-  if (!token && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
+  // Respaldo manual: el empleado teclea el código corto impreso en el correo.
+  if (!token && looksLikeShortCode(trimmed)) {
+    token = await db.qrToken.findUnique({
+      where: { shortCode },
+      select: selectFields,
+    });
+  }
+
+  // Los UUID solo se consultan si el texto tiene esa forma. Sin esta guarda,
+  // un código mal tecleado se pasaba a una columna uuid y Postgres devolvía un
+  // error 500 en vez de "este código no existe".
+  const pareceUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed);
+
+  if (!token && pareceUuid) {
     token = await db.qrToken.findUnique({
       where: { id: trimmed },
       select: selectFields,
     });
   }
 
-  if (!token) {
+  if (!token && pareceUuid) {
     token = await db.qrToken.findFirst({
       where: { reservationId: trimmed },
       select: selectFields,
@@ -192,6 +220,11 @@ export async function findQrByTokenHash(tokenArg: string): Promise<QrLookup | nu
     customerFirstName: token.reservation.customer.user.firstName,
     customerLastName: token.reservation.customer.user.lastName,
     customerDocument: token.reservation.customer.document,
+    guestName:
+      token.guest?.fullName ??
+      `${token.reservation.customer.user.firstName} ${token.reservation.customer.user.lastName}`.trim(),
+    guestDocument: token.guest?.document ?? token.reservation.customer.document,
+    guestIsTitular: token.guest?.isTitular ?? true,
     serviceId: token.block?.service.id ?? token.reservation.service.id,
     serviceName: token.block?.service.name ?? token.reservation.service.name,
     categoryName: token.block?.service.category.name ?? token.reservation.service.category.name,
@@ -204,22 +237,42 @@ export type GrantResult =
   | { ok: false; reason: "qr_consumido" | "qr_no_activo" };
 
 /**
+ * Marca un QR como expirado cuando su franja ya paso.
+ *
+ * El estado se escribe de forma perezosa, en el momento en que alguien lo
+ * consulta: asi el panel muestra la realidad sin necesitar un cron. Solo cambia
+ * si el QR sigue activo: un QR ya usado conserva su historial.
+ */
+export async function marcarQrExpirado(qrTokenId: string): Promise<void> {
+  await db.qrToken.updateMany({
+    where: { id: qrTokenId, status: "active" },
+    data: { status: "expired" },
+  });
+}
+
+/**
  * Registra el ingreso y consume el QR de forma atómica.
  *
  * El paso crítico es el updateMany condicionado a status = "active": si dos
- * empleados escanean el mismo QR a la vez, solo uno obtiene count = 1. Asi el
- * uso unico se garantiza en la base de datos, no en JavaScript (sección 18).
+ * empleados escanean el mismo QR a la vez, solo uno obtiene count = 1. Así el
+ * uso único se garantiza en la base de datos, no en JavaScript (sección 18).
+ *
+ * Un intento denegado durante la consulta no consume el QR (el mismo código
+ * puede volverse a intentar). Un denegado explícito del empleado sí lo consume:
+ * esa fue su decisión y no debe rebotar en otra puerta.
  */
 export async function grantAccess(input: {
   qrTokenId: string;
   employeeId: string;
   result: "allowed" | "denied";
   denialReason?: string | null;
+  /** Consume el QR también en un rechazo. */
+  consumeQr?: boolean;
 }): Promise<GrantResult> {
   const accessedAt = new Date();
 
   return db.$transaction(async (tx) => {
-    if (input.result === "allowed") {
+    if (input.result === "allowed" || input.consumeQr) {
       const consumed = await tx.qrToken.updateMany({
         where: { id: input.qrTokenId, status: "active" },
         data: { status: "used", usedAt: accessedAt },
@@ -234,7 +287,7 @@ export async function grantAccess(input: {
         qrTokenId: input.qrTokenId,
         employeeId: input.employeeId,
         result: input.result,
-denialReason: input.denialReason ?? null,
+        denialReason: input.denialReason ?? null,
       },
       select: { id: true },
     });

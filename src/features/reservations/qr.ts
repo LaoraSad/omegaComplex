@@ -9,8 +9,10 @@
  * correr no duplica tokens.
  */
 import { randomBytes, createHash } from "node:crypto";
+import type { Prisma } from "@prisma/client";
 
 import { db } from "@/shared/lib/db";
+import { generateShortCode } from "@/features/access/short-code";
 
 /** Prefijo legible para el PDF: el token no es adivinable. */
 function nuevoToken(): { token: string; hash: string } {
@@ -26,6 +28,11 @@ export type QrEmitido = {
   /** Etiqueta para el PDF: Z2-P03 (zona 2, persona 3). */
   etiqueta: string;
   token: string;
+  /**
+   * Código corto transcribible. Es la misma autorización que el token: si la
+   * cámara del empleado falla, el cliente puede dictarlo y se valida igual.
+   */
+  codigoCorto: string;
 };
 
 export type EmitirResultado =
@@ -80,12 +87,14 @@ export async function emitirQrDeReserva(reservationId: string): Promise<EmitirRe
       for (const [indicePersona, inscripcion] of bloque.guests.entries()) {
         const numeroPersona = indicePersona + 1;
         const { token, hash } = nuevoToken();
+        const codigoCorto = await generarCodigoCortoUnico(tx);
         await tx.qrToken.create({
           data: {
             reservationId: reserva.id,
             blockId: bloque.id,
             seqNo: numeroPersona,
             tokenHash: hash,
+            shortCode: codigoCorto,
             guestId: inscripcion.guest.id,
           },
         });
@@ -95,9 +104,30 @@ export async function emitirQrDeReserva(reservationId: string): Promise<EmitirRe
           nombre: inscripcion.guest.fullName,
           etiqueta: `Z${numeroZona}-P${String(numeroPersona).padStart(2, "0")}`,
           token,
+          codigoCorto,
         });
       }
     }
     return { ok: true, emitidos };
   });
+}
+
+/**
+ * Código corto único. Reintenta un par de veces por si choca con otro QR; el
+ * índice único de la columna es la garantía real de que no se repita.
+ */
+async function generarCodigoCortoUnico(
+  tx: Prisma.TransactionClient,
+): Promise<string> {
+  for (let intento = 0; intento < 5; intento++) {
+    const codigo = generateShortCode();
+    const existe = await tx.qrToken.findFirst({
+      where: { shortCode: codigo },
+      select: { id: true },
+    });
+    if (!existe) return codigo;
+  }
+  // 5 colisiones sobre 32^8 no ocurren en la practica; si pasan, se delega al
+  // índice único de la base de datos, que es quien manda.
+  return generateShortCode();
 }

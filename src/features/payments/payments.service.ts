@@ -336,6 +336,8 @@ async function enviarPdfPorN8n(input: {
       // El token crudo viaja en el evento porque es lo que hay que dibujar en
       // el QR del PDF; se genera aquí y no se guarda en la base.
       token: q.token,
+      // Respaldo transcribible para cuando la cámara de la puerta falla.
+      codigoCorto: q.codigoCorto,
     })),
   });
 
