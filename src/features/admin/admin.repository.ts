@@ -13,6 +13,7 @@ import type {
   EmployeeAccessRow,
   EmployeeDetailRow,
   EmployeeRow,
+  MetricasRango,
   Paginated,
   ReservationDetail,
   ReservationRow,
@@ -43,6 +44,50 @@ export function bogotaDayRange(ref: Date = new Date()): { start: Date; end: Date
   return {
     start: new Date(Date.UTC(y, m - 1, d, 5, 0, 0, 0)),
     end: new Date(Date.UTC(y, m - 1, d + 1, 5, 0, 0, 0)),
+  };
+}
+
+/** Clave Bogotá YYYY-MM-DD de una fecha. */
+function claveDiaBogota(ref: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(ref);
+}
+
+/**
+ * Fase 4: sanea el filtro desde/hasta de métricas. Puro y testeable (`ahora`
+ * inyectable). Sin fechas → últimos 30 días; invertidas se ordenan; el tramo
+ * se acota a 90 días para no presionar el pooler.
+ */
+export function sanearRangoMetricas(
+  desde: string | undefined,
+  hasta: string | undefined,
+  ahora: Date = new Date(),
+): { start: Date; end: Date; desdeKey: string; hastaKey: string } {
+  const valida = (v: string | undefined): string | null =>
+    v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+  const hoyKey = claveDiaBogota(ahora);
+  const hace29 = new Date(ahora.getTime() - 29 * 24 * 60 * 60 * 1000);
+  let desdeKey = valida(desde) ?? claveDiaBogota(hace29);
+  let hastaKey = valida(hasta) ?? hoyKey;
+  if (desdeKey > hastaKey) [desdeKey, hastaKey] = [hastaKey, desdeKey];
+  // Acota a 90 días: si el tramo es mayor, se recorta por el inicio.
+  const maxDias = 90;
+  const inicioMs = Date.parse(`${desdeKey}T12:00:00Z`);
+  const finMs = Date.parse(`${hastaKey}T12:00:00Z`);
+  if (finMs - inicioMs > (maxDias - 1) * 24 * 60 * 60 * 1000) {
+    desdeKey = claveDiaBogota(new Date(finMs - (maxDias - 1) * 24 * 60 * 60 * 1000));
+  }
+  const [y1, m1, d1] = desdeKey.split("-").map(Number);
+  const [y2, m2, d2] = hastaKey.split("-").map(Number);
+  return {
+    start: new Date(Date.UTC(y1, m1 - 1, d1, 5, 0, 0, 0)),
+    end: new Date(Date.UTC(y2, m2 - 1, d2 + 1, 5, 0, 0, 0)),
+    desdeKey,
+    hastaKey,
   };
 }
 
@@ -142,6 +187,108 @@ export function construirSerieDiaria(
     total: v.total,
     confirmed: v.confirmed,
   }));
+}
+
+export type FilaIngreso = {
+  amountCop: number;
+  reservation: { service: { id: string; name: string; category: { name: string } } };
+};
+
+/** Agregación pura de pagos: total + por servicio + por categoría (desc). */
+export function agregarIngresos(rows: FilaIngreso[]): {
+  totalIngresosCop: number;
+  ingresosPorServicio: Array<{ serviceId: string; serviceName: string; totalCop: number }>;
+  ingresosPorCategoria: Array<{ categoryName: string; totalCop: number }>;
+} {
+  let totalIngresosCop = 0;
+  const porServicio = new Map<string, { serviceName: string; totalCop: number }>();
+  const porCategoria = new Map<string, number>();
+  for (const r of rows) {
+    totalIngresosCop += r.amountCop;
+    const s = r.reservation.service;
+    const entry = porServicio.get(s.id) ?? { serviceName: s.name, totalCop: 0 };
+    entry.totalCop += r.amountCop;
+    porServicio.set(s.id, entry);
+    porCategoria.set(s.category.name, (porCategoria.get(s.category.name) ?? 0) + r.amountCop);
+  }
+  return {
+    totalIngresosCop,
+    ingresosPorServicio: [...porServicio.entries()]
+      .map(([serviceId, v]) => ({ serviceId, ...v }))
+      .sort((a, b) => b.totalCop - a.totalCop),
+    ingresosPorCategoria: [...porCategoria.entries()]
+      .map(([categoryName, totalCop]) => ({ categoryName, totalCop }))
+      .sort((a, b) => b.totalCop - a.totalCop),
+  };
+}
+
+export type FilaReservaRango = {
+  service: { id: string; name: string; category: { name: string } };
+};
+
+/** Agregación pura de reservas del rango: total + por servicio + por categoría. */
+export function agregarReservasPorRango(rows: FilaReservaRango[]): {
+  totalReservas: number;
+  reservasPorServicio: Array<{ serviceId: string; serviceName: string; total: number }>;
+  reservasPorCategoria: Array<{ categoryName: string; total: number }>;
+} {
+  const porServicio = new Map<string, { serviceName: string; total: number }>();
+  const porCategoria = new Map<string, number>();
+  for (const r of rows) {
+    const entry = porServicio.get(r.service.id) ?? { serviceName: r.service.name, total: 0 };
+    entry.total += 1;
+    porServicio.set(r.service.id, entry);
+    porCategoria.set(r.service.category.name, (porCategoria.get(r.service.category.name) ?? 0) + 1);
+  }
+  return {
+    totalReservas: rows.length,
+    reservasPorServicio: [...porServicio.entries()]
+      .map(([serviceId, v]) => ({ serviceId, ...v }))
+      .sort((a, b) => b.total - a.total),
+    reservasPorCategoria: [...porCategoria.entries()]
+      .map(([categoryName, total]) => ({ categoryName, total }))
+      .sort((a, b) => b.total - a.total),
+  };
+}
+
+/**
+ * Fase 4.1 (§20): ingresos y reservas por rango de fechas de franja.
+ * Los ingresos se acotan por `paidAt` (cuándo entró el dinero) y las
+ * reservas por `startsAt` (cuándo ocurre el servicio). Dos lecturas en una
+ * oleada: el pooler admite hasta 3 simultáneas.
+ */
+export async function getMetricasRango(
+  desde: string | undefined,
+  hasta: string | undefined,
+): Promise<MetricasRango> {
+  const { start, end, desdeKey, hastaKey } = sanearRangoMetricas(desde, hasta);
+  const [pagos, reservas] = await Promise.all([
+    db.payment.findMany({
+      where: { status: "succeeded", paidAt: { gte: start, lt: end } },
+      select: {
+        amountCop: true,
+        reservation: {
+          select: { service: { select: { id: true, name: true, category: { select: { name: true } } } } },
+        },
+      },
+    }),
+    db.reservation.findMany({
+      where: { startsAt: { gte: start, lt: end } },
+      select: { service: { select: { id: true, name: true, category: { select: { name: true } } } } },
+    }),
+  ]);
+  const ingresos = agregarIngresos(pagos);
+  const conteo = agregarReservasPorRango(reservas);
+  return {
+    desde: desdeKey,
+    hasta: hastaKey,
+    totalIngresosCop: ingresos.totalIngresosCop,
+    ingresosPorServicio: ingresos.ingresosPorServicio,
+    ingresosPorCategoria: ingresos.ingresosPorCategoria,
+    totalReservas: conteo.totalReservas,
+    reservasPorServicio: conteo.reservasPorServicio,
+    reservasPorCategoria: conteo.reservasPorCategoria,
+  };
 }
 
 export async function getDashboardOverview(): Promise<DashboardOverview> {  const { start: todayStart, end: todayEnd } = bogotaDayRange();

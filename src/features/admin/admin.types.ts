@@ -190,6 +190,22 @@ export interface Paginated<T> {
   totalPages: number;
 }
 
+/**
+ * Fase 4 (§20, solo visualización): ingresos y reservas por rango de fechas
+ * de franja, desglosados por servicio y categoría. Sin exportación.
+ */
+export interface MetricasRango {
+  /** Claves Bogotá YYYY-MM-DD tal como las pidió el filtro. */
+  desde: string;
+  hasta: string;
+  totalIngresosCop: number;
+  ingresosPorServicio: Array<{ serviceId: string; serviceName: string; totalCop: number }>;
+  ingresosPorCategoria: Array<{ categoryName: string; totalCop: number }>;
+  totalReservas: number;
+  reservasPorServicio: Array<{ serviceId: string; serviceName: string; total: number }>;
+  reservasPorCategoria: Array<{ categoryName: string; total: number }>;
+}
+
 export const RESERVATION_STATUSES = [
   "pending_payment",
   "payment_processing",
