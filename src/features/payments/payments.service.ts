@@ -60,15 +60,15 @@ function fechaBogota(d: Date): string {
  /**
  * Convierte pesos a la unidad mínima que espera la API de Stripe.
  *
- * Stripe NO recibe pesos: recibe centavos. El peso colombiano tiene dos
- * decimales en su API, así que 100.000 COP se envían como 10.000.000. Sin esta
- * conversión Stripe interpreta 100.000 como $1.000,00 y además lo rechaza con
- * `amount_too_small`, porque ese monto no alcanza el mínimo de la cuenta.
+ * Se asume que COP usa 2 decimales en la API (100.000 COP -> 10.000.000).
+ * Si la cuenta de Stripe tratara COP como moneda cero-decimal, este ×100
+ * cobraría 100 veces el precio real.
  *
- * Todo el resto del sistema (base de datos, correos, pantallas) trabaja en
- * pesos enteros; la conversión ocurre solo al hablar con Stripe.
+ * P0-2 (v2.0): NO cambiar este multiplicador sin pago de prueba en modo test
+ * que confirme que el checkout muestra lo mismo que la app. Esa verificación
+ * le toca al responsable de Stripe. Los tests congelan el comportamiento actual.
  */
-function aCentimos(cop: number): number {
+export function aCentimos(cop: number): number {
   return Math.round(cop * 100);
 }
 
