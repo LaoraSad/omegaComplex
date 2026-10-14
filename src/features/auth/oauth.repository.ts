@@ -34,6 +34,10 @@ export type OAuthUser = {
   phone: string | null;
   role: string;
   isNewUser: boolean;
+  /** P1-4: un desactivado con OAuth vinculado no debe entrar. */
+  isActive: boolean;
+  /** P1-4: sin verificación no se abre sesión (puerta a /verify-email). */
+  emailVerified: boolean;
 };
 
 export function normalizeEmail(email: string): string {
@@ -59,6 +63,8 @@ export async function findOAuthAccount(
     phone: user.phone,
     role: user.role.name,
     isNewUser: false,
+    isActive: user.isActive,
+    emailVerified: user.emailVerified,
   };
 }
 
@@ -123,6 +129,8 @@ firstName: profile.firstName,
     phone: user.phone,
     role: role.name,
     isNewUser: true,
+    isActive: true,
+    emailVerified: profile.emailVerified,
   };
 }
 
@@ -165,6 +173,8 @@ await db.oAuthAccount.create({
     phone: user.phone,
     role: user.role.name,
     isNewUser: false,
+    isActive: user.isActive,
+    emailVerified: user.emailVerified,
   };
 }
 

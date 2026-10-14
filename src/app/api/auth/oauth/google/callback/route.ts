@@ -7,7 +7,7 @@ import {
   linkOAuthAccount,
   type OAuthProfile,
 } from "@/features/auth/oauth.repository";
-import { GOOGLE_PROVIDER, OAUTH_STATE_COOKIE } from "@/features/auth/oauth.constants";
+import { GOOGLE_PROVIDER, OAUTH_STATE_COOKIE, destinoOAuth } from "@/features/auth/oauth.constants";
 import {
   googleConfigured,
   googleRedirectUri,
@@ -67,6 +67,16 @@ export async function GET(request: Request): Promise<Response> {
   const existing = await findOAuthAccount(GOOGLE_PROVIDER, profile.providerAccountId);
   if (existing) {
     if (!existing.role) return back("oauth_cuenta_inactiva");
+    // P1-4: desactivado no entra; sin verificar no se abre sesión.
+    const puerta = destinoOAuth({
+      role: existing.role,
+      isActive: existing.isActive,
+      emailVerified: existing.emailVerified,
+      email: existing.email,
+    });
+    if (!puerta.abrirSesion) {
+      return Response.redirect(new URL(puerta.destino, request.url), 302);
+    }
     await startSession(existing.id, existing.role);
     return Response.redirect(new URL(homeFor(existing.role), request.url), 302);
   }
@@ -83,6 +93,17 @@ export async function GET(request: Request): Promise<Response> {
   // de verificación propio, igual que en el registro manual.
   await notificarAltaConGoogle(user, profile.emailVerified);
 
+  // P1-4: sin verificación de Google no se abre sesión: va a /verify-email,
+  // donde pide el código por reenvío como cualquier registro manual.
+  const puerta = destinoOAuth({
+    role: user.role,
+    isActive: user.isActive,
+    emailVerified: user.emailVerified,
+    email: user.email,
+  });
+  if (!puerta.abrirSesion) {
+    return Response.redirect(new URL(puerta.destino, request.url), 302);
+  }
   await startSession(user.id, user.role);
   return Response.redirect(new URL(homeFor(user.role), request.url), 302);
 }
