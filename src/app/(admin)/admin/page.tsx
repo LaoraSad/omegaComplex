@@ -22,7 +22,7 @@ import {
   formatTime,
   fullName,
 } from "@/components/admin/format";
-import { servicePhoto } from "@/components/admin/service-image";
+import { servicePhoto } from "@/features/catalog/service-images";
 import { getDashboardOverview, listServicesLight } from "@/features/admin/admin.repository";
 
 export const metadata: Metadata = { title: "Panel" };

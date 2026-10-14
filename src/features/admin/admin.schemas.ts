@@ -110,7 +110,24 @@ const serviceCapacitySchema = z.coerce
   .min(1, "La capacidad mínima es 1 persona")
   .max(1000, "La capacidad es demasiado alta");
 
-const serviceImageSchema = z.string().trim().max(500).optional();
+/**
+ * Ruta de la foto, opcional.
+ *
+ * Acepta `null` a propósito: el formulario manda `null` cuando la foto queda
+ * vacía, y `undefined` nunca llega desde el navegador. Con solo `.optional()`,
+ * Zod rechazaba el `null` con "Invalid input: expected string, received null" y
+ * no dejaba crear el servicio si se dejaba la foto en blanco.
+ */
+const serviceImageSchema = z
+  .string()
+  .trim()
+  .max(500, "La ruta de la foto es demasiado larga")
+  .refine(
+    (valor) => valor === "" || valor.startsWith("/"),
+    "La foto debe empezar por / (por ejemplo /newassets/mi-foto.webp)",
+  )
+  .nullable()
+  .optional();
 
 const serviceCategorySchema = z.string().trim().uuid("La categoría no es válida");
 
@@ -130,7 +147,7 @@ export const serviceUpdateSchema = z.object({
   description: serviceDescriptionSchema.nullable().optional(),
   price: servicePriceSchema.optional(),
   capacity: serviceCapacitySchema.optional(),
-  imagen: serviceImageSchema.nullable().optional(),
+  imagen: serviceImageSchema,
   isActive: z.boolean().optional(),
 });
 

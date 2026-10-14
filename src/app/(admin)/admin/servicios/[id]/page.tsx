@@ -12,7 +12,7 @@ import {
   formatNumber,
   fullName,
 } from "@/components/admin/format";
-import { servicePhoto } from "@/components/admin/service-image";
+import { servicePhoto } from "@/features/catalog/service-images";
 import {
   bogotaDayRange,
   getServiceDetail,

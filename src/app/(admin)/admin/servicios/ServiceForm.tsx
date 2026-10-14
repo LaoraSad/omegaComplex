@@ -4,6 +4,8 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { LoaderCircle, Plus, Save } from "lucide-react";
 
+import { IMAGENES_DISPONIBLES, REQUISITOS_360 } from "@/features/catalog/service-images";
+
 type CategoriaOpcion = { id: string; name: string };
 
 type ServicioInicial = {
@@ -32,6 +34,10 @@ async function requestService<T>(url: string, init?: RequestInit): Promise<T> {
  * Revisa la proporción de la foto sin subirla: el tour 360 necesita
  * equirectangular 2:1 y acá solo llega la ruta. Si no cumple, se avisa pero se
  * deja guardar (habrá portada normal, sin 360).
+ *
+ * La tolerancia es la misma que usa `esValidaPara360` en el módulo de catálogo,
+ * para que el panel y el visor no se contradigan: las fotos de 1456x720 del
+ * complejo tienen 2.02:1 y son válidas.
  */
 function revisarProporcion360(
   ruta: string,
@@ -42,7 +48,11 @@ function revisarProporcion360(
     const img = new Image();
     img.onload = () => {
       const ratio = img.naturalWidth / img.naturalHeight;
-      resolve({ ratio, es360: Math.abs(ratio - 2) <= 0.03 });
+      resolve({
+        ratio,
+        es360:
+          Math.abs(ratio - REQUISITOS_360.ratio) <= REQUISITOS_360.tolerancia,
+      });
     };
     img.onerror = () => resolve(null);
     img.src = src;
@@ -227,21 +237,36 @@ export function ServiceForm({
         />
       </div>
 
-      <div className="space-y-1.5">
-        <label htmlFor={mode === "create" ? "svc-img" : "svc-img-edit"} className={labelCls}>
-          Foto (ruta en /newassets, opcional)
-        </label>
-        <input
-          id={mode === "create" ? "svc-img" : "svc-img-edit"}
-          value={imagen}
-          onChange={(e) => void onImagenChange(e.target.value)}
-          disabled={busy}
-          maxLength={500}
-          placeholder="/newassets/mi-foto.webp"
-          className={inputCls}
-        />
-        {aviso360 ? <p role="status" className="text-xs font-semibold text-amber-300">{aviso360}</p> : null}
-      </div>
+          <div className="space-y-1.5">
+            <label htmlFor={mode === "create" ? "svc-img" : "svc-img-edit"} className={labelCls}>
+              Foto de la instalación
+            </label>
+            {/* Antes era un campo de texto donde había que escribir la ruta a
+                mano (/newassets/mi-foto.webp), y lo fácil era equivocarse:
+                una ruta mal escrita deja la publicación en negro sin aviso.
+                Ahora se elige de una lista que sale de los archivos que de
+                verdad están en public/newassets. */}
+            <select
+              id={mode === "create" ? "svc-img" : "svc-img-edit"}
+              value={imagen}
+              onChange={(e) => void onImagenChange(e.target.value)}
+              disabled={busy}
+              className={inputCls}
+            >
+              <option value="">— Sin foto propia (usa la del catálogo) —</option>
+              {IMAGENES_DISPONIBLES.map((ruta) => (
+                <option key={ruta} value={ruta}>
+                  {ruta.replace("/newassets/", "")}
+                </option>
+              ))}
+            </select>
+            <p className="text-[0.7rem] leading-relaxed text-white/45">
+              Son las fotos que hay en <code className="text-white/60">public/newassets</code>.
+              Si eliges “sin foto propia”, el catálogo usa la que tiene asignada por
+              defecto; el tour 360 también.
+            </p>
+            {aviso360 ? <p role="status" className="text-xs font-semibold text-amber-300">{aviso360}</p> : null}
+          </div>
 
       <label className="flex items-center gap-2 text-xs font-semibold text-white/65">
         <input
