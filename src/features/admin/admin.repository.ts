@@ -715,7 +715,12 @@ export type ServiceCreateData = {
   description?: string;
   price: number;
   capacity: number;
-  imagen?: string;
+  /**
+   * Acepta `null` como "sin foto": el formulario manda null cuando el campo
+   * queda vacío. Sin esto, el tipo chocaba con lo que llega del cliente y la
+   * creación fallaba aunque el schema ya lo permitiera.
+   */
+  imagen?: string | null;
   isActive?: boolean;
 };
 

@@ -66,18 +66,37 @@ export function VerifyEmailPanel({ email, sent: initiallySent }: VerifyEmailPane
 
   return (
     <div className="auth-form">
-      <p aria-live="polite" className="auth-info">
-        {sent
-          ? "Te enviamos un código de 6 dígitos a tu correo."
-          : "Tu cuenta fue creada, pero no pudimos enviar el correo. Solicita un nuevo código."}
-        {email ? (
-          <>
-            {" "}
-            <strong>{email}</strong>
-          </>
-        ) : null}
-        {sent ? " Revisa tu bandeja de entrada y correo no deseado." : null}
-      </p>
+      {/*
+        Antes esto era un solo párrafo que cambiaba de texto, y cuando el envío
+        fallaba el aviso quedaba mezclado con el mensaje normal: la pantalla
+        seguía diciendo "verifica tu correo" como si nada y el usuario se
+        quedaba esperando un correo que nunca iba a llegar. Ahora el fallo se
+        muestra como error, que es lo que es.
+      */}
+      {sent ? (
+        <p aria-live="polite" className="auth-info">
+          Te enviamos un código de 6 dígitos
+          {email ? (
+            <>
+              {" "}
+              <strong>{email}</strong>
+            </>
+          ) : null}
+          . Revisa tu bandeja de entrada y correo no deseado.
+        </p>
+      ) : (
+        <AuthError>
+          Tu cuenta se creó, pero <strong>no pudimos enviar el correo</strong>
+          {email ? (
+            <>
+              {" "}
+              <strong>{email}</strong>
+            </>
+          ) : null}
+          . Pide el código con el botón de abajo o avísale al administrador del
+          complejo para que te lo entregue.
+        </AuthError>
+      )}
       {error ? <AuthError>{error}</AuthError> : null}
       {verified ? (
         <>

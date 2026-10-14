@@ -34,7 +34,8 @@ describe("imagen del servicio", () => {
   });
 
   it("acepta que el campo ni siquiera venga", () => {
-    const { imagen, ...sinFoto } = base;
+    const sinFoto = { ...base };
+    delete (sinFoto as { imagen?: string | null }).imagen;
     const r = serviceCreateSchema.safeParse(sinFoto);
     expect(r.success).toBe(true);
   });

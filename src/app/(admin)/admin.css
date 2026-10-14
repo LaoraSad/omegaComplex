@@ -1198,8 +1198,10 @@ a.atimeline-link:hover {
 
 .ainput:focus,
 .aselect:focus {
-  border-color: var(--admin-primary);
-  box-shadow: 0 0 0 3px rgb(122 31 61 / 10%);
+  /* Ver la regla equivalente más abajo: el foco va en dorado para que el
+     formulario no se vea en dos colores. */
+  border-color: var(--admin-gold);
+  box-shadow: 0 0 0 3px rgb(227 189 116 / 18%);
   outline: none;
 }
 
@@ -1223,6 +1225,12 @@ a.atimeline-link:hover {
   border: 1px solid var(--admin-border);
   border-radius: var(--admin-radius);
   background: var(--admin-surface);
+  /* En móvil el contenedor se desplaza en horizontal en vez de dejar que las
+     columnas se aplasten hasta ilegibles. `max-width:100%` evita que la tabla
+     estire el layout y empuje el resto del panel. */
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
 
 .atable {
@@ -1230,6 +1238,10 @@ a.atimeline-link:hover {
   border-collapse: separate;
   border-spacing: 0;
   font-size: 0.84rem;
+  /* Ancho mínimo: por debajo de ~640px las columnas se vuelven ilegibles y el
+     texto se parte en varias líneas, que es lo que se veía en el celular.
+     Con este mínimo, la tabla se desplaza y se lee bien. */
+  min-width: 640px;
 }
 
 .atable thead th {
@@ -1251,6 +1263,16 @@ a.atimeline-link:hover {
   border-bottom: 1px solid var(--admin-border-soft);
   padding: 0.9rem;
   vertical-align: middle;
+}
+
+/* Las celdas no deben partir el texto en varias líneas: "Carlos Pérez" en dos
+   renglones con guiones sueltos se lee peor que una columna un poco más
+   ancha. */
+.atable td,
+.atable th {
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 
 .atable tbody tr:last-child td {
@@ -2510,7 +2532,9 @@ li[id^="servicio-"]:target {
 /* ---------- Focus y accesibilidad ---------- */
 
 .admin-scope :focus-visible {
-  outline: 2px solid var(--admin-primary);
+  /* Mismo criterio que el foco de los campos: el acento del panel es dorado y
+     el vino se reserva para superficies, no para contornos. */
+  outline: 2px solid var(--admin-gold);
   outline-offset: 2px;
 }
 
@@ -3121,8 +3145,11 @@ li[id^="servicio-"]:target {
 
 .ainput:focus,
 .aselect:focus {
-  border-color: #b3295a;
-  box-shadow: 0 0 0 3px rgb(142 35 71 / 22%);
+  /* Dorado y no vino: la tarjeta que rodea al campo ya lleva el aro dorado, y
+     con el borde vino el formulario se veía en dos colores (rojo y dorado)
+     al enfocar. Un solo acento. */
+  border-color: var(--admin-gold);
+  box-shadow: 0 0 0 3px rgb(227 189 116 / 18%);
   outline: none;
   background: var(--admin-surface);
 }

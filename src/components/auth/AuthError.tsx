@@ -1,5 +1,8 @@
+import type { ReactNode } from "react";
+
 interface AuthErrorProps {
-  children: string;
+  /** Puede llevar <strong> para destacar una parte del mensaje. */
+  children: ReactNode;
 }
 
 export function AuthError({ children }: AuthErrorProps) {
