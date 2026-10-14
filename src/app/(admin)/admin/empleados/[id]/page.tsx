@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MapPin, ScanLine, UserCheck } from "lucide-react";
+import { Suspense } from "react";
+import { ArrowLeft, MapPin, ScanLine, UserCheck } from "lucide-react";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Pagination } from "@/components/admin/Pagination";
@@ -37,13 +38,12 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
   const { page: pageParam } = await searchParams;
   const page = Number(pageParam) || 1;
 
-  const employee = await getEmployeeDetail(id);
-  if (!employee) notFound();
-
-  const [accesses, groups] = await Promise.all([
+  const [employee, accesses, groups] = await Promise.all([
+    getEmployeeDetail(id),
     listEmployeeAccesses(id, { page, pageSize: 10 }),
     listZoneOptions(),
   ]);
+  if (!employee) notFound();
 
   const name = fullName(employee.user.firstName, employee.user.lastName);
   const isActive = employee.user.isActive && employee.isActive;

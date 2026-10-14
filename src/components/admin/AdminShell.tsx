@@ -20,18 +20,19 @@ interface AdminShellProps {
   children: React.ReactNode;
 }
 
-function isActive(pathname: string, match: string): boolean {
-  return new RegExp(match).test(pathname);
-}
+const ADMIN_NAV_REGEX = ADMIN_NAV.map((section) => ({
+  title: section.title,
+  items: section.items.map((item) => ({ ...item, regex: new RegExp(item.match) })),
+}));
 
 /** Estructura admin: sidebar fija + topbar + contenido. Drawer en mobile. */
 export function AdminShell({ user, children }: AdminShellProps) {
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
-  const activeSection = ADMIN_NAV.find((section) =>
-    section.items.some((item) => isActive(pathname, item.match)),
+  const activeSection = ADMIN_NAV_REGEX.find((section) =>
+    section.items.some((item) => item.regex.test(pathname)),
   );
-  const activeItem = activeSection?.items.find((item) => isActive(pathname, item.match));
+  const activeItem = activeSection?.items.find((item) => item.regex.test(pathname));
 
   useEffect(() => {
     document.body.style.overflow = navOpen ? "hidden" : "";
@@ -78,13 +79,13 @@ export function AdminShell({ user, children }: AdminShellProps) {
         </div>
 
         <nav className="admin-sidebar-nav">
-          {ADMIN_NAV.map((section) => (
+          {ADMIN_NAV_REGEX.map((section) => (
             <div key={section.title} className="admin-nav-section">
               <p className="admin-nav-title">{section.title}</p>
               <div className="space-y-0.5">
                 {section.items.map((item) => {
                   const Icon = item.icon;
-                  const current = isActive(pathname, item.match);
+                  const current = item.regex.test(pathname);
                   return (
                     <Link
                       key={item.href}

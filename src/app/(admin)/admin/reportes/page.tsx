@@ -26,12 +26,12 @@ export default async function ReportesPage({
   // Dos oleadas en vez de 8 consultas secuenciales: el pooler aguanta ~5
   // simultáneas y cada roundtrip cuesta ~270 ms. Los conteos son `count()`
   // puros: antes se traían listas completas solo para mostrar el total.
-  const [metricas, ocupacion, uso] = await Promise.all([
+  const [metricas, ocupacion, uso, conteos] = await Promise.all([
     getMetricasRango(desde, hasta),
     getOcupacionPorFecha(fecha),
     getUsoReservas(desde, hasta),
+    getConteosReportes(),
   ]);
-  const conteos = await getConteosReportes();
 
   const cards = [
     {

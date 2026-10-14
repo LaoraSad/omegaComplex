@@ -103,6 +103,15 @@ const reservationInclude = {
   _count: { select: { qrTokens: true } },
 } as const;
 
+const reservationListInclude = {
+  customer: {
+    include: { user: { select: { firstName: true, lastName: true } } },
+  },
+  service: { include: { category: { select: { name: true } } } },
+  payments: { orderBy: { createdAt: "desc" as const }, take: 1 },
+  _count: { select: { qrTokens: true } },
+} as const;
+
 /** Agregación pura del groupBy de reservas: conteo por estado y total. */
 export function agregarReservasPorEstado(
   groups: Array<{ status: string; _count: { status: number } }>,
@@ -508,7 +517,7 @@ export async function listReservations(
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      include: reservationInclude,
+      include: reservationListInclude,
     }),
   ]);
   return {
@@ -553,6 +562,17 @@ export async function listServices(): Promise<ServiceRow[]> {
           },
         },
       },
+    },
+  });
+  return rows as ServiceRow[];
+}
+
+export async function listServicesLight(): Promise<ServiceRow[]> {
+  const rows = await db.service.findMany({
+    orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
+    take: 5,
+    include: {
+      category: { select: { name: true } },
     },
   });
   return rows as ServiceRow[];

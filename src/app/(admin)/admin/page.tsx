@@ -23,7 +23,7 @@ import {
   fullName,
 } from "@/components/admin/format";
 import { servicePhoto } from "@/components/admin/service-image";
-import { getDashboardOverview, listServices } from "@/features/admin/admin.repository";
+import { getDashboardOverview, listServicesLight } from "@/features/admin/admin.repository";
 
 export const metadata: Metadata = { title: "Panel" };
 
@@ -65,11 +65,10 @@ function InstOcc({ used, total, compact }: { used: number; total: number; compac
 }
 
 export default async function AdminDashboardPage() {
-  // Secuencial a propósito: el pooler (session mode, 15 conexiones
-  // compartidas) colapsa con picos concurrentes. El overview ya va en
-  // oleadas internas de 3 y tarda ~1s en vez de ~5s.
-  const data = await getDashboardOverview();
-  const services = await listServices();
+  const [data, services] = await Promise.all([
+    getDashboardOverview(),
+    listServicesLight(),
+  ]);
 
   const confirmed = data.reservationsByStatus.confirmed ?? 0;
   const pendingOnly = data.reservationsByStatus.pending_payment ?? 0;
