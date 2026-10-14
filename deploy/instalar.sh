@@ -165,7 +165,10 @@ done
 titulo "Configurando nginx para $DOMINIO"
 # ---------------------------------------------------------------------------
 # IMPORTANTE: no se borra ningún sitio previo. Solo se añade el nuestro.
-sed "s/127.0.0.1:3000/127.0.0.1:$PUERTO/g" deploy/nginx.conf > /tmp/omega-nginx.conf
+# El archivo de nginx empieza solo con HTTP a propósito: el certificado lo
+# agrega despues certbot, porque nginx no arranca si le pides un certificado
+# que todavia no existe.
+sed "s/PUERTO_OMEGA/$PUERTO/g" deploy/nginx.conf > /tmp/omega-nginx.conf
 $SUDO cp /tmp/omega-nginx.conf "$SITIO_NGINX"
 $SUDO ln -sf "$SITIO_NGINX" /etc/nginx/sites-enabled/omega
 
