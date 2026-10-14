@@ -236,7 +236,17 @@ export async function completePasswordReset(token: string, password: string): Pr
       data: { usedAt: now },
     });
     if (claimed.count !== 1) return false;
-    await tx.user.update({ where: { id: reset.userId }, data: { passwordHash } });
+    // P1-5: desactivado no recupera acceso; y subir la versión revoca
+    // sesiones anteriores (token robado + recovery ya no sirve).
+    const target = await tx.user.findUnique({
+      where: { id: reset.userId },
+      select: { isActive: true },
+    });
+    if (!target || !target.isActive) return false;
+    await tx.user.update({
+      where: { id: reset.userId },
+      data: { passwordHash, tokenVersion: { increment: 1 } },
+    });
     await tx.passwordReset.updateMany({
       where: { userId: reset.userId, id: { not: reset.id }, usedAt: null },
       data: { usedAt: now },

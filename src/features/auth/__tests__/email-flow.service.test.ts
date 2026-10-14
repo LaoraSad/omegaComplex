@@ -206,6 +206,7 @@ describe("email auth flows", () => {
     };
     mocks.db.passwordReset.findUnique.mockResolvedValue(reset);
     mocks.db.passwordReset.updateMany.mockResolvedValue({ count: 1 });
+    mocks.db.user.findUnique.mockResolvedValue({ id: userId, isActive: true });
 
     await completePasswordReset(token, "NuevaClave123");
 
@@ -217,8 +218,27 @@ describe("email auth flows", () => {
     );
     expect(mocks.db.user.update).toHaveBeenCalledWith({
       where: { id: userId },
-      data: { passwordHash: expect.any(String) },
+      // P1-5: subir la versión revoca las sesiones anteriores.
+      data: { passwordHash: expect.any(String), tokenVersion: { increment: 1 } },
     });
+  });
+
+  it("P1-5: desactivado no recupera acceso ni cambia la clave", async () => {
+    const token = "ab".repeat(32);
+    mocks.db.passwordReset.findUnique.mockResolvedValue({
+      id: "reset-1",
+      userId,
+      tokenHash: createHash("sha256").update(token).digest("hex"),
+      expiresAt: new Date(Date.now() + 60_000),
+      usedAt: null,
+    });
+    mocks.db.passwordReset.updateMany.mockResolvedValue({ count: 1 });
+    mocks.db.user.findUnique.mockResolvedValue({ id: userId, isActive: false });
+
+    await expect(completePasswordReset(token, "NuevaClave123")).rejects.toMatchObject({
+      code: "RESET_TOKEN_USED",
+    });
+    expect(mocks.db.user.update).not.toHaveBeenCalled();
   });
 
   it("rechaza el segundo uso de un token de recuperación", async () => {

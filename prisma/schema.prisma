@@ -32,6 +32,9 @@ model User {
   phone        String?
   isActive     Boolean  @default(true)
   emailVerified Boolean @default(false)
+  // P1-5: revocación de sesiones. Cada cambio de contraseña lo incrementa y
+  // los JWT llevan el valor vigente: un token robado muere al cambiar la clave.
+  tokenVersion Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
