@@ -1,5 +1,5 @@
 /**
- * Fase 5.3 (E2E, Stripe mockeado): empleado — consulta un QR y da acceso.
+ * (E2E, Stripe mockeado): empleado — consulta un QR y da acceso.
  *
  * El QR es un fixture (mock): se inserta con hash + código corto reales pero
  * sin pasar por Stripe, en una franja en curso para que el gate de tiempo lo

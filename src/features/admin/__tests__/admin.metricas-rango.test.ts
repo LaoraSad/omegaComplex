@@ -11,7 +11,7 @@ import {
 // 2026-10-14 07:00 COT: hoy es 2026-10-14 en Bogotá.
 const AHORA = new Date("2026-10-14T12:00:00Z");
 
-describe("sanearRangoMetricas (Fase 4.1)", () => {
+describe("sanearRangoMetricas", () => {
   it("sin fechas devuelve los últimos 30 días", () => {
     const r = sanearRangoMetricas(undefined, undefined, AHORA);
     expect(r.desdeKey).toBe("2026-09-15");
@@ -38,7 +38,7 @@ describe("sanearRangoMetricas (Fase 4.1)", () => {
   });
 });
 
-describe("agregarIngresos (Fase 4.1)", () => {
+describe("agregarIngresos", () => {
   const fila = (amountCop: number, id: string, name: string, category: string) => ({
     amountCop,
     reservation: { service: { id, name, category: { name: category } } },
@@ -68,7 +68,7 @@ describe("agregarIngresos (Fase 4.1)", () => {
   });
 });
 
-describe("agregarReservasPorRango (Fase 4.1)", () => {
+describe("agregarReservasPorRango", () => {
   const fila = (id: string, name: string, category: string) => ({
     service: { id, name, category: { name: category } },
   });

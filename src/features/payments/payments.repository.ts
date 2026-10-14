@@ -283,7 +283,7 @@ export async function obtenerContactoQr(
 }
 
 /**
- * Fase 3.1: contacto + detalle de una reserva para los avisos de pago
+ * Contacto + detalle de una reserva para los avisos de pago
  * rechazado y hold expirado (email y nombre del titular, fecha, instalación
  * y monto). Null si la reserva ya no existe.
  */

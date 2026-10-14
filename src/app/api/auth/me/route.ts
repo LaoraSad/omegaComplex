@@ -36,7 +36,7 @@ export const PATCH = handler(async (req) => {
 
   const result = await updateProfile(session.userId, parsed.data);
 
-  // Decisión Fase 2: al cambiar el correo se cierran las sesiones (tokenVersion++).
+  // Al cambiar el correo se cierran las sesiones (tokenVersion++).
   // Se borra la cookie aquí para forzar el re-login + verificación inmediata.
   if (result.emailChanged) {
     await deleteSession();

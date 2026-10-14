@@ -210,7 +210,7 @@ describe("confirmarPagoExitoso", () => {
     expect(result).toEqual({ transitioned: true, emitidos });
   });
 
-  it("el correo por Resend lleva el documento igual que el de n8n (Fase 3.2)", async () => {
+  it("el correo por Resend lleva el documento igual que el de n8n", async () => {
     mocks.db.reservation.findUnique
       .mockResolvedValueOnce({ id: "res-1", status: "pending_payment" })
       .mockResolvedValue({ id: "res-1", status: "confirmed" });
@@ -331,7 +331,7 @@ describe("rechazarPago", () => {  it("marca fallido y libera los cupos retenidos
     expect(mocks.repository.liberarCuposDeReserva).toHaveBeenCalledWith("res-1");
   });
 
-  it("avisa al cliente por correo con el motivo (Fase 3.1)", async () => {
+  it("avisa al cliente por correo con el motivo", async () => {
     mocks.repository.rejectPayment.mockResolvedValue({ id: "pay-1", reservationId: "res-1" });
     mocks.repository.liberarCuposDeReserva.mockResolvedValue({ applied: true });
     mocks.repository.obtenerContactoAviso.mockResolvedValue({

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { TriangleAlert } from "lucide-react";
 import { resendVerificationEmail, getAuthErrorMessage } from "@/lib/api/auth";
 
-/** Fase 2: aviso cuando el correo está pendiente de verificación, con reenvío. */
+/** Aviso cuando el correo está pendiente de verificación, con reenvío. */
 export function PendingEmailBanner({ email }: { email: string }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);

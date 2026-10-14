@@ -25,7 +25,7 @@ vi.mock("../email-flow.service", () => ({
 import { ConflictError, UnauthorizedError } from "@/shared/http/errors";
 import { updateProfile } from "../auth.service";
 
-describe("updateProfile (Fase 2)", () => {
+describe("updateProfile", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.findUserEmailById.mockResolvedValue({ id: "u-1", email: "actual@ejemplo.com", isActive: true });

@@ -71,7 +71,7 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
 /**
- * Fase 2: edición del perfil. Solo teléfono y correo. El `.strict()` rechaza
+ * Edición del perfil. Solo teléfono y correo. El `.strict()` rechaza
  * `document`/`birthDate` aunque se envíen (33-H: no editables).
  */
 export const updateProfileSchema = z

@@ -1,12 +1,12 @@
 /**
- * Fixtures compartidos de los E2E (Fase 5.3). Todo lo que se crea lleva un
+ * Fixtures compartidos de los E2E. Todo lo que se crea lleva un
  * sufijo único por corrida y cada spec lo borra en su limpieza: la BD dev
  * queda igual que antes.
  */
 import "dotenv/config";
 
 import { createHash } from "node:crypto";
-import type { Page, Request } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { esDiaDeMantenimiento } from "@/features/schedules/colombia-holidays";
@@ -32,7 +32,7 @@ export function clienteDb(): PrismaClient {
  */
 export async function iniciarSesion(
   page: Page,
-  request: Request,
+  request: APIRequestContext,
   email: string,
   password: string,
 ): Promise<void> {

@@ -1,5 +1,5 @@
 /**
- * Fase 5.2: concurrencia real contra PostgreSQL (BD dev).
+ * Concurrencia real contra PostgreSQL (BD dev).
  *
  * Dos transacciones paralelas de `createReservationWithHold` pelean el último
  * cupo de la misma franja: el UPDATE condicional (`capacity >= booked + held
@@ -121,7 +121,7 @@ afterAll(async () => {
   await db.$disconnect();
 });
 
-describe("concurrencia real por el último cupo (Fase 5.2)", () => {
+describe("concurrencia real por el último cupo", () => {
   it("dos clientes en paralelo: solo uno gana y el otro ve ya_reservado", { timeout: 60_000 }, async () => {
     const sufijo = `ultimo-${Date.now()}`;
     const esc: Escenario = { sufijo, userIds: [], serviceIds: [], slotIds: [], reservaIds: [] };

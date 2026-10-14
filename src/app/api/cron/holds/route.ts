@@ -22,7 +22,7 @@ export const GET = handler(async (req: NextRequest) => {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  // Fase 3.1: solo este barrido proactivo avisa. Las liberaciones perezosas
+  // Solo este barrido proactivo avisa. Las liberaciones perezosas
   // (lecturas de calendario, creación de reservas) no mandan correo: hacerlo
   // ahí sería notificar en mitad de la petición de otro cliente.
   const expiradas: string[] = [];

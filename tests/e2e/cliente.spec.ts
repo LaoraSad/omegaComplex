@@ -1,5 +1,5 @@
 /**
- * Fase 5.3 (E2E, Stripe mockeado): cliente — registro → reserva con hold →
+ * (E2E, Stripe mockeado): cliente — registro → reserva con hold →
  * visible en mis reservas con pago pendiente.
  *
  * El inbox del correo no existe en E2E: la cuenta se marca verificada por

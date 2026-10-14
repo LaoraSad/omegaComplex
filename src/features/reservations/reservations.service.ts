@@ -141,7 +141,7 @@ type ClienteReserva = Pick<
  * límite) porque ese sí es su trabajo. La operación es idempotente, así que
  * lo que no alcance una pasada lo toma la siguiente.
  *
- * Fase 3.1: `alExpirar` avisa por cada reserva que ESTA llamada expiró (solo
+ * `alExpirar` avisa por cada reserva que ESTA llamada expiró (solo
  * la gana quien marcó el update condicional, así no hay doble aviso). Las
  * lecturas no lo pasan: el aviso sale únicamente del barrido del cron, no en
  * mitad de la consulta del calendario de otro cliente.

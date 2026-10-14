@@ -60,7 +60,7 @@ function claveDiaBogota(ref: Date): string {
 }
 
 /**
- * Fase 4: sanea el filtro desde/hasta de métricas. Puro y testeable (`ahora`
+ * Sanea el filtro desde/hasta de métricas. Puro y testeable (`ahora`
  * inyectable). Sin fechas → últimos 30 días; invertidas se ordenan; el tramo
  * se acota a 90 días para no presionar el pooler.
  */
@@ -254,7 +254,7 @@ export function agregarReservasPorRango(rows: FilaReservaRango[]): {
 }
 
 /**
- * Fase 4.1 (§20): ingresos y reservas por rango de fechas de franja.
+ * (§20): ingresos y reservas por rango de fechas de franja.
  * Los ingresos se acotan por `paidAt` (cuándo entró el dinero) y las
  * reservas por `startsAt` (cuándo ocurre el servicio). Dos lecturas en una
  * oleada: el pooler admite hasta 3 simultáneas.
@@ -294,7 +294,7 @@ export async function getMetricasRango(
 }
 
 /**
- * Fase 4.2 (§20): ocupación de una fecha configurable. Misma agregación que
+ * (§20): ocupación de una fecha configurable. Misma agregación que
  * el overview de hoy (`agregarOcupacion`), pero sobre el día Bogotá pedido;
  * fecha inválida o ausente cae a hoy.
  */
@@ -316,7 +316,7 @@ export async function getOcupacionPorFecha(fecha: string | undefined): Promise<O
 }
 
 /**
- * Fase 4.2 (§20): reservas usadas vs no usadas en el rango (fecha de franja).
+ * (§20): reservas usadas vs no usadas en el rango (fecha de franja).
  * Usada = `status used`. No usada = `confirmed` con `endsAt` pasado y ningún
  * QR consumido. Dos conteos en una oleada.
  */
@@ -657,7 +657,7 @@ export async function getServiceDetail(id: string): Promise<ServiceRow | null> {
 }
 
 // ---------------------------------------------------------------------------
-// CRUD de servicios (Fase 1, SCRUM sección 5). Sin esto todo cambio iba por
+// CRUD de servicios (SCRUM sección 5). Sin esto todo cambio iba por
 // seed/SQL. Reglas: slug único derivado del nombre, capacidad nunca bajo lo
 // vendido en franjas futuras, desactivar no toca reservas vivas, y lo nuevo
 // rige franjas futuras (las pasadas son historia).

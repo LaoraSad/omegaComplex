@@ -88,7 +88,7 @@ export default async function ReportesPage({
         description="Descarga los datos reales del sistema en CSV, listo para Excel. Los reportes de reservas y accesos aceptan rango de fechas."
       />
 
-      {/* Fase 4 (§20, solo visualización): métricas por rango de fechas de
+      {/* (§20, solo visualización): métricas por rango de fechas de
         franja. Sin exportación: el CSV de abajo no incluye estos desgloses. */}
       <section aria-label="Métricas" className="acard acard-pad space-y-4">
         <div className="flex items-start justify-between gap-3">

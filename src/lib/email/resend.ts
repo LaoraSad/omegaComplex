@@ -185,7 +185,7 @@ export async function sendWelcomeEmail(to: string, firstName: string): Promise<v
 }
 
 /**
- * Fase 3.1: aviso de pago rechazado. Sin adjuntos: lo único que necesita el
+ * Aviso de pago rechazado. Sin adjuntos: lo único que necesita el
  * cliente es saber que el cobro no entró y que puede intentarlo de nuevo.
  */
 export async function sendPagoRechazadoEmail(
@@ -215,7 +215,7 @@ export async function sendPagoRechazadoEmail(
 }
 
 /**
- * Fase 3.1: aviso de hold expirado. El bloqueo de 10 minutos se venció sin
+ * Aviso de hold expirado. El bloqueo de 10 minutos se venció sin
  * pago y los cupos volvieron al inventario: la reserva hay que crearla de nuevo.
  */
 export async function sendHoldExpiradoEmail(

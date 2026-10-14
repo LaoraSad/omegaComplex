@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Mail } from "lucide-react";
 import { updateProfile, getAuthErrorMessage } from "@/lib/api/auth";
 
-/** Fase 2: cambio de correo con re-verificación. Cierra la sesión y manda a /verify-email. */
+/** Cambio de correo con re-verificación. Cierra la sesión y manda a /verify-email. */
 export function EditEmailForm({ currentEmail }: { currentEmail: string }) {
   const router = useRouter();
   const [email, setEmail] = useState(currentEmail);

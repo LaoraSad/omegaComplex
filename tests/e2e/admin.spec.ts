@@ -1,5 +1,5 @@
 /**
- * Fase 5.3 (E2E, Stripe mockeado): admin — crea categoría, consulta horarios
+ * (E2E, Stripe mockeado): admin — crea categoría, consulta horarios
  * y métricas.
  */
 import { expect, test } from "@playwright/test";

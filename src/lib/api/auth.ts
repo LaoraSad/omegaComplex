@@ -177,8 +177,8 @@ export function updateProfile(data: { phone?: string; email?: string }): Promise
   return requestPatch<UpdateProfileResult>(AUTH_API_PATHS.me, data);
 }
 
-// NOTA(merge verificacion-recuperacion): no se trae el stub loginWithGoogle
-// de la rama porque deshabilita el OAuth con Google que ya funciona en develop.
+// No hay loginWithGoogle a propósito: el OAuth con Google vive en su
+// callback y un stub de login lo deshabilitaría.
 export function getAuthErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }

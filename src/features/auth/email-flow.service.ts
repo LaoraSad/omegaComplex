@@ -178,7 +178,7 @@ export async function verifyEmailCode(email: string, code: string): Promise<void
     } catch (error) {
       logger.error("email.bienvenida_fallida", { error });
     }
-    // Fase 3.2: el evento existía en el tipo pero nunca se emitía. n8n no
+    // El evento existía en el tipo pero nunca se emitía. n8n no
     // lanza (contrato de enviarEvento), así que va fuera del try: la cuenta
     // quedó verificada aunque la bienvenida falle.
     await enviarEvento("usuario.verificado", {
