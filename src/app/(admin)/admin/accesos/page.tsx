@@ -153,6 +153,11 @@ export default async function AccesosPage({ searchParams }: AccesosPageProps) {
                       {a.denialReason ? (
                         <span className="block text-xs text-[#b8aca6]">{a.denialReason}</span>
                       ) : null}
+                      {a.invalidacionManual ? (
+                        <span className="block text-xs font-semibold text-amber-300">
+                          Invalidación manual del QR
+                        </span>
+                      ) : null}
                     </td>
                   </tr>
                 ))}

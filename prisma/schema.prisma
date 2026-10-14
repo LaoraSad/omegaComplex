@@ -390,6 +390,10 @@ model Access {
   employeeId     String       @db.Uuid
   result         AccessResult
   denialReason   String?
+  // P2-5: auditoría de invalidación manual (33-E). true solo cuando el
+  // empleado consumió un QR válido con denegación explícita. Un denied del
+  // sistema (lookup fallido) nunca consume el QR y queda en false.
+  invalidacionManual Boolean @default(false)
   wristbandColor String?
   accessedAt     DateTime     @default(now())
 

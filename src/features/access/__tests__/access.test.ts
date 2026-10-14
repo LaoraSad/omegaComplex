@@ -225,12 +225,14 @@ describe("denyAccess", () => {
       },
     });
     // El QR se consume: si no, el mismo código rebotaría en otra puerta.
+    // Y queda auditado como invalidación manual, distinto de un denied del sistema.
     expect(mocks.grantAccess).toHaveBeenCalledWith({
       qrTokenId: "qr-1",
       employeeId: "emp-1",
       result: "denied",
       denialReason: "La persona no coincide con la ficha",
       consumeQr: true,
+      invalidacionManual: true,
     });
   });
 

@@ -25,6 +25,10 @@ export const denyRequestSchema = z.object({
   token: accessTokenSchema,
   /** Motivo que verá el administrador en Accesos. */
   reason: z.string().trim().max(200).optional(),
+  /** P2-5: la UI lo manda tras la doble confirmación (ficha → motivo → confirmar).
+   * Sin esta bandera no hay invalidación manual: un toque accidental o un
+   * llamado directo no consume un QR válido. */
+  confirmacion: z.literal(true, { message: "Confirma la denegación para invalidar el QR." }),
 });
 
 export type ValidateInput = z.infer<typeof validateRequestSchema>;

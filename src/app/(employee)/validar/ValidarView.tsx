@@ -135,7 +135,7 @@ export default function ValidarView() {
         const res = await fetch("/api/access/validate?action=deny", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token, reason: motivo }),
+          body: JSON.stringify({ token, reason: motivo, confirmacion: true }),
         });
         const json = await res.json();
         const denial = json?.data?.denial as { message?: string } | undefined;
