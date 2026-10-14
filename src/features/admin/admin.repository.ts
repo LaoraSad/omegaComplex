@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { db } from "@/shared/lib/db";
 import type { Prisma } from "@prisma/client";
+import { diaDeSemana } from "@/features/schedules/colombia-holidays";
 
 import type {
   AccessRow,
@@ -384,15 +385,25 @@ export async function upsertServiceSchedule(input: {
 }
 
 export async function deleteServiceSchedule(serviceId: string, dayOfWeek: number) {
+  if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
+    throw new Error("El día de la semana debe estar entre 0 y 6.");
+  }
   const existing = await db.serviceSchedule.findUnique({
     where: { serviceId_dayOfWeek: { serviceId, dayOfWeek } },
   });
   if (!existing) throw new Error("Ese horario ya no existe.");
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Inicio del día en Bogotá (no medianoche del servidor): el rango de slots
+  // a revisar debe estar en la misma zona que el resto del sistema.
+  const hoyBogota = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const today = new Date(`${hoyBogota}T05:00:00.000Z`);
   const next90 = new Date(today);
-  next90.setDate(today.getDate() + 90);
+  next90.setDate(next90.getDate() + 90);
 
   const slots = await db.serviceSlot.findMany({
     where: {
@@ -402,6 +413,10 @@ export async function deleteServiceSchedule(serviceId: string, dayOfWeek: number
     select: { id: true, startsAt: true },
   });
 
+  // P1-8: el día de semana se calcula en Bogotá con `diaDeSemana` (0 = domingo,
+  // igual que ServiceSchedule). El código anterior parseaba `YYYY-MM-DD` como
+  // UTC y usaba `getDay()` del servidor: según la zona borraba los slots del
+  // día equivocado o no borraba nada.
   const ids = slots
     .filter((slot) => {
       const dateKey = new Intl.DateTimeFormat("en-CA", {
@@ -410,20 +425,18 @@ export async function deleteServiceSchedule(serviceId: string, dayOfWeek: number
         month: "2-digit",
         day: "2-digit",
       }).format(slot.startsAt);
-      return new Date(dateKey).getDay() === dayOfWeek
-        ? dayOfWeek === 0
-          ? new Date(dateKey).getDay() === 0
-          : new Date(dateKey).getDay() === dayOfWeek
-        : false;
+      return diaDeSemana(dateKey) === dayOfWeek;
     })
     .map((slot) => slot.id);
 
-  if (ids.length > 0) {
-    await db.serviceSlot.deleteMany({ where: { id: { in: ids } } });
-  }
+  return db.$transaction(async (tx) => {
+    if (ids.length > 0) {
+      await tx.serviceSlot.deleteMany({ where: { id: { in: ids } } });
+    }
 
-  return db.serviceSchedule.delete({
-    where: { serviceId_dayOfWeek: { serviceId, dayOfWeek } },
+    return tx.serviceSchedule.delete({
+      where: { serviceId_dayOfWeek: { serviceId, dayOfWeek } },
+    });
   });
 }
 
