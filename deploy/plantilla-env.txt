@@ -55,11 +55,16 @@ STRIPE_WEBHOOK_SECRET=
 #  5. RESEND  (el que manda los correos con el QR)
 #  >>> OBTENER: resend.com > API Keys > Create API Key > copiar
 #      - RESEND_FROM_EMAIL debe ser un dominio YA VERIFICADO en Resend
-#        (agrega coderhivex.com en "Domains" y sigue los pasos de DNS).
-#        Para empezar rápido puedes usar:  Omega Complex <onboarding@resend.dev>
+#        (agrega el dominio en "Domains" y sigue los pasos de DNS).
+#        Solo la direccion, sin nombre ni parentesis: la app ya le pone
+#        "Omega Complex <...>". Si le pones el nombre a mano, el remitente
+#        queda mal formado y NINGUN correo sale.
+#      - Nada de onboarding@resend.dev: esa direccion solo deja enviar al
+#        correo del titular de la cuenta, asi que los QR, los codigos de
+#        verificacion y el restablecimiento de clave no llegan a los clientes.
 # ---------------------------------------------------------------------------
 RESEND_API_KEY=re_PEGA_AQUI
-RESEND_FROM_EMAIL=Omega Complex <onboarding@resend.dev>
+RESEND_FROM_EMAIL=notificaciones@omegacomplex.coderhivex.com
 
 
 # ---------------------------------------------------------------------------

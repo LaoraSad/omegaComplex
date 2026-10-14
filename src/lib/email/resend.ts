@@ -155,8 +155,8 @@ async function send(
       soloPropio
         ? "Resend rechazó el envío: el remitente es una dirección de pruebas " +
           `(${getFromEmail()}) y solo permite enviar al correo del titular de la cuenta. ` +
-          "Hay que verificar un dominio en resend.com/domains y ponerlo en RESEND_FROM_EMAIL " +
-          "con el formato 'Omega Complex <notificaciones@tudominio.com>'."
+          "Hay que verificar un dominio en resend.com/domains y poner en RESEND_FROM_EMAIL " +
+          "solo la direccion, sin nombre ni parentesis: 'notificaciones@tudominio.com'."
         : `Resend rechazó el correo: ${mensaje}`,
     );
   }

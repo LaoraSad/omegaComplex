@@ -113,7 +113,9 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"
 STRIPE_WEBHOOK_SECRET=
 
 RESEND_API_KEY="$RESEND_API_KEY"
-RESEND_FROM_EMAIL=Omega Complex <onboarding@resend.dev>
+# Solo la direccion: la app le antepone "Omega Complex <...>". Con el nombre
+# puesto a mano el remitente queda mal formado y no sale ningun correo.
+RESEND_FROM_EMAIL=notificaciones@omegacomplex.coderhivex.com
 
 GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID"
 GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET"
