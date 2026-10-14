@@ -11,6 +11,7 @@ import {
   fullName,
 } from "@/components/admin/format";
 import { listAccesses, listServiceOptions } from "@/features/admin/admin.repository";
+import { zonaDeAcceso } from "@/features/admin/admin.types";
 
 export const metadata: Metadata = { title: "Accesos" };
 
@@ -144,13 +145,18 @@ export default async function AccesosPage({ searchParams }: AccesosPageProps) {
                         a.qrToken.reservation.customer.user.lastName,
                       )}
                     </td>
-                    <td>{a.qrToken.reservation.service.name}</td>
+                    <td>{zonaDeAcceso(a)}</td>
                     <td className="anum">QR #{a.qrToken.seqNo}</td>
                     <td>{fullName(a.employee.user.firstName, a.employee.user.lastName)}</td>
                     <td>
                       <StatusBadge kind="access" value={a.result} />
                       {a.denialReason ? (
                         <span className="block text-xs text-[#b8aca6]">{a.denialReason}</span>
+                      ) : null}
+                      {a.invalidacionManual ? (
+                        <span className="block text-xs font-semibold text-amber-300">
+                          Invalidación manual del QR
+                        </span>
                       ) : null}
                     </td>
                   </tr>

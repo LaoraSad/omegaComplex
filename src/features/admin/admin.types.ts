@@ -51,6 +51,8 @@ export type AccessRow = Prisma.AccessGetPayload<{
     employee: { include: { user: { select: { firstName: true; lastName: true } } } };
     qrToken: {
       include: {
+        // Zona real del QR. Nulo en QR legacy: ahí manda la reserva.
+        block: { select: { service: { select: { id: true; name: true } } } };
         reservation: {
           include: {
             customer: {
@@ -65,6 +67,20 @@ export type AccessRow = Prisma.AccessGetPayload<{
     };
   };
 }>;
+
+/**
+ * Zona a la que da acceso un QR (P1-7). En multizona el servicio principal de
+ * la reserva miente: un QR de piscina en una compra con cancha debe mostrar
+ * piscina. Sin bloque (QR legacy) se usa la reserva.
+ */
+export function zonaDeAcceso(a: {
+  qrToken: {
+    block?: { service?: { name?: string } | null } | null;
+    reservation: { service: { name: string } };
+  };
+}): string {
+  return a.qrToken.block?.service?.name ?? a.qrToken.reservation.service.name;
+}
 
 export type EmployeeRow = Prisma.EmployeeGetPayload<{
   include: {
@@ -172,6 +188,38 @@ export interface Paginated<T> {
   page: number;
   pageSize: number;
   totalPages: number;
+}
+
+/**
+ * (§20, solo visualización): ingresos y reservas por rango de fechas
+ * de franja, desglosados por servicio y categoría. Sin exportación.
+ */
+export interface MetricasRango {
+  /** Claves Bogotá YYYY-MM-DD tal como las pidió el filtro. */
+  desde: string;
+  hasta: string;
+  totalIngresosCop: number;
+  ingresosPorServicio: Array<{ serviceId: string; serviceName: string; totalCop: number }>;
+  ingresosPorCategoria: Array<{ categoryName: string; totalCop: number }>;
+  totalReservas: number;
+  reservasPorServicio: Array<{ serviceId: string; serviceName: string; total: number }>;
+  reservasPorCategoria: Array<{ categoryName: string; total: number }>;
+}
+
+/** (§20): ocupación de una fecha configurable (misma forma que hoy). */
+export interface OcupacionFecha {
+  fecha: string;
+  occupancyToday: { used: number; total: number } | null;
+  occupancyByService: Array<{ serviceId: string; serviceName: string; used: number; total: number }>;
+}
+
+/**
+ * (§20): usadas vs no usadas. No usada = confirmada con fecha
+ * pasada y ningún QR consumido (definición estricta aprobada).
+ */
+export interface UsoReservas {
+  usadas: number;
+  noUsadas: number;
 }
 
 export const RESERVATION_STATUSES = [

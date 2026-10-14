@@ -19,7 +19,9 @@ import {
   listAccesses,
   listReservations,
 } from "@/features/admin/admin.repository";
+import { listCategories } from "@/features/catalog";
 import { db } from "@/shared/lib/db";
+import { ServiceForm } from "../ServiceForm";
 
 export const metadata: Metadata = { title: "Detalle de servicio" };
 
@@ -43,7 +45,8 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
   const service = await getServiceDetail(id);
   if (!service) notFound();
 
-  const photo = servicePhoto(service.slug);
+  const categorias = await listCategories(true);
+  const photo = service.imagen ?? servicePhoto(service.slug);
   const byDay = new Map(service.serviceSchedules.map((sc) => [sc.dayOfWeek, sc]));
 
   const { start: todayStart, end: todayEnd } = bogotaDayRange();
@@ -66,6 +69,21 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
         <ArrowLeft className="h-4 w-4" />
         Volver a servicios
       </Link>
+
+      <ServiceForm
+        mode="edit"
+        categorias={categorias.map((c) => ({ id: c.id, name: c.name }))}
+        initial={{
+          id: service.id,
+          name: service.name,
+          categoryId: service.categoryId,
+          description: service.description,
+          price: service.price,
+          capacity: service.capacity,
+          imagen: service.imagen,
+          isActive: service.isActive,
+        }}
+      />
 
       <PageHeader
         eyebrow={service.category.name}

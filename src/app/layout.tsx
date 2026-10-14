@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import NextTopLoader from "nextjs-toploader";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -43,6 +44,9 @@ export default function RootLayout({
         data-scroll-behavior="smooth"
       >
       <body className={`min-h-full flex flex-col ${recoleta.className}`}>
+        {/* Barra fina de progreso en cada navegación: con páginas pesadas
+          (reportes, accesos) el skeleton no basta y la app se siente colgada. */}
+        <NextTopLoader color="#7A1F3D" showSpinner={false} shadow="0 0 10px #7A1F3D,0 0 5px #7A1F3D" />
         {children}
         <Toaster position="top-center" richColors closeButton />
       </body>

@@ -1,22 +1,19 @@
-'use client';
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowLeft, CalendarClock, Compass, CreditCard, Users } from "lucide-react";
+import AmbientBubbles from "@/components/AmbientBubbles";
+import SectionDivider from "@/components/SectionDivider";
+import { servicePhoto } from "@/components/admin/service-image";
+import { panorama360 } from "@/components/admin/panorama-image";
+import PanoramaModal from "@/components/tour/PanoramaModal";
+import Tour360 from "@/components/tour/Tour360";
+import PanningImage from "@/components/tour/PanningImage";
+import ReservaIsla from "./ReservaIsla";
+import { getCatalogService } from "@/features/catalog";
+import { NotFoundError } from "@/shared/http/errors";
 
-import { use, useEffect, useState } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, CalendarClock, Compass, CreditCard, Users } from 'lucide-react';
-import AmbientBubbles from '@/components/AmbientBubbles';
-import SectionDivider from '@/components/SectionDivider';
-import { servicePhoto } from '@/components/admin/service-image';
-import { panorama360 } from '@/components/admin/panorama-image';
-import PanoramaModal from '@/components/tour/PanoramaModal';
-import Tour360 from '@/components/tour/Tour360';
-import PanningImage from '@/components/tour/PanningImage';
-import { SelectorFranjas } from '@/components/storefront/SelectorFranjas';
-import type { CatalogServiceRecord } from '@/features/catalog/catalog.types';
-
-interface ApiResult<T> {
-  data: T | null;
-  error: { message: string } | null;
-}
+export const metadata: Metadata = { title: "Detalle del servicio" };
 
 interface ServiceDetailPageProps {
   params: Promise<{ id: string }>;
@@ -24,48 +21,25 @@ interface ServiceDetailPageProps {
 
 const DAYS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
-export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
-  // El provider del carrito vive en el layout: aquí solo va el detalle.
-  return <DetalleServicio params={params} />;
-}
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function DetalleServicio({ params }: ServiceDetailPageProps) {
-  const { id } = use(params);
-  const [service, setService] = useState<CatalogServiceRecord | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [abriendoReserva, setAbriendoReserva] = useState(false);
+// El detalle se sirve renderizado: el servidor lee el servicio y manda el HTML
+// con contenido. Solo el botón de reserva y el modal de franjas son cliente.
+export default async function ServiceDetailPage({ params }: ServiceDetailPageProps) {
+  const { id } = await params;
+  if (!UUID_PATTERN.test(id)) notFound();
 
-  useEffect(() => {
-    const controller = new AbortController();
-    async function loadService() {
-      try {
-        const response = await fetch(`/api/services/${id}`, {
-          cache: 'no-store',
-          signal: controller.signal,
-        });
-        const result = (await response.json()) as ApiResult<CatalogServiceRecord>;
-        if (!response.ok || result.error || !result.data) {
-          throw new Error(result.error?.message ?? 'No fue posible cargar el servicio.');
-        }
-        setService(result.data);
-      } catch (reason) {
-        if (!controller.signal.aborted) {
-          setError(reason instanceof Error ? reason.message : 'No fue posible cargar el servicio.');
-        }
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    }
-    void loadService();
-    return () => controller.abort();
-  }, [id]);
+  let service;
+  try {
+    service = await getCatalogService(id);
+  } catch (error) {
+    if (error instanceof NotFoundError) notFound();
+    throw error;
+  }
 
-  const price = service
-    ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(service.price)
-    : '';
-  const image = service ? servicePhoto(service.slug) : null;
-  const panorama = service ? panorama360(service.slug) : null;
+  const price = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(service.price);
+  const image = service.imagen ?? servicePhoto(service.slug);
+  const panorama = service.imagen ?? panorama360(service.slug);
 
   return (
     <div className="omega-dark-section relative min-h-screen overflow-hidden bg-[#0e0b0d] text-white">
@@ -76,105 +50,76 @@ function DetalleServicio({ params }: ServiceDetailPageProps) {
           <ArrowLeft className="h-4 w-4" /> Volver al catálogo
         </Link>
 
-        {loading ? (
-          <p role="status" className="py-20 text-center text-white/60">Cargando servicio…</p>
-        ) : error || !service ? (
-          <div role="alert" className="rounded-xl border border-red-300/20 bg-red-950/30 p-6 text-center text-red-100">
-            {error || 'Servicio no encontrado.'}
-          </div>
-        ) : (
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]">
-            <section className="space-y-6">
-              <div className="overflow-hidden rounded-xl border border-white/10 bg-[#141013]">
-                <div className="relative h-80 overflow-hidden rounded-2xl border border-white/10 bg-black shadow-inner">
-                  {panorama && image ? (
-                    <Tour360
-                      src={panorama}
-                      title={service.name}
-                      subtitle={service.category.name}
-                      trigger={<PanningImage src={image} alt={service.name} />}
-                    />
-                  ) : image ? (
-                    <PanoramaModal
-                      src={image}
-                      title={service.name}
-                      subtitle={service.category.name}
-                      trigger={<PanningImage src={image} alt={service.name} />}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-[#211a1d]" aria-hidden="true" />
-                  )}
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]">
+          <section className="space-y-6">
+            <div className="overflow-hidden rounded-xl border border-white/10 bg-[#141013]">
+              <div className="relative h-80 overflow-hidden rounded-2xl border border-white/10 bg-black shadow-inner">
+                {panorama && image ? (
+                  <Tour360
+                    src={panorama}
+                    title={service.name}
+                    subtitle={service.category.name}
+                    trigger={<PanningImage src={image} alt={service.name} />}
+                  />
+                ) : image ? (
+                  <PanoramaModal
+                    src={image}
+                    title={service.name}
+                    subtitle={service.category.name}
+                    trigger={<PanningImage src={image} alt={service.name} />}
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-[#211a1d]" aria-hidden="true" />
+                )}
+              </div>
+              {image ? (
+                <div className="flex items-center gap-2 text-xs font-semibold text-white/55">
+                  <Compass className="h-4 w-4 text-[#e3bd74]" />
+                  <span>
+                    {panorama
+                      ? 'Toca la imagen para recorrerla en 360°.'
+                      : 'Inspecciona la imagen con el cursor o amplíala.'}
+                  </span>
                 </div>
-                {image ? (
-                  <div className="flex items-center gap-2 text-xs font-semibold text-white/55">
-                    <Compass className="h-4 w-4 text-[#e3bd74]" />
-                    <span>
-                      {panorama
-                        ? 'Toca la imagen para recorrerla en 360°.'
-                        : 'Inspecciona la imagen con el cursor o amplíala.'}
-                    </span>
+              ) : null}
+              <div className="space-y-4 p-6 sm:p-8">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#e3bd74]">{service.category.name}</p>
+                <h1 className="text-3xl font-black uppercase text-white sm:text-4xl">{service.name}</h1>
+                <p className="leading-relaxed text-white/65">{service.description || 'Descripción no registrada.'}</p>
+                <SectionDivider />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4">
+                    <Users className="h-5 w-5 text-[#e3bd74]" />
+                    <div><p className="text-xs text-white/50">Capacidad registrada</p><p className="font-bold">{service.capacity} personas</p></div>
                   </div>
-                ) : null}
-                <div className="space-y-4 p-6 sm:p-8">
-                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#e3bd74]">{service.category.name}</p>
-                  <h1 className="text-3xl font-black uppercase text-white sm:text-4xl">{service.name}</h1>
-                  <p className="leading-relaxed text-white/65">{service.description || 'Descripción no registrada.'}</p>
-                  <SectionDivider />
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4">
-                      <Users className="h-5 w-5 text-[#e3bd74]" />
-                      <div><p className="text-xs text-white/50">Capacidad registrada</p><p className="font-bold">{service.capacity} personas</p></div>
-                    </div>
-                    <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4">
-                      <CreditCard className="h-5 w-5 text-[#e3bd74]" />
-                      <div><p className="text-xs text-white/50">Precio registrado</p><p className="font-bold">{price} COP</p></div>
-                    </div>
+                  <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4">
+                    <CreditCard className="h-5 w-5 text-[#e3bd74]" />
+                    <div><p className="text-xs text-white/50">Precio registrado</p><p className="font-bold">{price} COP</p></div>
                   </div>
                 </div>
               </div>
+            </div>
 
-              <section className="rounded-xl border border-white/10 bg-[#141013] p-6">
-                <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wide">
-                  <CalendarClock className="h-4 w-4 text-[#e3bd74]" /> Horarios registrados
-                </h2>
-                {service.serviceSchedules.length ? (
-                  <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-                    {service.serviceSchedules.map((schedule) => (
-                      <li key={schedule.id} className="flex justify-between gap-3 rounded-md bg-white/5 px-3 py-2 text-sm">
-                        <span className="capitalize text-white/65">{DAYS[schedule.dayOfWeek] ?? `Día ${schedule.dayOfWeek}`}</span>
-                        <span className="font-semibold">{schedule.openTime}–{schedule.closeTime}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : <p className="mt-3 text-sm text-white/55">No hay horarios configurados para este servicio.</p>}
-              </section>
+            <section className="rounded-xl border border-white/10 bg-[#141013] p-6">
+              <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wide">
+                <CalendarClock className="h-4 w-4 text-[#e3bd74]" /> Horarios registrados
+              </h2>
+              {service.serviceSchedules.length ? (
+                <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+                  {service.serviceSchedules.map((schedule) => (
+                    <li key={schedule.id} className="flex justify-between gap-3 rounded-md bg-white/5 px-3 py-2 text-sm">
+                      <span className="capitalize text-white/65">{DAYS[schedule.dayOfWeek] ?? `Día ${schedule.dayOfWeek}`}</span>
+                      <span className="font-semibold">{schedule.openTime}–{schedule.closeTime}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="mt-3 text-sm text-white/55">No hay horarios configurados para este servicio.</p>}
             </section>
+          </section>
 
-            <aside className="h-fit rounded-xl border border-[#e3bd74]/25 bg-[#141013] p-6">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#e3bd74]">Reservas</p>
-              <h2 className="mt-2 text-xl font-black">Reserva en línea</h2>
-              <p className="mt-3 text-sm leading-relaxed text-white/60">
-                Elige la fecha y la franja de una hora, di cuántas personas asistirán y registra a
-                los acompañantes. Puedes sumar más zonas al carrito y pagar todo junto.
-              </p>
-              <button
-                type="button"
-                onClick={() => setAbriendoReserva(true)}
-                disabled={!service}
-                className="mt-6 w-full rounded-md border border-[#e3bd74]/50 px-4 py-2.5 text-sm font-bold text-[#e3bd74] transition-colors hover:bg-[#e3bd74]/10 disabled:opacity-50"
-              >
-                Reservar
-              </button>
-            </aside>
-          </div>
-        )}
+          <ReservaIsla service={service} />
+        </div>
       </main>
-
-      {/* Mismo selector y misma barra que el catálogo: una sola forma de
-          reservar en todo el sitio. El modal viejo se queda sin uso. */}
-      {abriendoReserva && service ? (
-        <SelectorFranjas servicio={service} onClose={() => setAbriendoReserva(false)} />
-      ) : null}
     </div>
   );
 }

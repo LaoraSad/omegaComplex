@@ -478,6 +478,7 @@ La aplicación queda disponible en `http://localhost:3000`.
 | `JWT_SECRET`            | Secreto utilizado para firmar JWT         |
 | `STRIPE_SECRET_KEY`     | Clave privada de Stripe                   |
 | `STRIPE_WEBHOOK_SECRET` | Firma del webhook                         |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Clave pública de Stripe (checkout) |
 | `RESEND_API_KEY`        | Envío de correos (QR, verificación)       |
 | `RESEND_FROM_EMAIL`     | Remitente verificado en Resend            |
 | `NEXT_PUBLIC_APP_URL`   | URL pública (links de correo y Stripe)    |
@@ -488,6 +489,22 @@ La aplicación queda disponible en `http://localhost:3000`.
 | `ADMIN_*`               | Variables relacionadas con administración |
 
 Los valores reales nunca deben almacenarse en el repositorio.
+
+</details>
+
+<details>
+<summary><strong>Despliegue</strong></summary>
+
+<br />
+
+La URL pública de producción aún no está definida. Cuando se despliegue:
+
+```bash
+NEXT_PUBLIC_APP_URL=https://tu-dominio-en-produccion
+```
+
+Fuera del alcance de la app: desplegar, dominio y `migrate deploy` en prod
+(lo gestiona infra).
 
 </details>
 

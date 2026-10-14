@@ -183,25 +183,9 @@ export async function findQrByTokenHash(rawArg: string): Promise<QrLookup | null
     });
   }
 
-  // Los UUID solo se consultan si el texto tiene esa forma. Sin esta guarda,
-  // un código mal tecleado se pasaba a una columna uuid y Postgres devolvía un
-  // error 500 en vez de "este código no existe".
-  const pareceUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed);
-
-  if (!token && pareceUuid) {
-    token = await db.qrToken.findUnique({
-      where: { id: trimmed },
-      select: selectFields,
-    });
-  }
-
-  if (!token && pareceUuid) {
-    token = await db.qrToken.findFirst({
-      where: { reservationId: trimmed },
-      select: selectFields,
-    });
-  }
-
+  // Solo token seguro (hash) o código corto impreso: nada de UUID ni
+  // reservationId. Esos identificadores son visibles en APIs/admin y
+  // permitirían validar sin el token (requisito §14: token seguro).
   if (!token) return null;
 
   return {
@@ -268,6 +252,8 @@ export async function grantAccess(input: {
   denialReason?: string | null;
   /** Consume el QR también en un rechazo. */
   consumeQr?: boolean;
+  /** P2-5: true solo en invalidación manual (deny explícito de QR válido). */
+  invalidacionManual?: boolean;
 }): Promise<GrantResult> {
   const accessedAt = new Date();
 
@@ -288,12 +274,39 @@ export async function grantAccess(input: {
         employeeId: input.employeeId,
         result: input.result,
         denialReason: input.denialReason ?? null,
+        invalidacionManual: input.invalidacionManual ?? false,
       },
       select: { id: true },
     });
 
     return { ok: true, accessId: access.id, accessedAt } as const;
   });
+}
+
+/**
+ * ¿Ya se registró este mismo rechazo hace poco? (P2-6)
+ *
+ * Cada lookup fallido se registra para auditoría, pero un empleado probando el
+ * mismo QR generaba N filas idénticas que contaminan las métricas. Ventana de
+ * 5 minutos por (QR, empleado, motivo): dentro de ella el duplicado se omite.
+ */
+export async function huboDenegacionReciente(input: {
+  qrTokenId: string;
+  employeeId: string;
+  reason: string;
+  ventanaMs?: number;
+}): Promise<boolean> {
+  const desde = new Date(Date.now() - (input.ventanaMs ?? 5 * 60 * 1000));
+  const count = await db.access.count({
+    where: {
+      qrTokenId: input.qrTokenId,
+      employeeId: input.employeeId,
+      result: "denied",
+      denialReason: input.reason,
+      accessedAt: { gte: desde },
+    },
+  });
+  return count > 0;
 }
 
 /** Historial de ingresos del propio empleado para su vista. */

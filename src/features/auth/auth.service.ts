@@ -18,10 +18,14 @@ import {
   findRoleByName,
   findUserByEmail,
   findUserCredentialsById,
+  findUserEmailById,
+  normalizeEmail,
+  updateUserEmailPendingVerification,
   updateUserPassword,
+  updateUserPhone,
 } from "./auth.repository";
 
-import type { ChangePasswordInput, LoginInput, RegisterInput } from "./auth.schemas";
+import type { ChangePasswordInput, LoginInput, RegisterInput, UpdateProfileInput } from "./auth.schemas";
 
 function toAuthUser(user: {
   id: string;
@@ -183,4 +187,65 @@ export async function changePassword(userId: string, input: ChangePasswordInput)
   }
 
   await updateUserPassword(userId, await bcrypt.hash(input.newPassword, 12));
+}
+
+export type UpdateProfileResult = {
+  phoneUpdated: boolean;
+  emailChanged: boolean;
+  newEmail?: string;
+  verificationEmailSent?: boolean;
+};
+
+/**
+ * Edición de teléfono y correo del perfil.
+ * - Teléfono: actualización directa.
+ * - Correo: colisión con mensaje genérico, reseteo a `emailVerified=false`,
+ *   `tokenVersion++` (revoca sesiones, igual que cambio de clave) y emisión
+ *   de código nuevo al correo nuevo. `document`/`birthDate` nunca llegan aquí
+ *   porque `updateProfileSchema.strict()` los rechaza en la ruta.
+ */
+export async function updateProfile(userId: string, input: UpdateProfileInput): Promise<UpdateProfileResult> {
+  const current = await findUserEmailById(userId);
+  if (!current || !current.isActive) {
+    throw new UnauthorizedError("No autenticado");
+  }
+
+  let phoneUpdated = false;
+  let emailChanged = false;
+  let newEmail: string | undefined;
+  let verificationEmailSent: boolean | undefined;
+
+  if (input.phone !== undefined) {
+    await updateUserPhone(userId, input.phone);
+    phoneUpdated = true;
+  }
+
+  if (input.email !== undefined) {
+    const normalized = normalizeEmail(input.email);
+    if (normalized !== normalizeEmail(current.email)) {
+      const existing = await findUserByEmail(normalized);
+      if (existing && existing.id !== userId) {
+        throw new ConflictError("El correo ya está registrado");
+      }
+      try {
+        await updateUserEmailPendingVerification(userId, normalized);
+      } catch (error) {
+        if (typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "P2002") {
+          throw new ConflictError("El correo ya está registrado");
+        }
+        throw error;
+      }
+      emailChanged = true;
+      newEmail = normalized;
+      verificationEmailSent = true;
+      try {
+        await issueVerificationCode({ id: userId, email: normalized });
+      } catch (error) {
+        verificationEmailSent = false;
+        logger.error("email.verificacion_cambio_fallida", { userId, error });
+      }
+    }
+  }
+
+  return { phoneUpdated, emailChanged, newEmail, verificationEmailSent };
 }

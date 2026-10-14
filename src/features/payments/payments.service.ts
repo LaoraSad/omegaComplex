@@ -17,7 +17,7 @@ import { db } from "@/shared/lib/db";
 import { env } from "@/shared/lib/env";
 import { getStripe } from "@/shared/lib/stripe";
 import { logger } from "@/shared/lib/logger";
-import { sendQrEmail, type QrParaCorreo } from "@/lib/email/resend";
+import { sendPagoRechazadoEmail, sendQrEmail, type QrParaCorreo } from "@/lib/email/resend";
 import { enviarEvento, n8nConfigurado } from "@/shared/integrations/n8n";
 import { generarPdfQr } from "@/shared/pdf/qr-pdf";
 
@@ -26,6 +26,7 @@ import {
   createPendingPayment,
   liberarCuposDeReserva,
   rejectPayment,
+  obtenerContactoAviso,
   obtenerContactoQr,
   settlePayment,
 } from "./payments.repository";
@@ -60,15 +61,15 @@ function fechaBogota(d: Date): string {
  /**
  * Convierte pesos a la unidad mínima que espera la API de Stripe.
  *
- * Stripe NO recibe pesos: recibe centavos. El peso colombiano tiene dos
- * decimales en su API, así que 100.000 COP se envían como 10.000.000. Sin esta
- * conversión Stripe interpreta 100.000 como $1.000,00 y además lo rechaza con
- * `amount_too_small`, porque ese monto no alcanza el mínimo de la cuenta.
+ * Se asume que COP usa 2 decimales en la API (100.000 COP -> 10.000.000).
+ * Si la cuenta de Stripe tratara COP como moneda cero-decimal, este ×100
+ * cobraría 100 veces el precio real.
  *
- * Todo el resto del sistema (base de datos, correos, pantallas) trabaja en
- * pesos enteros; la conversión ocurre solo al hablar con Stripe.
+ * P0-2 (v2.0): NO cambiar este multiplicador sin pago de prueba en modo test
+ * que confirme que el checkout muestra lo mismo que la app. Esa verificación
+ * le toca al responsable de Stripe. Los tests congelan el comportamiento actual.
  */
-function aCentimos(cop: number): number {
+export function aCentimos(cop: number): number {
   return Math.round(cop * 100);
 }
 
@@ -224,20 +225,82 @@ export type ConfirmacionPago =
   | { transitioned: true; emitidos: QrEmitido[] }
   | { transitioned: false; emitidos: [] };
 
+/** El cobro entró pero el hold de 10 min ya expiró: no hay qué liquidar. */
+export const PAGO_TARDIO_CODE = "PAGO_TARDIO_REQUIERE_REVISION";
+
 /**
  * Liquida un pago confirmado por Stripe: reserva a confirmed, hold consumido,
  * cupos a booked y QR emitidos. Los tokens crudos se devuelven UNA vez para
  * enviarlos por correo (solo se guardan los hashes).
+ *
+ * P0-3: si el hold expiró antes de que llegara la confirmación (webhook lento
+ * o pantalla de espera tardía), NO se liquida ni se emiten QRs. El dinero sí
+ * puede estar cobrado en Stripe, así que el caso se registra para revisión
+ * manual: reembolsar o revivir la reserva lo decide el negocio, fuera de la app.
  */
 export async function confirmarPagoExitoso(input: {
   paymentId: string;
   stripePaymentIntentId: string;
 }): Promise<ConfirmacionPago> {
+  const pago = await db.payment.findFirst({
+    where: { id: input.paymentId },
+    select: { reservationId: true, status: true },
+  });
+  if (!pago) throw new NotFoundError("Pago no encontrado");
+  if (pago.status !== "pending") return { transitioned: false, emitidos: [] };
+
+  const reserva = await db.reservation.findUnique({
+    where: { id: pago.reservationId },
+    select: { status: true },
+  });
+  const holdVigente =
+    reserva?.status === "pending_payment"
+      ? await db.reservationHold.findFirst({
+          where: {
+            reservationId: pago.reservationId,
+            status: "active",
+            expiresAt: { gt: new Date() },
+          },
+          select: { id: true },
+        })
+      : null;
+  if (!reserva || reserva.status !== "pending_payment" || !holdVigente) {
+    logger.error("pago.tardio_requiere_revision_manual", {
+      paymentId: input.paymentId,
+      reservationId: pago.reservationId,
+      estadoReserva: reserva?.status ?? null,
+    });
+    throw new HttpError(
+      409,
+      PAGO_TARDIO_CODE,
+      "El pago llegó tras expirar el bloqueo de 10 minutos. Requiere revisión manual: no se emitieron QRs.",
+    );
+  }
+
   const { payment, transitioned } = await settlePayment({
     paymentId: input.paymentId,
     stripePaymentIntentId: input.stripePaymentIntentId,
   });
   if (!transitioned) return { transitioned: false, emitidos: [] };
+
+  // Cierra la carrera: el hold pudo expirar entre la verificación y la
+  // liquidación. Si la reserva no quedó confirmed, no se emiten QRs.
+  const confirmada = await db.reservation.findUnique({
+    where: { id: payment.reservationId },
+    select: { status: true },
+  });
+  if (!confirmada || confirmada.status !== "confirmed") {
+    logger.error("pago.tardio_requiere_revision_manual", {
+      paymentId: input.paymentId,
+      reservationId: payment.reservationId,
+      estadoReserva: confirmada?.status ?? null,
+    });
+    throw new HttpError(
+      409,
+      PAGO_TARDIO_CODE,
+      "El pago llegó tras expirar el bloqueo de 10 minutos. Requiere revisión manual: no se emitieron QRs.",
+    );
+  }
 
   await consumirHoldYTrasladarCupos(payment.reservationId);
 
@@ -294,6 +357,9 @@ async function entregarQrPorCorreo(
         nombre: contacto.nombre,
         fecha,
         codigos: emitidos,
+        // El documento iba solo por n8n (PDF). Por Resend también
+        // tiene que viajar para que el PDF lleve al titular.
+        documento: contacto.documento,
       });
     }
   } catch (error) {
@@ -347,11 +413,39 @@ async function enviarPdfPorN8n(input: {
 return entregado;
 }
 
-/** Marca el pago como fallido y devuelve los cupos retenidos al inventario. */
+/** Marca el pago como fallido, devuelve los cupos retenidos y avisa al cliente.
+ *
+ * El aviso nunca tumba el rechazo. Si el correo falla (o no hay
+ * contacto), queda en el log para revisión manual, igual que el QR.
+ */
 export async function rechazarPago(input: { paymentId: string; reason?: string | null }) {
   const payment = await rejectPayment({ paymentId: input.paymentId, reason: input.reason });
   await liberarCuposDeReserva(payment.reservationId);
+  await notificarPagoRechazado(payment.reservationId, input.reason);
   return payment;
+}
+
+/** Aviso de pago rechazado por Resend directo (sin n8n: no existe workflow
+ * para este evento y crearlo le toca a su responsable). Nunca lanza. */
+async function notificarPagoRechazado(reservationId: string, motivo?: string | null): Promise<void> {
+  try {
+    const contacto = await obtenerContactoAviso(reservationId);
+    if (!contacto) return;
+    await sendPagoRechazadoEmail(contacto.email, {
+      nombre: contacto.nombre,
+      fecha: contacto.startsAt.toLocaleDateString("es-CO", {
+        timeZone: "America/Bogota",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+      servicio: contacto.servicio,
+      montoCop: contacto.totalCop,
+      motivo,
+    });
+  } catch (error) {
+    logger.error("pago.rechazo_email_fallido", { reservationId, error });
+  }
 }
 
 export function appUrl(): string {

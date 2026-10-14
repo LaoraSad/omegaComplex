@@ -1,6 +1,9 @@
 import bcrypt from "bcryptjs";
 import { db } from "@/shared/lib/db";
 import type { Prisma } from "@prisma/client";
+import { diaDeSemana, ultimoDiaReservable } from "@/features/schedules/colombia-holidays";
+import { slugifyCategory } from "@/features/catalog/catalog.schemas";
+import { ConflictError, NotFoundError } from "@/shared/http/errors";
 
 import type {
   AccessRow,
@@ -10,10 +13,13 @@ import type {
   EmployeeAccessRow,
   EmployeeDetailRow,
   EmployeeRow,
+  MetricasRango,
+  OcupacionFecha,
   Paginated,
   ReservationDetail,
   ReservationRow,
   ServiceRow,
+  UsoReservas,
   ZoneGroup,
 } from "./admin.types";
 import { RESERVATION_STATUSES } from "./admin.types";
@@ -40,6 +46,50 @@ export function bogotaDayRange(ref: Date = new Date()): { start: Date; end: Date
   return {
     start: new Date(Date.UTC(y, m - 1, d, 5, 0, 0, 0)),
     end: new Date(Date.UTC(y, m - 1, d + 1, 5, 0, 0, 0)),
+  };
+}
+
+/** Clave Bogotá YYYY-MM-DD de una fecha. */
+function claveDiaBogota(ref: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(ref);
+}
+
+/**
+ * Sanea el filtro desde/hasta de métricas. Puro y testeable (`ahora`
+ * inyectable). Sin fechas → últimos 30 días; invertidas se ordenan; el tramo
+ * se acota a 90 días para no presionar el pooler.
+ */
+export function sanearRangoMetricas(
+  desde: string | undefined,
+  hasta: string | undefined,
+  ahora: Date = new Date(),
+): { start: Date; end: Date; desdeKey: string; hastaKey: string } {
+  const valida = (v: string | undefined): string | null =>
+    v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+  const hoyKey = claveDiaBogota(ahora);
+  const hace29 = new Date(ahora.getTime() - 29 * 24 * 60 * 60 * 1000);
+  let desdeKey = valida(desde) ?? claveDiaBogota(hace29);
+  let hastaKey = valida(hasta) ?? hoyKey;
+  if (desdeKey > hastaKey) [desdeKey, hastaKey] = [hastaKey, desdeKey];
+  // Acota a 90 días: si el tramo es mayor, se recorta por el inicio.
+  const maxDias = 90;
+  const inicioMs = Date.parse(`${desdeKey}T12:00:00Z`);
+  const finMs = Date.parse(`${hastaKey}T12:00:00Z`);
+  if (finMs - inicioMs > (maxDias - 1) * 24 * 60 * 60 * 1000) {
+    desdeKey = claveDiaBogota(new Date(finMs - (maxDias - 1) * 24 * 60 * 60 * 1000));
+  }
+  const [y1, m1, d1] = desdeKey.split("-").map(Number);
+  const [y2, m2, d2] = hastaKey.split("-").map(Number);
+  return {
+    start: new Date(Date.UTC(y1, m1 - 1, d1, 5, 0, 0, 0)),
+    end: new Date(Date.UTC(y2, m2 - 1, d2 + 1, 5, 0, 0, 0)),
+    desdeKey,
+    hastaKey,
   };
 }
 
@@ -141,8 +191,182 @@ export function construirSerieDiaria(
   }));
 }
 
-export async function getDashboardOverview(): Promise<DashboardOverview> {  const { start: todayStart, end: todayEnd } = bogotaDayRange();
-  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+export type FilaIngreso = {
+  amountCop: number;
+  reservation: { service: { id: string; name: string; category: { name: string } } };
+};
+
+/** Agregación pura de pagos: total + por servicio + por categoría (desc). */
+export function agregarIngresos(rows: FilaIngreso[]): {
+  totalIngresosCop: number;
+  ingresosPorServicio: Array<{ serviceId: string; serviceName: string; totalCop: number }>;
+  ingresosPorCategoria: Array<{ categoryName: string; totalCop: number }>;
+} {
+  let totalIngresosCop = 0;
+  const porServicio = new Map<string, { serviceName: string; totalCop: number }>();
+  const porCategoria = new Map<string, number>();
+  for (const r of rows) {
+    totalIngresosCop += r.amountCop;
+    const s = r.reservation.service;
+    const entry = porServicio.get(s.id) ?? { serviceName: s.name, totalCop: 0 };
+    entry.totalCop += r.amountCop;
+    porServicio.set(s.id, entry);
+    porCategoria.set(s.category.name, (porCategoria.get(s.category.name) ?? 0) + r.amountCop);
+  }
+  return {
+    totalIngresosCop,
+    ingresosPorServicio: [...porServicio.entries()]
+      .map(([serviceId, v]) => ({ serviceId, ...v }))
+      .sort((a, b) => b.totalCop - a.totalCop),
+    ingresosPorCategoria: [...porCategoria.entries()]
+      .map(([categoryName, totalCop]) => ({ categoryName, totalCop }))
+      .sort((a, b) => b.totalCop - a.totalCop),
+  };
+}
+
+export type FilaReservaRango = {
+  service: { id: string; name: string; category: { name: string } };
+};
+
+/** Agregación pura de reservas del rango: total + por servicio + por categoría. */
+export function agregarReservasPorRango(rows: FilaReservaRango[]): {
+  totalReservas: number;
+  reservasPorServicio: Array<{ serviceId: string; serviceName: string; total: number }>;
+  reservasPorCategoria: Array<{ categoryName: string; total: number }>;
+} {
+  const porServicio = new Map<string, { serviceName: string; total: number }>();
+  const porCategoria = new Map<string, number>();
+  for (const r of rows) {
+    const entry = porServicio.get(r.service.id) ?? { serviceName: r.service.name, total: 0 };
+    entry.total += 1;
+    porServicio.set(r.service.id, entry);
+    porCategoria.set(r.service.category.name, (porCategoria.get(r.service.category.name) ?? 0) + 1);
+  }
+  return {
+    totalReservas: rows.length,
+    reservasPorServicio: [...porServicio.entries()]
+      .map(([serviceId, v]) => ({ serviceId, ...v }))
+      .sort((a, b) => b.total - a.total),
+    reservasPorCategoria: [...porCategoria.entries()]
+      .map(([categoryName, total]) => ({ categoryName, total }))
+      .sort((a, b) => b.total - a.total),
+  };
+}
+
+/**
+ * (§20): ingresos y reservas por rango de fechas de franja.
+ * Los ingresos se acotan por `paidAt` (cuándo entró el dinero) y las
+ * reservas por `startsAt` (cuándo ocurre el servicio). Dos lecturas en una
+ * oleada: el pooler admite hasta 3 simultáneas.
+ */
+export async function getMetricasRango(
+  desde: string | undefined,
+  hasta: string | undefined,
+): Promise<MetricasRango> {
+  const { start, end, desdeKey, hastaKey } = sanearRangoMetricas(desde, hasta);
+  const [pagos, reservas] = await Promise.all([
+    db.payment.findMany({
+      where: { status: "succeeded", paidAt: { gte: start, lt: end } },
+      select: {
+        amountCop: true,
+        reservation: {
+          select: { service: { select: { id: true, name: true, category: { select: { name: true } } } } },
+        },
+      },
+    }),
+    db.reservation.findMany({
+      where: { startsAt: { gte: start, lt: end } },
+      select: { service: { select: { id: true, name: true, category: { select: { name: true } } } } },
+    }),
+  ]);
+  const ingresos = agregarIngresos(pagos);
+  const conteo = agregarReservasPorRango(reservas);
+  return {
+    desde: desdeKey,
+    hasta: hastaKey,
+    totalIngresosCop: ingresos.totalIngresosCop,
+    ingresosPorServicio: ingresos.ingresosPorServicio,
+    ingresosPorCategoria: ingresos.ingresosPorCategoria,
+    totalReservas: conteo.totalReservas,
+    reservasPorServicio: conteo.reservasPorServicio,
+    reservasPorCategoria: conteo.reservasPorCategoria,
+  };
+}
+
+/**
+ * (§20): ocupación de una fecha configurable. Misma agregación que
+ * el overview de hoy (`agregarOcupacion`), pero sobre el día Bogotá pedido;
+ * fecha inválida o ausente cae a hoy.
+ */
+export async function getOcupacionPorFecha(fecha: string | undefined): Promise<OcupacionFecha> {
+  const valida = fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha) ? fecha : null;
+  const ref = valida ? new Date(`${valida}T12:00:00Z`) : new Date();
+  const { start, end } = bogotaDayRange(ref);
+  const slots = await db.serviceSlot.findMany({
+    where: { startsAt: { gte: start, lt: end } },
+    select: {
+      capacity: true,
+      bookedCount: true,
+      heldCount: true,
+      service: { select: { id: true, name: true } },
+    },
+  });
+  const { occupancyToday, occupancyByService } = agregarOcupacion(slots);
+  return { fecha: valida ?? claveDiaBogota(new Date()), occupancyToday, occupancyByService };
+}
+
+/**
+ * (§20): reservas usadas vs no usadas en el rango (fecha de franja).
+ * Usada = `status used`. No usada = `confirmed` con `endsAt` pasado y ningún
+ * QR consumido. Dos conteos en una oleada.
+ */
+export async function getUsoReservas(
+  desde: string | undefined,
+  hasta: string | undefined,
+  ahora: Date = new Date(),
+): Promise<UsoReservas> {
+  const { start, end } = sanearRangoMetricas(desde, hasta, ahora);
+  const rango = { startsAt: { gte: start, lt: end } };
+  const [usadas, noUsadas] = await Promise.all([
+    db.reservation.count({ where: { ...rango, status: "used" } }),
+    db.reservation.count({
+      where: {
+        ...rango,
+        status: "confirmed",
+        endsAt: { lt: ahora },
+        qrTokens: { none: { usedAt: { not: null } } },
+      },
+    }),
+  ]);
+  return { usadas, noUsadas };
+}
+
+/**
+ * Conteos para las tarjetas de `/admin/reportes`. Un solo roundtrip con
+ * UNION ALL: la página traía listas completas (servicios con horarios, 100
+ * clientes, filas con includes) solo para mostrar el total, y eso costaba
+ * ~5 s secuenciales. Cada roundtrip al pooler cuesta ~270 ms, así que 5
+ * `count()` en oleada seguirían costando ~1 s.
+ */
+export async function getConteosReportes(): Promise<{
+  reservas: number;
+  accesos: number;
+  servicios: number;
+  empleados: number;
+  clientes: number;
+}> {
+  const filas = await db.$queryRaw<Array<{ total: bigint }>>`
+    SELECT COUNT(*)::bigint AS total FROM "Reservation"
+    UNION ALL SELECT COUNT(*) FROM "Access"
+    UNION ALL SELECT COUNT(*) FROM "Service"
+    UNION ALL SELECT COUNT(*) FROM "Employee"
+    UNION ALL SELECT COUNT(*) FROM "Customer"
+  `;
+  const [reservas, accesos, servicios, empleados, clientes] = filas.map((f) => Number(f.total));
+  return { reservas, accesos, servicios, empleados, clientes };
+}
+
+export async function getDashboardOverview(): Promise<DashboardOverview> {  const { start: todayStart, end: todayEnd } = bogotaDayRange();  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
   // Lecturas independientes en oleadas de 3: el pooler (session mode, 15
   // conexiones) colapsa con 10 consultas simultáneas, pero en secuencia
@@ -378,30 +602,44 @@ export async function upsertServiceSchedule(input: {
   });
 
   const { generateServiceSlotsForRange } = await import("@/features/availability/availability.repository");
-  await generateServiceSlotsForRange(input.serviceId, 90);
+  await generateServiceSlotsForRange(input.serviceId);
 
   return schedule;
 }
 
 export async function deleteServiceSchedule(serviceId: string, dayOfWeek: number) {
+  if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
+    throw new Error("El día de la semana debe estar entre 0 y 6.");
+  }
   const existing = await db.serviceSchedule.findUnique({
     where: { serviceId_dayOfWeek: { serviceId, dayOfWeek } },
   });
   if (!existing) throw new Error("Ese horario ya no existe.");
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const next90 = new Date(today);
-  next90.setDate(today.getDate() + 90);
+  // Inicio del día en Bogotá (no medianoche del servidor) y fin en el último
+  // día reservable: el rango a revisar cubre lo mismo que la generación (P2-3).
+  const hoyBogota = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const today = new Date(`${hoyBogota}T05:00:00.000Z`);
+  const finVentana = new Date(`${ultimoDiaReservable(hoyBogota)}T05:00:00.000Z`);
+  finVentana.setDate(finVentana.getDate() + 1);
 
   const slots = await db.serviceSlot.findMany({
     where: {
       serviceId,
-      startsAt: { gte: today, lt: next90 },
+      startsAt: { gte: today, lt: finVentana },
     },
     select: { id: true, startsAt: true },
   });
 
+  // P1-8: el día de semana se calcula en Bogotá con `diaDeSemana` (0 = domingo,
+  // igual que ServiceSchedule). El código anterior parseaba `YYYY-MM-DD` como
+  // UTC y usaba `getDay()` del servidor: según la zona borraba los slots del
+  // día equivocado o no borraba nada.
   const ids = slots
     .filter((slot) => {
       const dateKey = new Intl.DateTimeFormat("en-CA", {
@@ -410,20 +648,18 @@ export async function deleteServiceSchedule(serviceId: string, dayOfWeek: number
         month: "2-digit",
         day: "2-digit",
       }).format(slot.startsAt);
-      return new Date(dateKey).getDay() === dayOfWeek
-        ? dayOfWeek === 0
-          ? new Date(dateKey).getDay() === 0
-          : new Date(dateKey).getDay() === dayOfWeek
-        : false;
+      return diaDeSemana(dateKey) === dayOfWeek;
     })
     .map((slot) => slot.id);
 
-  if (ids.length > 0) {
-    await db.serviceSlot.deleteMany({ where: { id: { in: ids } } });
-  }
+  return db.$transaction(async (tx) => {
+    if (ids.length > 0) {
+      await tx.serviceSlot.deleteMany({ where: { id: { in: ids } } });
+    }
 
-  return db.serviceSchedule.delete({
-    where: { serviceId_dayOfWeek: { serviceId, dayOfWeek } },
+    return tx.serviceSchedule.delete({
+      where: { serviceId_dayOfWeek: { serviceId, dayOfWeek } },
+    });
   });
 }
 
@@ -443,6 +679,146 @@ export async function getServiceDetail(id: string): Promise<ServiceRow | null> {
     },
   });
   return row as ServiceRow | null;
+}
+
+// ---------------------------------------------------------------------------
+// CRUD de servicios (SCRUM sección 5). Sin esto todo cambio iba por
+// seed/SQL. Reglas: slug único derivado del nombre, capacidad nunca bajo lo
+// vendido en franjas futuras, desactivar no toca reservas vivas, y lo nuevo
+// rige franjas futuras (las pasadas son historia).
+// ---------------------------------------------------------------------------
+
+export type ServiceCreateData = {
+  categoryId: string;
+  name: string;
+  description?: string;
+  price: number;
+  capacity: number;
+  imagen?: string;
+  isActive?: boolean;
+};
+
+export type ServiceUpdateData = {
+  categoryId?: string;
+  name?: string;
+  description?: string | null;
+  price?: number;
+  capacity?: number;
+  imagen?: string | null;
+  isActive?: boolean;
+};
+
+function rethrowServiceDuplicado(error: unknown): void {
+  if ((error as { code?: string })?.code === "P2002") {
+    throw new Error("Ya existe un servicio con ese nombre.");
+  }
+}
+
+export async function createService(input: ServiceCreateData) {
+  const category = await db.category.findUnique({ where: { id: input.categoryId } });
+  if (!category) throw new NotFoundError("La categoría seleccionada no existe.");
+
+  const name = input.name.trim();
+  const slug = slugifyCategory(name);
+  if (!slug) throw new Error("El nombre debe contener letras o números.");
+  const dupe = await db.service.findFirst({
+    where: { OR: [{ name }, { slug }] },
+    select: { id: true },
+  });
+  if (dupe) throw new ConflictError("Ya existe un servicio con ese nombre.");
+
+  try {
+    return await db.service.create({
+      data: {
+        categoryId: input.categoryId,
+        name,
+        slug,
+        description: input.description?.trim() ? input.description.trim() : null,
+        price: input.price,
+        capacity: input.capacity,
+        imagen: input.imagen?.trim() ? input.imagen.trim() : null,
+        isActive: input.isActive ?? true,
+      },
+    });
+    // Tras crear, el admin configura los horarios: cada upsert genera sus slots.
+  } catch (error) {
+    rethrowServiceDuplicado(error);
+    throw error;
+  }
+}
+
+export async function updateService(id: string, input: ServiceUpdateData) {
+  const existing = await db.service.findUnique({ where: { id } });
+  if (!existing) throw new NotFoundError("El servicio no existe.");
+
+  if (input.categoryId !== undefined) {
+    const category = await db.category.findUnique({ where: { id: input.categoryId } });
+    if (!category) throw new NotFoundError("La categoría seleccionada no existe.");
+  }
+
+  const data: Record<string, unknown> = {};
+  if (input.categoryId !== undefined) data.categoryId = input.categoryId;
+  if (input.name !== undefined) {
+    const name = input.name.trim();
+    const slug = slugifyCategory(name);
+    if (!slug) throw new Error("El nombre debe contener letras o números.");
+    const dupe = await db.service.findFirst({
+      where: { OR: [{ name }, { slug }], id: { not: id } },
+      select: { id: true },
+    });
+    if (dupe) throw new ConflictError("Ya existe otro servicio con ese nombre.");
+    data.name = name;
+    data.slug = slug;
+  }
+  if (input.description !== undefined) {
+    data.description = input.description?.trim() ? input.description.trim() : null;
+  }
+  if (input.price !== undefined) data.price = input.price;
+  if (input.capacity !== undefined) data.capacity = input.capacity;
+  if (input.imagen !== undefined) {
+    data.imagen = input.imagen?.trim() ? input.imagen.trim() : null;
+  }
+  if (input.isActive !== undefined) data.isActive = input.isActive;
+
+  // Guard de capacidad: ninguna franja futura puede quedar con más cupos
+  // vendidos que la nueva capacidad. Si pasa, las futuras heredan la nueva.
+  const cambiaCapacidad = input.capacity !== undefined && input.capacity !== existing.capacity;
+  if (cambiaCapacidad) {
+    const futuros = await db.serviceSlot.findMany({
+      where: { serviceId: id, startsAt: { gte: new Date() } },
+      select: { bookedCount: true, heldCount: true },
+    });
+    if (futuros.some((s) => s.bookedCount + s.heldCount > (input.capacity as number))) {
+      throw new Error("Hay franjas futuras con más cupos vendidos que la nueva capacidad.");
+    }
+  }
+
+  try {
+    return await db.$transaction(async (tx) => {
+      const updated = await tx.service.update({ where: { id }, data: data as never });
+      if (cambiaCapacidad) {
+        await tx.serviceSlot.updateMany({
+          where: { serviceId: id, startsAt: { gte: new Date() } },
+          data: { capacity: input.capacity as number },
+        });
+      }
+      return updated;
+    });
+  } catch (error) {
+    rethrowServiceDuplicado(error);
+    throw error;
+  }
+}
+
+/**
+ * Activa o desactiva la instalación en el catálogo. Desactivar oculta sin
+ * borrar: las reservas existentes (incluso futuras) se respetan y el QR sigue
+ * validando; solo se cierra la venta nueva.
+ */
+export async function setServiceActive(id: string, isActive: boolean) {
+  const existing = await db.service.findUnique({ where: { id }, select: { id: true } });
+  if (!existing) throw new NotFoundError("El servicio no existe.");
+  return db.service.update({ where: { id }, data: { isActive } });
 }
 
 export async function listClosures(): Promise<ClosureRow[]> {
@@ -513,9 +889,14 @@ export function buildAccessWhere(f: AccessFilters) {
   }
   const reservationFilter: Record<string, unknown> = {};
   let hasReservationFilter = false;
+  const qrTokenOr: Array<Record<string, unknown>> = [];
   if (f.serviceId) {
-    reservationFilter.serviceId = f.serviceId;
-    hasReservationFilter = true;
+    // P1-7: la zona del acceso es la del bloque del QR, no la principal de la
+    // reserva. Sin bloque (QR legacy) se usa la reserva.
+    qrTokenOr.push(
+      { block: { serviceId: f.serviceId } },
+      { blockId: null, reservation: { serviceId: f.serviceId } },
+    );
   }
   const q = f.q?.trim();
   if (q) {
@@ -526,8 +907,11 @@ export function buildAccessWhere(f: AccessFilters) {
     ];
     hasReservationFilter = true;
   }
-  if (hasReservationFilter) {
-    where.qrToken = { reservation: reservationFilter as never };
+  if (hasReservationFilter || qrTokenOr.length > 0) {
+    const qrTokenFilter: Record<string, unknown> = {};
+    if (hasReservationFilter) qrTokenFilter.reservation = reservationFilter as never;
+    if (qrTokenOr.length > 0) qrTokenFilter.OR = qrTokenOr as never;
+    where.qrToken = qrTokenFilter as never;
   }
   return where;
 }
@@ -547,6 +931,7 @@ export async function listAccesses(filters: AccessFilters): Promise<Paginated<Ac
         employee: { include: { user: { select: { firstName: true, lastName: true } } } },
         qrToken: {
           include: {
+            block: { select: { service: { select: { id: true, name: true } } } },
             reservation: {
               include: {
                 customer: {

@@ -2,12 +2,13 @@ import { randomUUID } from "node:crypto";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { liberarHoldsVencidos } from "@/features/reservations/reservations.service";
 import {
+  diasVentanaReserva,
   esDiaDeMantenimiento,
   esFestivo,
   nombreFestivo,
 } from "@/features/schedules/colombia-holidays";
 import { db } from "@/shared/lib/db";
-import type { DayAvailability, SlotAvailability } from "./availability.types";
+import type { DayAvailability, SlotAvailability, SlotStatus } from "./availability.types";
 
 // ---------------------------------------------------------------------------
 // Disponibilidad real: se cruzan ServiceSchedule (horario semanal),
@@ -121,10 +122,15 @@ function dateOnlyValue(date: Date): number {
 
 export async function generateServiceSlotsForRange(
   serviceId: string,
-  rangeDays = 90,
+  rangeDays?: number,
   client: PrismaClient = db,
 ): Promise<number> {
-  if (!Number.isInteger(rangeDays) || rangeDays < 1) {
+  const firstDate = toBogotaDateKey(new Date());
+  // P2-3: por defecto se cubre toda la ventana reservable (hoy + 3 meses),
+  // no 90 días fijos. Con 90 fijos quedaba un hueco donde el backend permitía
+  // reservar pero no había franjas generadas.
+  const dias = rangeDays ?? diasVentanaReserva(firstDate);
+  if (!Number.isInteger(dias) || dias < 1) {
     throw new Error("rangeDays debe ser un entero mayor que cero.");
   }
 
@@ -139,8 +145,7 @@ export async function generateServiceSlotsForRange(
 
   if (!service) return 0;
 
-  const firstDate = toBogotaDateKey(new Date());
-  const lastDate = addBogotaDays(firstDate, rangeDays - 1);
+  const lastDate = addBogotaDays(firstDate, dias - 1);
   const firstDateValue = Date.parse(`${firstDate}T00:00:00.000Z`);
   const lastDateValue = Date.parse(`${lastDate}T00:00:00.000Z`);
   const closures = await client.serviceClosure.findMany({
@@ -153,7 +158,7 @@ export async function generateServiceSlotsForRange(
   });
   const slots: Array<{ startsAt: Date; endsAt: Date; capacity: number }> = [];
 
-  for (let offset = 0; offset < rangeDays; offset++) {
+  for (let offset = 0; offset < dias; offset++) {
     const dateKey = addBogotaDays(firstDate, offset);
 
 // Festivo y mantenimiento no generan franjas. Ojo: el festivo por sí solo NO
@@ -220,6 +225,7 @@ export async function getDayAvailability(
         id: true,
         name: true,
         capacity: true,
+        isActive: true,
         serviceSchedules: { select: { dayOfWeek: true, openTime: true, closeTime: true } },
       },
     }),
@@ -252,6 +258,11 @@ export async function getDayAvailability(
     festivo: festivo ? nombreFestivo(date) : null,
     slots: [],
   });
+
+  // Desactivada por el admin: cierra la venta nueva sin tocar reservas vivas.
+  if (!service.isActive) {
+    return cerrado("servicio_inactivo", "Esta instalación no está disponible actualmente.");
+  }
 
   // Cierre puntual del admin (imprevisto). Gana sobre todo lo demás: si alguien
   // cerró la instalación a mano, ese es el motivo que hay que explicar.
@@ -300,14 +311,13 @@ export async function getDayAvailability(
   const disponibles: SlotAvailability[] = slots.map((s) => {
     const occupied = s.bookedCount + s.heldCount;
     const free = Math.max(s.capacity - occupied, 0);
-    const pasado = s.endsAt <= now;
     return {
       id: s.id,
       startsAt: s.startsAt,
       endsAt: s.endsAt,
       capacity: s.capacity,
       free,
-      status: pasado ? "past" : free === 0 ? "full" : "available",
+      status: estadoDeSlot(s.startsAt, free, now),
     };
   });
 
@@ -329,7 +339,7 @@ export async function getDayAvailability(
     reason: hayDisponibilidad
       ? null
       : disponibles.every((s) => s.status === "past")
-        ? "Las franjas de hoy ya terminaron"
+        ? "Las franjas de hoy ya empezaron o terminaron"
         : "Todas las franjas de este día están completas",
     openTime: schedule.openTime,
     closeTime: schedule.closeTime,
@@ -353,7 +363,7 @@ export async function getSlotsInRange(
   const [service, closures, slots] = await Promise.all([
     db.service.findUnique({
       where: { id: serviceId },
-      select: { serviceSchedules: { select: { dayOfWeek: true, openTime: true, closeTime: true } } },
+      select: { isActive: true, serviceSchedules: { select: { dayOfWeek: true, openTime: true, closeTime: true } } },
     }),
     db.serviceClosure.findMany({
       where: {
@@ -376,7 +386,7 @@ export async function getSlotsInRange(
       },
     }),
   ]);
-  if (!service) return [];
+  if (!service || !service.isActive) return [];
 
   const validSlots = slots.filter((slot) => {
     const dateKey = toBogotaDateKey(slot.startsAt);
@@ -403,9 +413,22 @@ export async function getSlotsInRange(
       endsAt: s.endsAt,
       capacity: s.capacity,
       free,
-      status: s.endsAt <= now ? "past" : free === 0 ? "full" : "available",
+      status: estadoDeSlot(s.startsAt, free, now),
     };
   });
+}
+
+/**
+ * Estado de una franja frente al reloj.
+ *
+ * P2-1: pasado = ya empezó (`startsAt <= now`), no ya terminó. La escritura
+ * exige `startsAt > now` (§12 franjas ya iniciadas), así que una franja
+ * iniciada se mostraba disponible y luego fallaba al reservar.
+ */
+export function estadoDeSlot(startsAt: Date, free: number, now: Date): SlotStatus {
+  if (startsAt <= now) return "past";
+  if (free === 0) return "full";
+  return "available";
 }
 
 /** Date-only para comparar con las columnas @db.Date de ServiceClosure. */

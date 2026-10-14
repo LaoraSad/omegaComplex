@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
 import { db } from "@/shared/lib/db";
+import { esDiaDeMantenimiento, ultimoDiaReservable } from "@/features/schedules/colombia-holidays";
 import type { CreateReservationInput } from "./reservations.schemas";
 
 // ---------------------------------------------------------------------------
@@ -18,7 +19,6 @@ import type { CreateReservationInput } from "./reservations.schemas";
 // ---------------------------------------------------------------------------
 
 export const HOLD_MINUTES = 10;
-export const MAX_ADVANCE_MONTHS = 3;
 /** Reintentos cuando varias reservas chocan por el lock de la misma franja. */
 const MAX_INTENTOS = 3;
 const BOGOTA = "America/Bogota";
@@ -87,20 +87,25 @@ export type CrearError =
   | "bloque_repetido"
   | "asistentes_inconsistentes"
   | "sin_acompanyantes"
-  | "ya_reservado";
+  | "ya_reservado"
+  | "mantenimiento"
+  | "servicio_inactivo";
 
-/** Anteposición máxima: hoy + 3 meses. */
-function maxAdvanceDate(ref: Date): Date {
-  const d = new Date(ref);
-  d.setMonth(d.getMonth() + MAX_ADVANCE_MONTHS);
-  return d;
+/** Anteposición máxima: hoy Bogotá + 3 meses calendario (una sola definición). */
+function fechaLimiteReserva(now: Date): string {
+  return ultimoDiaReservable(dateKeyBogota(now));
 }
 
-/** El SCRUM no permite reservar fechas anteriores. */
-function isPastDate(date: string, now: Date): boolean {
-  const [y, m, d] = date.split("-").map(Number);
-  const start = new Date(Date.UTC(y, m - 1, d, 5, 0, 0, 0));
-  return start < now;
+/** El SCRUM no permite reservar fechas anteriores. Se compara por día calendario
+ *  en America/Bogota: hoy nunca es pasado, aunque ya hayan pasado las 00:00. */
+export function isPastDate(date: string, now: Date): boolean {
+  const hoy = new Intl.DateTimeFormat("en-CA", {
+    timeZone: BOGOTA,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+  return date < hoy;
 }
 
 /**
@@ -127,9 +132,25 @@ type ClienteReserva = Pick<
  * condicionado por estado hace que la operación sea idempotente: si dos
  * peticiones intentan expirar la misma reserva, solo una devuelve cupos.
  */
+/**
+ * Libera los holds vencidos y devuelve sus cupos al inventario.
+ *
+ * P2-4: `limite` acota el trabajo por llamada (50 por defecto). Las lecturas
+ * de disponibilidad y la escritura llaman con el default para no frenar cada
+ * apertura de calendario con un barrido total; el cron pasa `null` (sin
+ * límite) porque ese sí es su trabajo. La operación es idempotente, así que
+ * lo que no alcance una pasada lo toma la siguiente.
+ *
+ * `alExpirar` avisa por cada reserva que ESTA llamada expiró (solo
+ * la gana quien marcó el update condicional, así no hay doble aviso). Las
+ * lecturas no lo pasan: el aviso sale únicamente del barrido del cron, no en
+ * mitad de la consulta del calendario de otro cliente.
+ */
 export async function liberarHoldsVencidos(
   now: Date = new Date(),
   cliente: ClienteReserva = db,
+  limite: number | null = 50,
+  alExpirar?: (reservationId: string) => void | Promise<void>,
 ): Promise<number> {
   // Los cupos se devuelven con la cantidad de la tabla puente, no con la del
   // hold: así una reserva de varias franjas devuelve exactamente lo que tomó.
@@ -138,6 +159,7 @@ export async function liberarHoldsVencidos(
       status: "pending_payment",
       holds: { some: { status: "active", expiresAt: { lte: now } } },
     },
+    ...(limite === null ? {} : { take: limite }),
     select: { id: true, slots: { select: { slotId: true, quantity: true } } },
   });
 
@@ -158,10 +180,11 @@ export async function liberarHoldsVencidos(
       await cliente.$executeRaw`
         UPDATE "ServiceSlot"
            SET "heldCount" = GREATEST("heldCount" - ${s.quantity}, 0)
-         WHERE id = ${s.slotId}::uuid
+          WHERE id = ${s.slotId}::uuid
       `;
     }
     liberadas += 1;
+    await alExpirar?.(reserva.id);
   }
   return liberadas;
 }
@@ -240,7 +263,13 @@ export async function createReservationWithHold(
     if (isPastDate(b.fecha, now)) {
       return { ok: false, code: "franja_pasada", message: "No se puede reservar en una fecha pasada." };
     }
-    if (new Date(`${b.fecha}T23:59:59Z`) > maxAdvanceDate(now)) {
+    // P1-3: el día de mantenimiento (lunes, o martes si el lunes es festivo)
+    // cierra el complejo igual que si no hubiera horario: la escritura lo
+    // defiende, no solo la lectura del calendario.
+    if (esDiaDeMantenimiento(b.fecha)) {
+      return { ok: false, code: "mantenimiento", message: "Ese día el complejo está en mantenimiento técnico." };
+    }
+    if (b.fecha > fechaLimiteReserva(now)) {
       return {
         ok: false,
         code: "muy_far",
@@ -257,6 +286,7 @@ export async function createReservationWithHold(
           id: true,
           name: true,
           price: true,
+          isActive: true,
           category: { select: { name: true } },
           serviceSchedules: { select: { dayOfWeek: true, openTime: true, closeTime: true } },
         },
@@ -314,6 +344,14 @@ export async function createReservationWithHold(
     const slot = slotPorId.get(bloque.slotId);
     if (!slot) continue;
 
+    // Desactivada por el admin: ni con franja generada se vende.
+    if (!slot.service.isActive) {
+      return {
+        ok: false,
+        code: "servicio_inactivo",
+        message: "La instalación no está disponible actualmente.",
+      };
+    }
     const dateKey = dateKeyBogota(slot.startsAt);
     const dayOfWeek = dayOfWeekBogota(dateKey);
     const schedule = slot.service.serviceSchedules.find((item) => item.dayOfWeek === dayOfWeek);
@@ -430,10 +468,9 @@ export async function createReservationWithHold(
     asistentesPorBloque.set(b.slot.id, [...indices].sort((a, c) => a - c));
   }
 
-  // Antes de bloquear cupos: recuperar los cupos de los holds que ya vencieron,
-  // para no competir por un cupo que en realidad está libre.
-  await liberarHoldsVencidos(now);
-
+  // Los cupos vencidos se recuperan DENTRO de la transacción (ver abajo): así
+  // la limpieza, el lock, el chequeo de solape y la creación son atómicos y el
+  // choque no ve holds que ya expiraron pero aún no se liberaron (P2-2).
   const expiresAt = new Date(now.getTime() + HOLD_MINUTES * 60 * 1000);
 
   const totalCop = ordenados.reduce((suma, b) => {
@@ -459,6 +496,11 @@ export async function createReservationWithHold(
     try {
       return await db.$transaction(
         async (tx) => {
+          // Primero se liberan los holds vencidos, con el cliente de la
+          // transacción: lo que sigue (cupos, lock, solape, creación) ve el
+          // inventario ya limpio y nada se cuela en la carrera.
+          await liberarHoldsVencidos(now, tx);
+
           // Todos o nada: si un solo bloque pierde su cupo, la transacción
           // entera se revierte y no queda ninguna franja retenida a medias.
           for (const b of ordenados) {

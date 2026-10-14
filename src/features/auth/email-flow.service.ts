@@ -10,6 +10,7 @@ import {
   sendVerificationEmail,
   sendWelcomeEmail,
 } from "@/lib/email/resend";
+import { enviarEvento } from "@/shared/integrations/n8n";
 
 const VERIFICATION_TTL_MS = 10 * 60 * 1000;
 const RESET_TTL_MS = 30 * 60 * 1000;
@@ -177,6 +178,13 @@ export async function verifyEmailCode(email: string, code: string): Promise<void
     } catch (error) {
       logger.error("email.bienvenida_fallida", { error });
     }
+    // El evento existía en el tipo pero nunca se emitía. n8n no
+    // lanza (contrato de enviarEvento), así que va fuera del try: la cuenta
+    // quedó verificada aunque la bienvenida falle.
+    await enviarEvento("usuario.verificado", {
+      email: verifiedUser.email,
+      nombre: verifiedUser.firstName,
+    });
   }
 }
 
@@ -236,7 +244,17 @@ export async function completePasswordReset(token: string, password: string): Pr
       data: { usedAt: now },
     });
     if (claimed.count !== 1) return false;
-    await tx.user.update({ where: { id: reset.userId }, data: { passwordHash } });
+    // P1-5: desactivado no recupera acceso; y subir la versión revoca
+    // sesiones anteriores (token robado + recovery ya no sirve).
+    const target = await tx.user.findUnique({
+      where: { id: reset.userId },
+      select: { isActive: true },
+    });
+    if (!target || !target.isActive) return false;
+    await tx.user.update({
+      where: { id: reset.userId },
+      data: { passwordHash, tokenVersion: { increment: 1 } },
+    });
     await tx.passwordReset.updateMany({
       where: { userId: reset.userId, id: { not: reset.id }, usedAt: null },
       data: { usedAt: now },

@@ -130,10 +130,17 @@ export async function settlePayment(input: {
 export async function rejectPayment(input: {
   paymentId: string;
   reason?: string | null;
-}): Promise<PaymentRow> {  return db.$transaction(async (tx) => {
-    const payment = await tx.payment.update({
-      where: { id: input.paymentId },
+}): Promise<PaymentRow> {
+  return db.$transaction(async (tx) => {
+    // P1-2: condicional por estado, como en settlePayment. Si el pago ya quedó
+    // `succeeded` (carrera con el webhook de éxito), no se voltea a `failed`:
+    // el dinero entró y la fila debe decir la verdad.
+    await tx.payment.updateMany({
+      where: { id: input.paymentId, status: "pending" },
       data: { status: "failed" },
+    });
+    const payment = await tx.payment.findUniqueOrThrow({
+      where: { id: input.paymentId },
       select: paymentSelect,
     });
     await tx.reservation.updateMany({
@@ -272,6 +279,35 @@ export async function obtenerContactoQr(
     nombre: `${row.customer.user.firstName} ${row.customer.user.lastName}`.trim(),
     startsAt: row.startsAt,
     documento: row.customer.document ?? null,
+  };
+}
+
+/**
+ * Contacto + detalle de una reserva para los avisos de pago
+ * rechazado y hold expirado (email y nombre del titular, fecha, instalación
+ * y monto). Null si la reserva ya no existe.
+ */
+export async function obtenerContactoAviso(
+  reservationId: string,
+): Promise<{ email: string; nombre: string; startsAt: Date; servicio: string; totalCop: number } | null> {
+  const row = await db.reservation.findUnique({
+    where: { id: reservationId },
+    select: {
+      startsAt: true,
+      totalCop: true,
+      service: { select: { name: true } },
+      customer: {
+        select: { user: { select: { email: true, firstName: true, lastName: true } } },
+      },
+    },
+  });
+  if (!row) return null;
+  return {
+    email: row.customer.user.email,
+    nombre: `${row.customer.user.firstName} ${row.customer.user.lastName}`.trim(),
+    startsAt: row.startsAt,
+    servicio: row.service.name,
+    totalCop: row.totalCop,
   };
 }
 

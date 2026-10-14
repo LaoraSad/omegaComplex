@@ -184,6 +184,62 @@ export async function sendWelcomeEmail(to: string, firstName: string): Promise<v
   );
 }
 
+/**
+ * Aviso de pago rechazado. Sin adjuntos: lo único que necesita el
+ * cliente es saber que el cobro no entró y que puede intentarlo de nuevo.
+ */
+export async function sendPagoRechazadoEmail(
+  to: string,
+  input: { nombre: string; fecha: string; servicio: string; montoCop: number; motivo?: string | null },
+): Promise<void> {
+  const monto = `$${input.montoCop.toLocaleString("es-CO")} COP`;
+  await send(
+    to,
+    "Tu pago no pudo completarse - Omega Complex",
+`<p style="margin:0 0 8px;color:#7a1f3d;font-size:12px;font-weight:bold;letter-spacing:1.4px;text-transform:uppercase">Omega Complex</p>
+      <h1 style="margin:0 0 18px;color:#242124;font-size:25px;line-height:1.25">Tu pago no pudo completarse</h1>
+      <p style="margin:0 0 14px;color:#555;font-size:15px;line-height:1.65">Hola ${escapeHtml(input.nombre)}, el cobro de tu reserva no fue aprobado y no se descontó ningún valor.</p>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 24px;background:#fbf7f8;border-left:4px solid #7a1f3d">
+        <tr>
+          <td style="padding:14px 16px">
+            <p style="margin:0 0 4px;color:#9a9a9a;font-size:11px;font-weight:bold;letter-spacing:1.3px;text-transform:uppercase">Reserva</p>
+            <p style="margin:0 0 10px;color:#242124;font-size:16px;font-weight:bold">${escapeHtml(input.servicio)} · ${escapeHtml(input.fecha)}</p>
+            <p style="margin:0 0 4px;color:#9a9a9a;font-size:11px;font-weight:bold;letter-spacing:1.3px;text-transform:uppercase">Monto no cobrado</p>
+            <p style="margin:0;color:#242124;font-size:14px">${escapeHtml(monto)}</p>
+          </td>
+        </tr>
+      </table>
+      ${input.motivo ? `<p style="margin:0 0 14px;color:#555;font-size:13px;line-height:1.6">Motivo reportado: ${escapeHtml(input.motivo)}</p>` : ""}
+      <p style="margin:0;color:#555;font-size:14px;line-height:1.65">Puedes volver a crear tu reserva e intentarlo con otro medio de pago. Si el problema persiste, escríbenos a recepción.</p>`,
+  );
+}
+
+/**
+ * Aviso de hold expirado. El bloqueo de 10 minutos se venció sin
+ * pago y los cupos volvieron al inventario: la reserva hay que crearla de nuevo.
+ */
+export async function sendHoldExpiradoEmail(
+  to: string,
+  input: { nombre: string; fecha: string; servicio: string },
+): Promise<void> {
+  await send(
+    to,
+    "Tu reserva expiró por falta de pago - Omega Complex",
+`<p style="margin:0 0 8px;color:#7a1f3d;font-size:12px;font-weight:bold;letter-spacing:1.4px;text-transform:uppercase">Omega Complex</p>
+      <h1 style="margin:0 0 18px;color:#242124;font-size:25px;line-height:1.25">Tu reserva expiró</h1>
+      <p style="margin:0 0 14px;color:#555;font-size:15px;line-height:1.65">Hola ${escapeHtml(input.nombre)}, el bloqueo de 10 minutos para pagar tu reserva se venció y los cupos volvieron a estar disponibles.</p>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 24px;background:#fbf7f8;border-left:4px solid #7a1f3d">
+        <tr>
+          <td style="padding:14px 16px">
+            <p style="margin:0 0 4px;color:#9a9a9a;font-size:11px;font-weight:bold;letter-spacing:1.3px;text-transform:uppercase">Reserva vencida</p>
+            <p style="margin:0;color:#242124;font-size:16px;font-weight:bold">${escapeHtml(input.servicio)} · ${escapeHtml(input.fecha)}</p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0;color:#555;font-size:14px;line-height:1.65">Si aún quieres asistir, crea la reserva de nuevo y completa el pago dentro de los 10 minutos.</p>`,
+  );
+}
+
 export type QrParaCorreo = {
   /** Etiqueta legible: Z1-P01 (zona 1, persona 1). */
   etiqueta: string;

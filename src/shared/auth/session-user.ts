@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { findSessionUserById, type SessionUser } from "@/features/auth/auth.repository";
 import { logger } from "@/shared/lib/logger";
 import { ServiceUnavailableError } from "@/shared/http/errors";
@@ -13,8 +14,15 @@ import { ServiceUnavailableError } from "@/shared/http/errors";
  * infraestructura a cualquiera que abra la página. Con esto, un problema de
  * conectividad sale como un 503 con un mensaje entendible, y un usuario
  * simplemente inexistente sigue siendo "no hay sesión" como siempre.
+ *
+ * Con memo por request (React `cache`): el layout y la página piden al mismo
+ * usuario en la misma navegación y la BD se toca una sola vez. No se aplica a
+ * `getSession`: sus tests la llaman varias veces con distinta cookie y el memo
+ * fuera de un request los contaminaría.
  */
-export async function cargarUsuarioDeSesion(userId: string): Promise<SessionUser | null> {
+export const cargarUsuarioDeSesion = cache(cargarUsuarioDeSesionSinCache);
+
+async function cargarUsuarioDeSesionSinCache(userId: string): Promise<SessionUser | null> {
   try {
     return await findSessionUserById(userId);
   } catch (error) {

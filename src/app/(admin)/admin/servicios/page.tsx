@@ -7,6 +7,8 @@ import { PageHeader } from "@/components/admin/PageHeader";
 import { formatCOP, formatNumber } from "@/components/admin/format";
 import { servicePhoto } from "@/components/admin/service-image";
 import { listServices } from "@/features/admin/admin.repository";
+import { listCategories } from "@/features/catalog";
+import { ServiceForm } from "./ServiceForm";
 import AmbientBubbles from "@/components/AmbientBubbles";
 import SectionDivider from "@/components/SectionDivider";
 
@@ -24,7 +26,8 @@ const DAY_LABELS: Record<number, string> = {
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
 export default async function ServiciosPage() {
-  const services = await listServices();
+  const [services, categorias] = await Promise.all([listServices(), listCategories(true)]);
+  const opciones = categorias.map((c) => ({ id: c.id, name: c.name }));
   const byCategory = new Map<string, typeof services>();
   for (const s of services) {
     const list = byCategory.get(s.category.name) ?? [];
@@ -45,6 +48,8 @@ export default async function ServiciosPage() {
           </Link>
         }
       />
+
+      <ServiceForm mode="create" categorias={opciones} />
 
       {services.length === 0 ? (
         <div className="acard">
@@ -83,7 +88,7 @@ export default async function ServiciosPage() {
                 <ul className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                   {items.map((s) => {
                     const byDay = new Map(s.serviceSchedules.map((sc) => [sc.dayOfWeek, sc]));
-                    const photo = servicePhoto(s.slug);
+                    const photo = s.imagen ?? servicePhoto(s.slug);
                     return (
                       <li key={s.id} id={`servicio-${s.id}`} className="omega-ring h-full scroll-mt-24">
                         <article className="omega-ring-inner flex h-full flex-col overflow-hidden bg-[#141013]">
@@ -117,6 +122,11 @@ export default async function ServiciosPage() {
                                 <Link href={`/admin/servicios/${s.id}`} className="transition-colors hover:text-[#e3bd74]">
                                   {s.name}
                                 </Link>
+                                {!s.isActive ? (
+                                  <span className="ml-2 rounded-full border border-amber-300/40 bg-amber-500/10 px-2 py-0.5 align-middle text-[0.6rem] font-bold uppercase tracking-wider text-amber-300">
+                                    Oculto
+                                  </span>
+                                ) : null}
                               </h4>
                               {s.description ? (
                                 <p className="mt-1 text-xs leading-relaxed text-white/60" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>

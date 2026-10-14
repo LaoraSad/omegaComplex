@@ -3,6 +3,7 @@ import {
   findEmployeeByUserId,
   findQrByTokenHash,
   grantAccess,
+  huboDenegacionReciente,
   marcarQrExpirado,
   type EmployeeForAccess,
 } from "./access.repository";
@@ -237,6 +238,11 @@ export async function recordDenial(input: {
 }): Promise<void> {
   const qr = await findQrByTokenHash(input.rawToken);
   if (!qr) return;
+  // P2-6: sin este freno, reintentar el mismo QR llenaba Accesos de filas
+  // idénticas. El primer rechazo queda; los siguientes (5 min) se omiten.
+  if (await huboDenegacionReciente({ qrTokenId: qr.qrTokenId, employeeId: input.employee.id, reason: input.reason })) {
+    return;
+  }
   await grantAccess({
     qrTokenId: qr.qrTokenId,
     employeeId: input.employee.id,
@@ -248,8 +254,13 @@ export async function recordDenial(input: {
 /**
  * El empleado decide que esta persona no entra, aunque el QR sea valido: no
  * reconoce a quien lo presenta, la zona esta cerrada o hay una restriccion que el
- * sistema no conoce. Queda registrado con su motivo y el QR se consume, para que
- * no se pueda intentar de nuevo en otra puerta.
+ * sistema no conoce.
+ *
+ * P2-5 (33-E): esto invalida el QR manualmente y consume un QR válido, así que
+ * exige doble confirmación en la UI (ficha → motivo → "Confirmar denegación")
+ * más bandera `confirmacion` en la API, y queda auditado con
+ * `invalidacionManual: true` (quién, cuándo y por qué) para distinguirlo de un
+ * denied del sistema, que nunca consume el QR.
  */
 export async function denyAccess(input: {
   rawToken: string;
@@ -275,6 +286,7 @@ export async function denyAccess(input: {
     result: "denied",
     denialReason: motivo,
     consumeQr: true,
+    invalidacionManual: true,
   });
 
   if (!registrado.ok) {

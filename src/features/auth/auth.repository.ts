@@ -30,6 +30,7 @@ export type SessionUser = {
   lastName: string;
   phone: string | null;
   role: string;
+  emailVerified: boolean;
 };
 
 export async function findSessionUserById(id: string): Promise<SessionUser | null> {
@@ -49,6 +50,7 @@ export async function findSessionUserById(id: string): Promise<SessionUser | nul
     lastName: user.lastName,
     phone: user.phone,
     role: user.role.name,
+    emailVerified: user.emailVerified,
   };
 }
 
@@ -71,7 +73,30 @@ export async function findUserCredentialsById(id: string) {
 }
 
 export async function updateUserPassword(id: string, passwordHash: string) {
-  await db.user.update({ where: { id }, data: { passwordHash } });
+  // P1-5: subir la versión revoca todas las sesiones anteriores.
+  await db.user.update({ where: { id }, data: { passwordHash, tokenVersion: { increment: 1 } } });
+}
+
+/** Teléfono editable del perfil. */
+export async function updateUserPhone(id: string, phone: string) {
+  await db.user.update({ where: { id }, data: { phone: phone.trim() } });
+}
+
+/** Correo pendiente de re-verificación. Sube tokenVersion para
+ * cerrar las sesiones vigentes (decisión: re-login tras cambiar el correo). */
+export async function updateUserEmailPendingVerification(id: string, email: string) {
+  await db.user.update({
+    where: { id },
+    data: { email: normalizeEmail(email), emailVerified: false, tokenVersion: { increment: 1 } },
+  });
+}
+
+/** Correo + estado mínimo para detectar cambio/no-op en el perfil. */
+export async function findUserEmailById(id: string) {
+  return db.user.findUnique({
+    where: { id },
+    select: { id: true, email: true, isActive: true },
+  });
 }
 
 export async function createUserWithCustomer(data: {

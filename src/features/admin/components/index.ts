@@ -1,1 +1,0 @@
-// TODO(admin): componente placeholder

@@ -32,6 +32,9 @@ model User {
   phone        String?
   isActive     Boolean  @default(true)
   emailVerified Boolean @default(false)
+  // P1-5: revocación de sesiones. Cada cambio de contraseña lo incrementa y
+  // los JWT llevan el valor vigente: un token robado muere al cambiar la clave.
+  tokenVersion Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -74,6 +77,10 @@ model Service {
   description String?
   price       Int
   capacity    Int
+  // Fase 1: el admin gestiona servicios sin SQL. Foto para portada/360
+  // (validar 2:1 en el formulario) y activo para ocultar sin borrar.
+  imagen      String?
+  isActive    Boolean @default(true)
 
   category            Category             @relation(fields: [categoryId], references: [id])
   serviceSchedules    ServiceSchedule[]
@@ -387,6 +394,10 @@ model Access {
   employeeId     String       @db.Uuid
   result         AccessResult
   denialReason   String?
+  // P2-5: auditoría de invalidación manual (33-E). true solo cuando el
+  // empleado consumió un QR válido con denegación explícita. Un denied del
+  // sistema (lookup fallido) nunca consume el QR y queda en false.
+  invalidacionManual Boolean @default(false)
   wristbandColor String?
   accessedAt     DateTime     @default(now())
 

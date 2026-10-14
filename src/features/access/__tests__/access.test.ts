@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   findQrByTokenHash: vi.fn(),
   grantAccess: vi.fn(),
   marcarQrExpirado: vi.fn(),
+  huboDenegacionReciente: vi.fn().mockResolvedValue(false),
 }));
 
 vi.mock("../access.repository", async (importOriginal) => ({
@@ -11,6 +12,7 @@ vi.mock("../access.repository", async (importOriginal) => ({
   findQrByTokenHash: mocks.findQrByTokenHash,
   grantAccess: mocks.grantAccess,
   marcarQrExpirado: mocks.marcarQrExpirado,
+  huboDenegacionReciente: mocks.huboDenegacionReciente,
 }));
 
 import {
@@ -225,12 +227,14 @@ describe("denyAccess", () => {
       },
     });
     // El QR se consume: si no, el mismo código rebotaría en otra puerta.
+    // Y queda auditado como invalidación manual, distinto de un denied del sistema.
     expect(mocks.grantAccess).toHaveBeenCalledWith({
       qrTokenId: "qr-1",
       employeeId: "emp-1",
       result: "denied",
       denialReason: "La persona no coincide con la ficha",
       consumeQr: true,
+      invalidacionManual: true,
     });
   });
 
@@ -308,6 +312,7 @@ describe("franja que todavía no empieza", () => {
 describe("recordDenial", () => {
   it("registra el intento denegado y no hace nada sin QR", async () => {
     mocks.findQrByTokenHash.mockResolvedValue(qrBase());
+    mocks.huboDenegacionReciente.mockResolvedValue(false);
     await recordDenial({ rawToken: "t", employee: empleado, reason: "fuera de horario" });
     expect(mocks.grantAccess).toHaveBeenCalledWith({
       qrTokenId: "qr-1",
@@ -319,6 +324,20 @@ describe("recordDenial", () => {
     mocks.grantAccess.mockClear();
     mocks.findQrByTokenHash.mockResolvedValue(null);
     await recordDenial({ rawToken: "x", employee: empleado, reason: "qr falso" });
+    expect(mocks.grantAccess).not.toHaveBeenCalled();
+  });
+
+  it("P2-6: omite el duplicado reciente del mismo QR, empleado y motivo", async () => {
+    mocks.findQrByTokenHash.mockResolvedValue(qrBase());
+    mocks.huboDenegacionReciente.mockResolvedValue(true);
+
+    await recordDenial({ rawToken: "t", employee: empleado, reason: "fuera de horario" });
+
+    expect(mocks.huboDenegacionReciente).toHaveBeenCalledWith({
+      qrTokenId: "qr-1",
+      employeeId: "emp-1",
+      reason: "fuera de horario",
+    });
     expect(mocks.grantAccess).not.toHaveBeenCalled();
   });
 });

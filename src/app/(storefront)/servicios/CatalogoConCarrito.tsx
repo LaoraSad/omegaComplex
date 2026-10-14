@@ -1,0 +1,173 @@
+'use client';
+
+import { useState, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
+import ServiceCard from '@/components/catalog/ServiceCard';
+import BookingGuide from '@/components/storefront/BookingGuide';
+import { SelectorFranjas } from '@/components/storefront/SelectorFranjas';
+import AmbientBubbles from '@/components/AmbientBubbles';
+import SectionDivider from '@/components/SectionDivider';
+import { Search, Waves, Trophy, Dumbbell, Sparkles, Filter, X } from 'lucide-react';
+import type { CategoryRecord, CatalogServiceRecord } from '@/features/catalog/catalog.types';
+
+/** Catálogo + carrito. Los datos iniciales vienen del servidor (RSC):
+ * acá solo vive la interacción (filtros, búsqueda, modal de franjas). */
+export default function CatalogoConCarrito({
+  initialCategories,
+  initialServices,
+}: {
+  initialCategories: CategoryRecord[];
+  initialServices: CatalogServiceRecord[];
+}) {
+  const searchParams = useSearchParams();
+  const categoryParam = searchParams.get('categoria');
+
+  const [categoryState, setCategoryState] = useState<string>('todas');
+  const [searchQuery, setSearchQuery] = useState('');
+  // Instalacion cuyo selector de franjas esta abierto.
+  const [elegido, setElegido] = useState<CatalogServiceRecord | null>(null);
+
+  const currentCategory = categoryParam || categoryState;
+
+  const filteredServices = useMemo(() => {
+    return initialServices.filter((service) => {
+      const matchesCategory = currentCategory === 'todas' || service.category.slug === currentCategory;
+      const matchesSearch =
+        service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (service.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.category.name.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [currentCategory, searchQuery, initialServices]);
+
+  const getCategoryIcon = (slug: string) => {
+    switch (slug) {
+      case 'piscinas':
+        return <Waves className="w-4 h-4" />;
+      case 'canchas':
+        return <Trophy className="w-4 h-4" />;
+      case 'gimnasio':
+        return <Dumbbell className="w-4 h-4" />;
+      case 'zonas-humedas':
+        return <Sparkles className="w-4 h-4" />;
+      default:
+        return <Sparkles className="w-4 h-4" />;
+    }
+  };
+
+  return (
+    <div className="omega-dark-section relative overflow-hidden bg-[#0e0b0d] text-white">
+      <div aria-hidden="true" className="omega-cta-glow" />
+      <AmbientBubbles variant="mixed" />
+      <BookingGuide />
+
+      <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      {/* Encabezado */}
+      <div className="mb-8 text-center sm:text-left space-y-2">
+        <p className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#e3bd74] max-sm:justify-center">
+          <span>Catálogo Oficial</span>
+          <span className="inline-block h-px w-14 bg-[#e3bd74]/50" />
+        </p>
+        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight uppercase">
+          Servicios e Instalaciones
+        </h1>
+        <p className="text-sm sm:text-base text-white/60 max-w-2xl">
+          Explora los servicios disponibles del complejo, consulta capacidades y selecciona el espacio ideal para tu entrenamiento o esparcimiento.
+        </p>
+      </div>
+
+      {/* Filtros por Categoría y Buscador */}
+      <div data-tour="filtros" className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6">
+        {/* Pestañas de categorías */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 scrollbar-none">
+          <button
+            onClick={() => setCategoryState('todas')}
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
+              currentCategory === 'todas'
+                ? 'bg-[#7a1f3d] text-white shadow-[0_8px_24px_rgba(122,31,61,0.45)]'
+                : 'bg-white/5 text-white/60 border border-white/10 hover:text-white hover:border-white/25'
+            }`}
+          >
+            <Filter className="w-3.5 h-3.5" />
+            <span>Todas ({initialServices.length})</span>
+          </button>
+
+          {initialCategories.map((cat) => {
+            const count = initialServices.filter((service) => service.category.slug === cat.slug).length;
+            const isSelected = currentCategory === cat.slug;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setCategoryState(cat.slug)}
+                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
+                  isSelected
+                    ? 'bg-[#7a1f3d] text-white shadow-[0_8px_24px_rgba(122,31,61,0.45)]'
+                    : 'bg-white/5 text-white/60 border border-white/10 hover:text-white hover:border-white/25'
+                }`}
+              >
+                <span>{getCategoryIcon(cat.slug)}</span>
+                <span>{cat.name}</span>
+                <span className="opacity-75 text-xs">({count})</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Buscador de texto */}
+        <div data-tour="buscador" className="relative min-w-70">
+          <input
+            type="text"
+            placeholder="Buscar cancha, piscina..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-2.5 pl-10 text-sm bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/35 focus:outline-none focus:border-[#b3295a] focus:shadow-[0_0_0_3px_rgba(142,35,71,0.35)] transition-all"
+          />
+          <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-white/40" />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-3 text-white/40 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+      {/* El divisor ES la línea inferior de la barra de filtros */}
+      <SectionDivider />
+
+      {/* Grid de Servicios */}
+      {filteredServices.length > 0 ? (
+        <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredServices.map((service, i) => (
+            <div key={service.id} data-tour={i === 0 ? 'reservar' : undefined} className="omega-card min-w-0">
+              <ServiceCard service={service} onElegirFranja={() => setElegido(service)} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-10 text-center py-16 rounded-2xl border border-white/10 bg-white/5 p-8 max-w-md mx-auto space-y-3">
+          <Search className="w-12 h-12 text-white/30 mx-auto" />
+          <h3 className="font-bold text-lg text-white">No se encontraron servicios</h3>
+          <p className="text-xs text-white/55">
+            No hay servicios que coincidan con la búsqueda o categoría seleccionada.
+          </p>
+          <button
+            onClick={() => {
+              setCategoryState('todas');
+              setSearchQuery('');
+            }}
+            className="text-xs font-bold text-[#e3bd74] hover:underline cursor-pointer"
+          >
+            Restablecer filtros
+          </button>
+        </div>
+      )}
+
+      {elegido && <SelectorFranjas servicio={elegido} onClose={() => setElegido(null)} />}
+
+      {/* Barra fija del carrito: vive dentro del contenedor para heredar el tema. */}
+      </div>
+    </div>
+  );
+}

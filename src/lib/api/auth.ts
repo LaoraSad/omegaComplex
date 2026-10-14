@@ -8,6 +8,14 @@ export type AuthUser = {
   lastName: string;
   phone?: string | null;
   role: string;
+  emailVerified?: boolean;
+};
+
+export type UpdateProfileResult = {
+  phoneUpdated: boolean;
+  emailChanged: boolean;
+  newEmail?: string;
+  verificationEmailSent?: boolean;
 };
 
 export const AUTH_API_PATHS = {
@@ -87,6 +95,19 @@ async function requestGet<T>(path: string): Promise<T> {
   return readEnvelope<T>(response);
 }
 
+async function requestPatch<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(path, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify(body),
+  });
+
+  return readEnvelope<T>(response);
+}
+
 async function readEnvelope<T>(response: Response): Promise<T> {
 
   const responseText = await response.text();
@@ -152,8 +173,12 @@ export function changePassword(data: { currentPassword: string; newPassword: str
   return request<{ message: string }>(AUTH_API_PATHS.changePassword, data);
 }
 
-// NOTA(merge verificacion-recuperacion): no se trae el stub loginWithGoogle
-// de la rama porque deshabilita el OAuth con Google que ya funciona en develop.
+export function updateProfile(data: { phone?: string; email?: string }): Promise<UpdateProfileResult> {
+  return requestPatch<UpdateProfileResult>(AUTH_API_PATHS.me, data);
+}
+
+// No hay loginWithGoogle a propósito: el OAuth con Google vive en su
+// callback y un stub de login lo deshabilitaría.
 export function getAuthErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }

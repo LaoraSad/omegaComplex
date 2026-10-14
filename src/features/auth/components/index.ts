@@ -1,1 +1,0 @@
-// TODO(auth): componente placeholder

@@ -13,12 +13,15 @@ function getSecret(): Uint8Array {
 export type JwtPayload = {
   userId: string;
   role: "user" | "admin" | "employee";
+  /** Versión vigente al emitir: si la BD tiene otra, el token está revocado. */
+  tv: number;
 };
 
 export async function createToken(payload: JwtPayload) {
   return new SignJWT({
     userId: payload.userId,
     role: payload.role,
+    tv: payload.tv,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -31,7 +34,8 @@ export async function verifyToken(token: string): Promise<JwtPayload> {
 
   if (
     typeof payload.userId !== "string" ||
-    !["user", "admin", "employee"].includes(String(payload.role))
+    !["user", "admin", "employee"].includes(String(payload.role)) ||
+    typeof payload.tv !== "number"
   ) {
     throw new Error("JWT inválido");
   }
@@ -39,5 +43,6 @@ export async function verifyToken(token: string): Promise<JwtPayload> {
   return {
     userId: payload.userId,
     role: payload.role as JwtPayload["role"],
+    tv: payload.tv,
   };
 }
