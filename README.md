@@ -593,6 +593,9 @@ npm run test
 * Variables sensibles mediante `.env`.
 * Firma de webhook de Stripe verificada + idempotencia por `eventId`.
 * QR de un solo uso (hash SHA-256, consumo atómico en BD).
+* Código corto de 8 símbolos para validación manual de QR si falla la cámara.
+* Invalidación manual de QR por empleado, con auditoría.
+* Revocación de sesiones al cambiar la contraseña (`tokenVersion`).
 * Correo transaccional (Resend) + recuperación y verificación.
 * Logging JSON de eventos críticos (sin secretos).
 * `ServiceUnavailableError` (503) si la base no responde, sin exponer detalles internos.
@@ -603,7 +606,6 @@ npm run test
 **Pendiente antes de producción**
 
 * Mover la BD a una región cercana (hoy `us-west-2`, ~270 ms por consulta).
-* Pruebas E2E de flujos críticos.
 * Job programado para expirar holds (hoy es reactivo al consultar).
 * Verificación del calendario de festivos contra el oficial.
 
