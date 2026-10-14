@@ -183,25 +183,9 @@ export async function findQrByTokenHash(rawArg: string): Promise<QrLookup | null
     });
   }
 
-  // Los UUID solo se consultan si el texto tiene esa forma. Sin esta guarda,
-  // un código mal tecleado se pasaba a una columna uuid y Postgres devolvía un
-  // error 500 en vez de "este código no existe".
-  const pareceUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed);
-
-  if (!token && pareceUuid) {
-    token = await db.qrToken.findUnique({
-      where: { id: trimmed },
-      select: selectFields,
-    });
-  }
-
-  if (!token && pareceUuid) {
-    token = await db.qrToken.findFirst({
-      where: { reservationId: trimmed },
-      select: selectFields,
-    });
-  }
-
+  // Solo token seguro (hash) o código corto impreso: nada de UUID ni
+  // reservationId. Esos identificadores son visibles en APIs/admin y
+  // permitirían validar sin el token (requisito §14: token seguro).
   if (!token) return null;
 
   return {
