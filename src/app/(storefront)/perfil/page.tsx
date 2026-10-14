@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Lock, Mail, Phone, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeft, Lock, ShieldCheck, UserRound } from "lucide-react";
 import { cargarUsuarioDeSesion } from "@/shared/auth/session-user";
 import { getSession } from "@/shared/auth/session";
 import { ChangePasswordForm } from "./ChangePasswordForm";
+import { EditEmailForm } from "./EditEmailForm";
+import { EditPhoneForm } from "./EditPhoneForm";
+import { PendingEmailBanner } from "./PendingEmailBanner";
 
 export const metadata: Metadata = {
   title: "Mi perfil",
@@ -77,6 +80,8 @@ export default async function ProfilePage() {
             <span>Datos de Identificación (No modificables)</span>
           </h2>
 
+          {user.emailVerified ? null : <PendingEmailBanner email={user.email} />}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <p className="block text-xs font-semibold text-[#6B7280] mb-1">Nombre</p>
@@ -92,38 +97,18 @@ export default async function ProfilePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs font-bold text-[#1F1F1F] mb-1 flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-[#7A1F3D]" />
-                <span>Correo electrónico</span>
-              </p>
-              <p className="w-full truncate px-3.5 py-2.5 bg-[#F5F5F5] border border-[#E5E7EB] rounded-xl text-sm font-bold text-[#1F1F1F]">
-                {user.email}
-              </p>
-              <p className="text-[10px] text-[#6B7280] mt-1">
-                Aquí recibes los códigos QR de tus reservas.
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-bold text-[#1F1F1F] mb-1 flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-[#7A1F3D]" />
-                <span>Teléfono de contacto</span>
-              </p>
-              <p className="w-full px-3.5 py-2.5 bg-[#F5F5F5] border border-[#E5E7EB] rounded-xl text-sm font-bold text-[#1F1F1F]">
-                {user.phone ?? "Sin registrar"}
-              </p>
-            </div>
-          </div>
-
           <p className="text-[11px] leading-relaxed text-[#6B7280] flex items-start gap-1.5 rounded-xl bg-[#F5F5F5] border border-[#E5E7EB] px-3.5 py-2.5">
             <UserRound className="w-3.5 h-3.5 mt-0.5 shrink-0" />
             <span>
-              Por seguridad, los datos de identificación no se pueden modificar desde esta vista.
-              El documento y la fecha de nacimiento no se muestran en tu sesión actual.
+              Por seguridad, el nombre, el apellido, el documento y la fecha de nacimiento no se pueden
+              modificar desde esta vista. El documento y la fecha de nacimiento no se muestran en tu sesión actual.
             </span>
           </p>
         </div>
+
+        <EditEmailForm currentEmail={user.email} />
+
+        <EditPhoneForm initialPhone={user.phone} />
 
         <ChangePasswordForm />
 
