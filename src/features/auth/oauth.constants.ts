@@ -20,3 +20,27 @@ export function oauthErrorMessage(code: string | null): string | null {
   if (!code) return null;
   return OAUTH_ERROR_MESSAGES[code] ?? "No se pudo completar el acceso con Google.";
 }
+
+/**
+ * Puerta de acceso tras el callback (P1-4). Pura para poder probarla:
+ * desactivado no entra; sin correo verificado no se abre sesión y va a
+ * `/verify-email` (el código se pide por reenvío, igual que en manual).
+ * Con todo en regla devuelve el rol para que la ruta abra sesión y use `homeFor`.
+ */
+export function destinoOAuth(input: {
+  role: string;
+  isActive: boolean;
+  emailVerified: boolean;
+  email: string;
+}): { abrirSesion: false; destino: string } | { abrirSesion: true; role: string } {
+  if (!input.isActive) {
+    return { abrirSesion: false, destino: "/login?error=oauth_cuenta_inactiva" };
+  }
+  if (!input.emailVerified) {
+    return {
+      abrirSesion: false,
+      destino: `/verify-email?email=${encodeURIComponent(input.email)}`,
+    };
+  }
+  return { abrirSesion: true, role: input.role };
+}
