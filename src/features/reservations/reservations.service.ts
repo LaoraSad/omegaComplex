@@ -96,11 +96,16 @@ function maxAdvanceDate(ref: Date): Date {
   return d;
 }
 
-/** El SCRUM no permite reservar fechas anteriores. */
-function isPastDate(date: string, now: Date): boolean {
-  const [y, m, d] = date.split("-").map(Number);
-  const start = new Date(Date.UTC(y, m - 1, d, 5, 0, 0, 0));
-  return start < now;
+/** El SCRUM no permite reservar fechas anteriores. Se compara por día calendario
+ *  en America/Bogota: hoy nunca es pasado, aunque ya hayan pasado las 00:00. */
+export function isPastDate(date: string, now: Date): boolean {
+  const hoy = new Intl.DateTimeFormat("en-CA", {
+    timeZone: BOGOTA,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+  return date < hoy;
 }
 
 /**
