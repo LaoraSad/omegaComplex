@@ -11,6 +11,7 @@ import {
   fullName,
 } from "@/components/admin/format";
 import { listAccesses, listServiceOptions } from "@/features/admin/admin.repository";
+import { zonaDeAcceso } from "@/features/admin/admin.types";
 
 export const metadata: Metadata = { title: "Accesos" };
 
@@ -144,7 +145,7 @@ export default async function AccesosPage({ searchParams }: AccesosPageProps) {
                         a.qrToken.reservation.customer.user.lastName,
                       )}
                     </td>
-                    <td>{a.qrToken.reservation.service.name}</td>
+                    <td>{zonaDeAcceso(a)}</td>
                     <td className="anum">QR #{a.qrToken.seqNo}</td>
                     <td>{fullName(a.employee.user.firstName, a.employee.user.lastName)}</td>
                     <td>

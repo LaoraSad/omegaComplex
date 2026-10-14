@@ -526,9 +526,14 @@ export function buildAccessWhere(f: AccessFilters) {
   }
   const reservationFilter: Record<string, unknown> = {};
   let hasReservationFilter = false;
+  const qrTokenOr: Array<Record<string, unknown>> = [];
   if (f.serviceId) {
-    reservationFilter.serviceId = f.serviceId;
-    hasReservationFilter = true;
+    // P1-7: la zona del acceso es la del bloque del QR, no la principal de la
+    // reserva. Sin bloque (QR legacy) se usa la reserva.
+    qrTokenOr.push(
+      { block: { serviceId: f.serviceId } },
+      { blockId: null, reservation: { serviceId: f.serviceId } },
+    );
   }
   const q = f.q?.trim();
   if (q) {
@@ -539,8 +544,11 @@ export function buildAccessWhere(f: AccessFilters) {
     ];
     hasReservationFilter = true;
   }
-  if (hasReservationFilter) {
-    where.qrToken = { reservation: reservationFilter as never };
+  if (hasReservationFilter || qrTokenOr.length > 0) {
+    const qrTokenFilter: Record<string, unknown> = {};
+    if (hasReservationFilter) qrTokenFilter.reservation = reservationFilter as never;
+    if (qrTokenOr.length > 0) qrTokenFilter.OR = qrTokenOr as never;
+    where.qrToken = qrTokenFilter as never;
   }
   return where;
 }
@@ -560,6 +568,7 @@ export async function listAccesses(filters: AccessFilters): Promise<Paginated<Ac
         employee: { include: { user: { select: { firstName: true, lastName: true } } } },
         qrToken: {
           include: {
+            block: { select: { service: { select: { id: true, name: true } } } },
             reservation: {
               include: {
                 customer: {

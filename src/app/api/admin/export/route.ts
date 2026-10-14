@@ -7,6 +7,7 @@ import {
   listEmployees,
   listServices,
 } from "@/features/admin/admin.repository";
+import { zonaDeAcceso } from "@/features/admin/admin.types";
 import { db } from "@/shared/lib/db";
 import { fail } from "@/shared/http/api-response";
 import { handler } from "@/shared/http/handler";
@@ -102,6 +103,7 @@ export const GET = handler(async (req: NextRequest) => {
         employee: { include: { user: { select: { firstName: true, lastName: true } } } },
         qrToken: {
           include: {
+            block: { select: { service: { select: { name: true } } } },
             reservation: {
               include: {
                 customer: { include: { user: { select: { firstName: true, lastName: true } } } },
@@ -121,7 +123,7 @@ export const GET = handler(async (req: NextRequest) => {
           a.qrToken.reservation.customer.user.firstName,
           a.qrToken.reservation.customer.user.lastName,
         ),
-        a.qrToken.reservation.service.name,
+        zonaDeAcceso(a),
         a.qrToken.seqNo,
         fullNameOf(a.employee.user.firstName, a.employee.user.lastName),
         a.result,
