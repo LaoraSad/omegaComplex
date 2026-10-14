@@ -1,5 +1,4 @@
-// Formato único de respuesta API (T1)
-// TODO(T1): definir { data, error, meta } y helpers ok()/fail().
+// Formato único de respuesta API.
 export type ApiSuccess<T> = { data: T; error: null };
 export type ApiFailure = { data: null; error: { code: string; message: string } };
 

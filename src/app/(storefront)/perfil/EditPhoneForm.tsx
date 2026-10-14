@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Phone } from "lucide-react";
 import { updateProfile, getAuthErrorMessage } from "@/lib/api/auth";
 
-/** Fase 2: edición del teléfono de contacto. Vive en /perfil. */
+/** Edición del teléfono de contacto. Vive en /perfil. */
 export function EditPhoneForm({ initialPhone }: { initialPhone: string | null }) {
   const router = useRouter();
   const [phone, setPhone] = useState(initialPhone ?? "");

@@ -16,7 +16,7 @@ vi.mock("@/shared/lib/db", () => ({ db: dbMock }));
 
 import { createService, setServiceActive, updateService } from "../admin.repository";
 
-describe("CRUD de servicios (Fase 1)", () => {
+describe("CRUD de servicios", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     dbMock.$transaction.mockImplementation((cb: (t: unknown) => unknown) =>

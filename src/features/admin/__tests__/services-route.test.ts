@@ -33,7 +33,7 @@ const NUEVO = {
   capacity: 14,
 };
 
-describe("POST /api/services (Fase 1: solo admin)", () => {
+describe("POST /api/services", () => {
   beforeEach(() => {
     vi.resetAllMocks();
   });
@@ -71,7 +71,7 @@ describe("POST /api/services (Fase 1: solo admin)", () => {
   });
 });
 
-describe("PATCH /api/services/[id] (Fase 1: solo admin)", () => {
+describe("PATCH /api/services/[id]", () => {
   beforeEach(() => {
     vi.resetAllMocks();
   });

@@ -52,7 +52,7 @@ describe("liberarHoldsVencidos (P2-4: lote acotado)", () => {
     expect(cliente.$executeRaw).toHaveBeenCalledOnce();
   });
 
-  it("avisa por cada reserva que esta pasada expiró (Fase 3.1)", async () => {
+  it("avisa por cada reserva que esta pasada expiró", async () => {
     const cliente = clienteCon([
       { id: "res-1", slots: [{ slotId: "slot-1", quantity: 1 }] },
       { id: "res-2", slots: [{ slotId: "slot-2", quantity: 1 }] },

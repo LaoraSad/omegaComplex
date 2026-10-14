@@ -77,12 +77,12 @@ export async function updateUserPassword(id: string, passwordHash: string) {
   await db.user.update({ where: { id }, data: { passwordHash, tokenVersion: { increment: 1 } } });
 }
 
-/** Fase 2: teléfono editable del perfil. */
+/** Teléfono editable del perfil. */
 export async function updateUserPhone(id: string, phone: string) {
   await db.user.update({ where: { id }, data: { phone: phone.trim() } });
 }
 
-/** Fase 2: correo pendiente de re-verificación. Sube tokenVersion para
+/** Correo pendiente de re-verificación. Sube tokenVersion para
  * cerrar las sesiones vigentes (decisión: re-login tras cambiar el correo). */
 export async function updateUserEmailPendingVerification(id: string, email: string) {
   await db.user.update({

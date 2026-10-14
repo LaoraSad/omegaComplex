@@ -11,7 +11,7 @@ vi.mock("@/shared/lib/db", () => ({
 
 import { getOcupacionPorFecha, getUsoReservas } from "../admin.repository";
 
-describe("getOcupacionPorFecha (Fase 4.2)", () => {
+describe("getOcupacionPorFecha", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.serviceSlot.findMany.mockResolvedValue([
@@ -48,7 +48,7 @@ describe("getOcupacionPorFecha (Fase 4.2)", () => {
   });
 });
 
-describe("getUsoReservas (Fase 4.2, definición estricta)", () => {
+describe("getUsoReservas (definición estricta)", () => {
   // 2026-10-14 07:00 COT.
   const AHORA = new Date("2026-10-14T12:00:00Z");
 

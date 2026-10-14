@@ -39,7 +39,7 @@ const contactoBase = {
   totalCop: 24000,
 };
 
-describe("GET /api/cron/holds (Fase 3.1: aviso de hold expirado)", () => {
+describe("GET /api/cron/holds", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.liberarHoldsVencidos.mockResolvedValue(0);

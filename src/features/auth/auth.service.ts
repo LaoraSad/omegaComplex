@@ -197,7 +197,7 @@ export type UpdateProfileResult = {
 };
 
 /**
- * Fase 2: edición de teléfono y correo del perfil.
+ * Edición de teléfono y correo del perfil.
  * - Teléfono: actualización directa.
  * - Correo: colisión con mensaje genérico, reseteo a `emailVerified=false`,
  *   `tokenVersion++` (revoca sesiones, igual que cambio de clave) y emisión

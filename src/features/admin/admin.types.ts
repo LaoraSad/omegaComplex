@@ -191,7 +191,7 @@ export interface Paginated<T> {
 }
 
 /**
- * Fase 4 (§20, solo visualización): ingresos y reservas por rango de fechas
+ * (§20, solo visualización): ingresos y reservas por rango de fechas
  * de franja, desglosados por servicio y categoría. Sin exportación.
  */
 export interface MetricasRango {
@@ -206,7 +206,7 @@ export interface MetricasRango {
   reservasPorCategoria: Array<{ categoryName: string; total: number }>;
 }
 
-/** Fase 4.2 (§20): ocupación de una fecha configurable (misma forma que hoy). */
+/** (§20): ocupación de una fecha configurable (misma forma que hoy). */
 export interface OcupacionFecha {
   fecha: string;
   occupancyToday: { used: number; total: number } | null;
@@ -214,7 +214,7 @@ export interface OcupacionFecha {
 }
 
 /**
- * Fase 4.2 (§20): usadas vs no usadas. No usada = confirmada con fecha
+ * (§20): usadas vs no usadas. No usada = confirmada con fecha
  * pasada y ningún QR consumido (definición estricta aprobada).
  */
 export interface UsoReservas {

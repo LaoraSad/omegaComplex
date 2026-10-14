@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { updateProfileSchema } from "../auth.schemas";
 
-describe("updateProfileSchema (Fase 2)", () => {
+describe("updateProfileSchema", () => {
   it("acepta solo teléfono", () => {
     const result = updateProfileSchema.safeParse({ phone: "+573001234567" });
     expect(result.success).toBe(true);

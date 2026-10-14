@@ -84,7 +84,7 @@ export function firstIssue(error: z.ZodError): string {
   return error.issues[0]?.message ?? "Revisa los datos ingresados.";
 }
 
-// Gestión de servicios (Fase 1, SCRUM sección 5).
+// Gestión de servicios (SCRUM sección 5).
 // El slug se deriva del nombre como en categorías; la proporción 2:1 de la
 // foto (tour 360) se valida en el formulario con el objeto Image del navegador,
 // porque acá solo llega la ruta y no las dimensiones.

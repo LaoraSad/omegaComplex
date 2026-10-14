@@ -127,7 +127,7 @@ describe("email auth flows", () => {
     expect(mocks.db.$transaction).not.toHaveBeenCalled();
   });
 
-  it("al verificar emite usuario.verificado y manda la bienvenida (Fase 3.2)", async () => {
+  it("al verificar emite usuario.verificado y manda la bienvenida", async () => {
     mocks.db.user.findUnique
       .mockResolvedValueOnce({ id: userId, emailVerified: false })
       .mockResolvedValue({ email: testEmail, firstName: "Ana" });

@@ -1,5 +1,4 @@
 // Clases de error del dominio HTTP.
-// TODO(T6): mapear a códigos de estado en handler.ts.
 export class HttpError extends Error {
   constructor(
     public status: number,

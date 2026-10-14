@@ -357,7 +357,7 @@ async function entregarQrPorCorreo(
         nombre: contacto.nombre,
         fecha,
         codigos: emitidos,
-        // Fase 3.2: el documento iba solo por n8n (PDF). Por Resend también
+        // El documento iba solo por n8n (PDF). Por Resend también
         // tiene que viajar para que el PDF lleve al titular.
         documento: contacto.documento,
       });
@@ -415,7 +415,7 @@ return entregado;
 
 /** Marca el pago como fallido, devuelve los cupos retenidos y avisa al cliente.
  *
- * Fase 3.1: el aviso nunca tumba el rechazo. Si el correo falla (o no hay
+ * El aviso nunca tumba el rechazo. Si el correo falla (o no hay
  * contacto), queda en el log para revisión manual, igual que el QR.
  */
 export async function rechazarPago(input: { paymentId: string; reason?: string | null }) {
