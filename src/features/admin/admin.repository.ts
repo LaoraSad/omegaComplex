@@ -2,6 +2,8 @@ import bcrypt from "bcryptjs";
 import { db } from "@/shared/lib/db";
 import type { Prisma } from "@prisma/client";
 import { diaDeSemana, ultimoDiaReservable } from "@/features/schedules/colombia-holidays";
+import { slugifyCategory } from "@/features/catalog/catalog.schemas";
+import { ConflictError, NotFoundError } from "@/shared/http/errors";
 
 import type {
   AccessRow,
@@ -456,6 +458,146 @@ export async function getServiceDetail(id: string): Promise<ServiceRow | null> {
     },
   });
   return row as ServiceRow | null;
+}
+
+// ---------------------------------------------------------------------------
+// CRUD de servicios (Fase 1, SCRUM sección 5). Sin esto todo cambio iba por
+// seed/SQL. Reglas: slug único derivado del nombre, capacidad nunca bajo lo
+// vendido en franjas futuras, desactivar no toca reservas vivas, y lo nuevo
+// rige franjas futuras (las pasadas son historia).
+// ---------------------------------------------------------------------------
+
+export type ServiceCreateData = {
+  categoryId: string;
+  name: string;
+  description?: string;
+  price: number;
+  capacity: number;
+  imagen?: string;
+  isActive?: boolean;
+};
+
+export type ServiceUpdateData = {
+  categoryId?: string;
+  name?: string;
+  description?: string | null;
+  price?: number;
+  capacity?: number;
+  imagen?: string | null;
+  isActive?: boolean;
+};
+
+function rethrowServiceDuplicado(error: unknown): void {
+  if ((error as { code?: string })?.code === "P2002") {
+    throw new Error("Ya existe un servicio con ese nombre.");
+  }
+}
+
+export async function createService(input: ServiceCreateData) {
+  const category = await db.category.findUnique({ where: { id: input.categoryId } });
+  if (!category) throw new NotFoundError("La categoría seleccionada no existe.");
+
+  const name = input.name.trim();
+  const slug = slugifyCategory(name);
+  if (!slug) throw new Error("El nombre debe contener letras o números.");
+  const dupe = await db.service.findFirst({
+    where: { OR: [{ name }, { slug }] },
+    select: { id: true },
+  });
+  if (dupe) throw new ConflictError("Ya existe un servicio con ese nombre.");
+
+  try {
+    return await db.service.create({
+      data: {
+        categoryId: input.categoryId,
+        name,
+        slug,
+        description: input.description?.trim() ? input.description.trim() : null,
+        price: input.price,
+        capacity: input.capacity,
+        imagen: input.imagen?.trim() ? input.imagen.trim() : null,
+        isActive: input.isActive ?? true,
+      },
+    });
+    // Tras crear, el admin configura los horarios: cada upsert genera sus slots.
+  } catch (error) {
+    rethrowServiceDuplicado(error);
+    throw error;
+  }
+}
+
+export async function updateService(id: string, input: ServiceUpdateData) {
+  const existing = await db.service.findUnique({ where: { id } });
+  if (!existing) throw new NotFoundError("El servicio no existe.");
+
+  if (input.categoryId !== undefined) {
+    const category = await db.category.findUnique({ where: { id: input.categoryId } });
+    if (!category) throw new NotFoundError("La categoría seleccionada no existe.");
+  }
+
+  const data: Record<string, unknown> = {};
+  if (input.categoryId !== undefined) data.categoryId = input.categoryId;
+  if (input.name !== undefined) {
+    const name = input.name.trim();
+    const slug = slugifyCategory(name);
+    if (!slug) throw new Error("El nombre debe contener letras o números.");
+    const dupe = await db.service.findFirst({
+      where: { OR: [{ name }, { slug }], id: { not: id } },
+      select: { id: true },
+    });
+    if (dupe) throw new ConflictError("Ya existe otro servicio con ese nombre.");
+    data.name = name;
+    data.slug = slug;
+  }
+  if (input.description !== undefined) {
+    data.description = input.description?.trim() ? input.description.trim() : null;
+  }
+  if (input.price !== undefined) data.price = input.price;
+  if (input.capacity !== undefined) data.capacity = input.capacity;
+  if (input.imagen !== undefined) {
+    data.imagen = input.imagen?.trim() ? input.imagen.trim() : null;
+  }
+  if (input.isActive !== undefined) data.isActive = input.isActive;
+
+  // Guard de capacidad: ninguna franja futura puede quedar con más cupos
+  // vendidos que la nueva capacidad. Si pasa, las futuras heredan la nueva.
+  const cambiaCapacidad = input.capacity !== undefined && input.capacity !== existing.capacity;
+  if (cambiaCapacidad) {
+    const futuros = await db.serviceSlot.findMany({
+      where: { serviceId: id, startsAt: { gte: new Date() } },
+      select: { bookedCount: true, heldCount: true },
+    });
+    if (futuros.some((s) => s.bookedCount + s.heldCount > (input.capacity as number))) {
+      throw new Error("Hay franjas futuras con más cupos vendidos que la nueva capacidad.");
+    }
+  }
+
+  try {
+    return await db.$transaction(async (tx) => {
+      const updated = await tx.service.update({ where: { id }, data: data as never });
+      if (cambiaCapacidad) {
+        await tx.serviceSlot.updateMany({
+          where: { serviceId: id, startsAt: { gte: new Date() } },
+          data: { capacity: input.capacity as number },
+        });
+      }
+      return updated;
+    });
+  } catch (error) {
+    rethrowServiceDuplicado(error);
+    throw error;
+  }
+}
+
+/**
+ * Activa o desactiva la instalación en el catálogo. Desactivar oculta sin
+ * borrar: las reservas existentes (incluso futuras) se respetan y el QR sigue
+ * validando; solo se cierra la venta nueva.
+ */
+export async function setServiceActive(id: string, isActive: boolean) {
+  const existing = await db.service.findUnique({ where: { id }, select: { id: true } });
+  if (!existing) throw new NotFoundError("El servicio no existe.");
+  return db.service.update({ where: { id }, data: { isActive } });
 }
 
 export async function listClosures(): Promise<ClosureRow[]> {

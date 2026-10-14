@@ -225,6 +225,7 @@ export async function getDayAvailability(
         id: true,
         name: true,
         capacity: true,
+        isActive: true,
         serviceSchedules: { select: { dayOfWeek: true, openTime: true, closeTime: true } },
       },
     }),
@@ -257,6 +258,11 @@ export async function getDayAvailability(
     festivo: festivo ? nombreFestivo(date) : null,
     slots: [],
   });
+
+  // Desactivada por el admin: cierra la venta nueva sin tocar reservas vivas.
+  if (!service.isActive) {
+    return cerrado("servicio_inactivo", "Esta instalación no está disponible actualmente.");
+  }
 
   // Cierre puntual del admin (imprevisto). Gana sobre todo lo demás: si alguien
   // cerró la instalación a mano, ese es el motivo que hay que explicar.
@@ -357,7 +363,7 @@ export async function getSlotsInRange(
   const [service, closures, slots] = await Promise.all([
     db.service.findUnique({
       where: { id: serviceId },
-      select: { serviceSchedules: { select: { dayOfWeek: true, openTime: true, closeTime: true } } },
+      select: { isActive: true, serviceSchedules: { select: { dayOfWeek: true, openTime: true, closeTime: true } } },
     }),
     db.serviceClosure.findMany({
       where: {
@@ -380,7 +386,7 @@ export async function getSlotsInRange(
       },
     }),
   ]);
-  if (!service) return [];
+  if (!service || !service.isActive) return [];
 
   const validSlots = slots.filter((slot) => {
     const dateKey = toBogotaDateKey(slot.startsAt);

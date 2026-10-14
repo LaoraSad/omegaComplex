@@ -88,7 +88,8 @@ export type CrearError =
   | "asistentes_inconsistentes"
   | "sin_acompanyantes"
   | "ya_reservado"
-  | "mantenimiento";
+  | "mantenimiento"
+  | "servicio_inactivo";
 
 /** Anteposición máxima: hoy Bogotá + 3 meses calendario (una sola definición). */
 function fechaLimiteReserva(now: Date): string {
@@ -278,6 +279,7 @@ export async function createReservationWithHold(
           id: true,
           name: true,
           price: true,
+          isActive: true,
           category: { select: { name: true } },
           serviceSchedules: { select: { dayOfWeek: true, openTime: true, closeTime: true } },
         },
@@ -335,6 +337,14 @@ export async function createReservationWithHold(
     const slot = slotPorId.get(bloque.slotId);
     if (!slot) continue;
 
+    // Desactivada por el admin: ni con franja generada se vende.
+    if (!slot.service.isActive) {
+      return {
+        ok: false,
+        code: "servicio_inactivo",
+        message: "La instalación no está disponible actualmente.",
+      };
+    }
     const dateKey = dateKeyBogota(slot.startsAt);
     const dayOfWeek = dayOfWeekBogota(dateKey);
     const schedule = slot.service.serviceSchedules.find((item) => item.dayOfWeek === dayOfWeek);

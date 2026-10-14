@@ -25,6 +25,7 @@ export type CierreMotivo =
   | "festivo"
   | "mantenimiento"
   | "cierre_admin"
+  | "servicio_inactivo"
   | "sin_horario"
   | "horario_invalido"
   | "sin_franjas"

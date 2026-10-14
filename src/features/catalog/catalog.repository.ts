@@ -77,6 +77,7 @@ const OFFICIAL_POOL_SLUGS = [
 export async function listCatalogServices(categorySlug?: string): Promise<CatalogServiceRecord[]> {
 	const services = (await db.service.findMany({
 		where: {
+			isActive: true,
 			category: {
 				is: {
 					isActive: true,
@@ -99,7 +100,7 @@ export async function listCatalogServices(categorySlug?: string): Promise<Catalo
 
 export async function getCatalogService(id: string): Promise<CatalogServiceRecord | null> {
 	const service = (await db.service.findFirst({
-		where: { id, category: { is: { isActive: true } } },
+		where: { id, isActive: true, category: { is: { isActive: true } } },
 		include: {
 			category: { select: { id: true, name: true, slug: true } },
 			serviceSchedules: { orderBy: { dayOfWeek: "asc" } },

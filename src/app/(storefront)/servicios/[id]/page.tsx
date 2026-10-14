@@ -64,8 +64,8 @@ function DetalleServicio({ params }: ServiceDetailPageProps) {
   const price = service
     ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(service.price)
     : '';
-  const image = service ? servicePhoto(service.slug) : null;
-  const panorama = service ? panorama360(service.slug) : null;
+  const image = service ? (service.imagen ?? servicePhoto(service.slug)) : null;
+  const panorama = service ? (service.imagen ?? panorama360(service.slug)) : null;
 
   return (
     <div className="omega-dark-section relative min-h-screen overflow-hidden bg-[#0e0b0d] text-white">
