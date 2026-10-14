@@ -48,6 +48,20 @@ Base: auditoría contra `requisitos.md` + `tareas-mvp-develop.md` + `funcionalid
 ### 10. Cron de holds — explicación (ver §3)
 - No se programa nada externo en v2.0 (lo haría la otra persona / infra). En app solo se deja el endpoint + documentado cómo activarlo. Detalle abajo.
 
+### 11. CRUD servicios admin SÍ (decisión posterior, 2026-10-14)
+- El punto 1 original de la auditoría (crear/editar/activar servicios) no había
+  quedado en el alcance; se incorpora ahora: sin catálogo editable no hay
+  operación real (§5 requisitos).
+- **IN:** `createService` (categoría, precio, capacidad, horarios iniciales en
+  transacción), `updateService`, `setServiceActive`, columna `imagen?` opcional
+  (migración), regeneración acotada de `ServiceSlot`, API `POST/PATCH`
+  (solo admin) + `ServiceForm`, tests (slug duplicado, capacidad < lo reservado,
+  sin duplicar slots).
+- **Guards:** no bajar capacidad bajo lo reservado; desactivar no toca reservas
+  vivas; slug único; lo nuevo rige franjas futuras, lo vendido no se toca.
+- **OUT:** duración como campo propio (se deriva de los slots de 1h),
+  taquilla/POS (sigue en punto 6, fuera).
+
 ## 2. Punto 6: flujo de correo actual vs venta física
 
 ### Cómo funciona hoy (solo app)
@@ -76,16 +90,18 @@ Base: auditoría contra `requisitos.md` + `tareas-mvp-develop.md` + `funcionalid
 - El endpoint `GET /api/cron/holds` (`cron/holds/route.ts:22`, `Bearer CRON_SECRET`) hace esa limpieza de forma **proactiva** si algo externo lo llama cada N minutos (Vercel Cron, systemd, etc.).
 - **Decisión v2.0:** se deja el endpoint + documentado (URL, header, frecuencia sugerida 1-5 min), sin programarlo (lo activa la otra persona / infra). Los tests de expiración (punto 1) validan la función liberadora, no el scheduler.
 
-## 4. Bugs: diferidos
+## 4. Bugs: hechos al 100% (ver `docs/bugs-v2.0.md`)
 
-- Los P0/P1/P2 de la auditoría (pasado-hoy, COP×100, pago tardío, localizador QR, webhook pre-registro, `rejectPayment`, mantenimiento en escritura, OAuth `isActive`, revocación JWT, `proxy.ts`, zona multizona, `deleteServiceSchedule`, ventana pasado, solape con expirados, 3 meses TZ, lazy sin límite, `denyAccess`, spam denials, dominio Gmail) **no se tocan** hasta orden explícita. Este documento es el prerrequisito.
+- Se ejecutaron en orden P0-1 → P0-4 → P0-3 → P0-2 → P1-1 → P1-2 → P1-3 → P1-8 →
+  P2-1 → P2-2 → P2-3 → P2-4 → P1-4 → P1-5 → P1-6 → P1-7 → P2-5 → P2-6, cada uno
+  con commit y tests. Detalle, porqués y cambios en `bugs-v2.0.md`.
 
-## 5. Criterio de cierre v2.0
+## 5. Criterio de cierre v2.0 + orden de fases
 
-- Perfil editable (teléfono/correo) con tests.
-- Concurrencia/capacidad/expiración/solape/pasada cubiertos con pruebas reales (mocks, sin Stripe real).
-- E2E de los 3 flujos con Stripe mockeado.
-- Métricas §20 visibles en admin.
-- Correos app (pago/hold, verificado, documento consistente, sin stub).
-- `.env.example` sincronizado + placeholder URL.
-- Sin regresiones: `tsc` 0, `lint` 0 errores, `vitest` en verde (salvo el `resend-qr` que requiere red).
+- **Fase 1 — CRUD servicios:** repositorio + migración + guards + API/UI + tests.
+- **Fase 2 — Perfil:** editable (teléfono/correo) con tests.
+- **Fase 3 — Correos app** (pago/hold, verificado, documento consistente, sin stub).
+- **Fase 4 — Métricas §20** visibles en admin (solo visualización, sin export).
+- **Fase 5 — Cierre:** `.env.example` sincronizado + placeholder URL, E2E de los
+  3 flujos con Stripe mockeado, concurrencia real con mocks.
+- Sin regresiones: `tsc` 0, `lint` 0 errores, `vitest` en verde.
