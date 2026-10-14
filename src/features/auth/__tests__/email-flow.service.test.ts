@@ -24,11 +24,15 @@ const mocks = vi.hoisted(() => ({
     sendPasswordResetEmail: vi.fn(),
     sendWelcomeEmail: vi.fn(),
   },
+  n8n: {
+    enviarEvento: vi.fn(),
+  },
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/shared/lib/db", () => ({ db: mocks.db }));
 vi.mock("@/lib/email/resend", () => mocks.mail);
+vi.mock("@/shared/integrations/n8n", () => mocks.n8n);
 
 import {
   completePasswordReset,
@@ -70,6 +74,7 @@ describe("email auth flows", () => {
     mocks.mail.sendVerificationEmail.mockResolvedValue(undefined);
     mocks.mail.sendPasswordResetEmail.mockResolvedValue(undefined);
     mocks.mail.sendWelcomeEmail.mockResolvedValue(undefined);
+    mocks.n8n.enviarEvento.mockResolvedValue({ entregado: true });
   });
 
   it("genera un código aleatorio de seis dígitos y solo persiste su hash", async () => {
@@ -119,7 +124,25 @@ describe("email auth flows", () => {
       .mockResolvedValueOnce({ id: "old-verification" });
 
     await expect(verifyEmailCode(testEmail, "583214")).rejects.toMatchObject({ code: "CODE_USED" });
-    expect(mocks.db.emailVerification.updateMany).not.toHaveBeenCalled();
+    expect(mocks.db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("al verificar emite usuario.verificado y manda la bienvenida (Fase 3.2)", async () => {
+    mocks.db.user.findUnique
+      .mockResolvedValueOnce({ id: userId, emailVerified: false })
+      .mockResolvedValue({ email: testEmail, firstName: "Ana" });
+    mocks.db.emailVerification.findFirst.mockResolvedValue(verificationRecord());
+
+    await expect(verifyEmailCode(testEmail, "583214")).resolves.toBeUndefined();
+
+    // La cuenta quedó marcada y los códigos viejos se invalidaron.
+    expect(mocks.db.$transaction).toHaveBeenCalledOnce();
+    expect(mocks.mail.sendWelcomeEmail).toHaveBeenCalledWith(testEmail, "Ana");
+    // El evento existía en el tipo pero nunca se emitía.
+    expect(mocks.n8n.enviarEvento).toHaveBeenCalledWith(
+      "usuario.verificado",
+      { email: testEmail, nombre: "Ana" },
+    );
   });
 
   it("bloquea después de cinco intentos", async () => {
