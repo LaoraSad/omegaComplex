@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
     rejectPayment: vi.fn(),
     settlePayment: vi.fn(),
     obtenerContactoAviso: vi.fn(),
+    obtenerContactoQr: vi.fn(),
   },
   qr: {
     emitirQrDeReserva: vi.fn(),
@@ -207,6 +208,32 @@ describe("confirmarPagoExitoso", () => {
     expect(mocks.repository.consumirHoldYTrasladarCupos).toHaveBeenCalledWith("res-1");
     expect(mocks.qr.emitirQrDeReserva).toHaveBeenCalledWith("res-1");
     expect(result).toEqual({ transitioned: true, emitidos });
+  });
+
+  it("el correo por Resend lleva el documento igual que el de n8n (Fase 3.2)", async () => {
+    mocks.db.reservation.findUnique
+      .mockResolvedValueOnce({ id: "res-1", status: "pending_payment" })
+      .mockResolvedValue({ id: "res-1", status: "confirmed" });
+    mocks.repository.settlePayment.mockResolvedValue({
+      payment: { id: "pay-1", reservationId: "res-1" },
+      transitioned: true,
+    });
+    mocks.repository.consumirHoldYTrasladarCupos.mockResolvedValue({ applied: true });
+    const emitidos = [{ token: "t", etiqueta: "Z1-P01" }];
+    mocks.qr.emitirQrDeReserva.mockResolvedValue({ ok: true, emitidos });
+    mocks.repository.obtenerContactoQr.mockResolvedValue({
+      email: "cliente@ejemplo.com",
+      nombre: "Ana López",
+      startsAt: new Date("2026-11-01T13:00:00Z"),
+      documento: "1020304050",
+    });
+
+    await confirmarPagoExitoso({ paymentId: "pay-1", stripePaymentIntentId: "pi_1" });
+
+    expect(mocks.sendQrEmail).toHaveBeenCalledWith(
+      "cliente@ejemplo.com",
+      expect.objectContaining({ nombre: "Ana López", documento: "1020304050" }),
+    );
   });
 
   it("si el pago ya estaba liquidado no toca cupos ni QR", async () => {

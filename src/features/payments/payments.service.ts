@@ -357,6 +357,9 @@ async function entregarQrPorCorreo(
         nombre: contacto.nombre,
         fecha,
         codigos: emitidos,
+        // Fase 3.2: el documento iba solo por n8n (PDF). Por Resend también
+        // tiene que viajar para que el PDF lleve al titular.
+        documento: contacto.documento,
       });
     }
   } catch (error) {

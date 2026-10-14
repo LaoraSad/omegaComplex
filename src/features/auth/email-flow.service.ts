@@ -10,6 +10,7 @@ import {
   sendVerificationEmail,
   sendWelcomeEmail,
 } from "@/lib/email/resend";
+import { enviarEvento } from "@/shared/integrations/n8n";
 
 const VERIFICATION_TTL_MS = 10 * 60 * 1000;
 const RESET_TTL_MS = 30 * 60 * 1000;
@@ -177,6 +178,13 @@ export async function verifyEmailCode(email: string, code: string): Promise<void
     } catch (error) {
       logger.error("email.bienvenida_fallida", { error });
     }
+    // Fase 3.2: el evento existía en el tipo pero nunca se emitía. n8n no
+    // lanza (contrato de enviarEvento), así que va fuera del try: la cuenta
+    // quedó verificada aunque la bienvenida falle.
+    await enviarEvento("usuario.verificado", {
+      email: verifiedUser.email,
+      nombre: verifiedUser.firstName,
+    });
   }
 }
 
