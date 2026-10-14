@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  INSTALADOR DE OMEGA COMPLEX
+#  INSTALADOR DE OMEGA COMPLEX  · versión segura para servidor compartido
 #
-#  Este script hace todo lo repetitivo por ti:
-#    1. Instala Docker
-#    2. Instala nginx y certbot (el candado de https)
-#    3. Copia el proyecto desde GitHub
-#    4. Prepara el archivo de configuración (.env)
-#    5. Levanta la aplicación
-#    6. Configura nginx para omegacomplex.coderhivex.com
+#  Este script instala Omega Complex SIN tocar lo que ya tengas desplegado:
+#    · no borra ningún sitio de nginx que exista
+#    · no detiene ningún contenedor ajeno
+#    · no reinicia nginx si la configuración nueva no valida
+#    · si el puerto 3000 está ocupado, elige otro libre
 #
 #  SOLO TIENES QUE CORRER:   sudo bash deploy/instalar.sh
 # ============================================================================
@@ -16,7 +14,8 @@
 set -e
 
 DOMINIO="omegacomplex.coderhivex.com"
-USUARIO_APP="omega"
+CARPETA="$HOME/omega"
+SITIO_NGINX="/etc/nginx/sites-available/omega"
 
 titulo() {
     echo ""
@@ -25,116 +24,171 @@ titulo() {
     echo "============================================================"
 }
 
-# Si no somos root, usamos sudo para todo lo que lo necesite.
-if [ "$(id -u)" -ne 0 ]; then
-    SUDO="sudo"
+aviso() { echo "  $1"; }
+
+if [ "$(id -u)" -ne 0 ]; then SUDO="sudo"; else SUDO=""; fi
+
+# ---------------------------------------------------------------------------
+titulo "PASO 1 de 6  ·  Mirando qué hay ya en el servidor"
+# Esto NO cambia nada. Solo informa, para que sepas qué hay antes de instalar.
+# ---------------------------------------------------------------------------
+aviso "Contenedores Docker que ya están corriendo:"
+if command -v docker > /dev/null 2>&1; then
+    docker ps --format '    · {{.Names}}  →  puerto {{.Ports}}' 2>/dev/null || echo "    (ninguno)"
 else
-    SUDO=""
+    echo "    (Docker aún no está instalado)"
 fi
+echo ""
+aviso "Sitios de nginx ya configurados:"
+if [ -d /etc/nginx/sites-enabled ]; then
+    ls -1 /etc/nginx/sites-enabled/ 2>/dev/null | sed 's/^/    · /' || echo "    (ninguno)"
+else
+    echo "    (nginx aún no está instalado)"
+fi
+echo ""
+aviso "Puertos que ya están en uso:"
+if command -v ss > /dev/null 2>&1; then
+    ss -ltn 2>/dev/null | awk 'NR>1 {print "    · puerto " $4}' | head -10
+else
+    echo "    (no se pudo revisar)"
+fi
+echo ""
 
-titulo "PASO 1 de 6  ·  Preparando el sistema"
-$SUDO apt update -qq
-$SUDO apt install -y -qq curl git ca-certificates > /dev/null
-echo "  OK  sistema actualizado"
-
-titulo "PASO 2 de 6  ·  Instalando Docker"
-if ! command -v docker > /dev/null 2>&1; then
+# ---------------------------------------------------------------------------
+titulo "PASO 2 de 6  ·  Instalando Docker (solo si no está)"
+# ---------------------------------------------------------------------------
+if command -v docker > /dev/null 2>&1; then
+    aviso "Docker ya estaba instalado: $(docker --version)"
+    aviso "NO se toca la configuración existente."
+else
+    $SUDO apt update -qq
+    $SUDO apt install -y -qq curl git ca-certificates > /dev/null
     curl -fsSL https://get.docker.com | $SUDO sh > /dev/null 2>&1
+    $SUDO systemctl enable --now docker > /dev/null 2>&1
+    aviso "Docker instalado: $(docker --version)"
 fi
-$SUDO systemctl enable --now docker > /dev/null 2>&1
-echo "  OK  Docker instalado: $(docker --version)"
 
-titulo "PASO 3 de 6  ·  Instalando nginx (el que pone el candado https)"
-$SUDO apt install -y -qq nginx > /dev/null
-$SUDO systemctl enable --now nginx > /dev/null 2>&1
-echo "  OK  nginx instalado"
+# ---------------------------------------------------------------------------
+titulo "PASO 3 de 6  ·  Instalando nginx (solo si no está)"
+# ---------------------------------------------------------------------------
+if command -v nginx > /dev/null 2>&1; then
+    aviso "nginx ya estaba instalado: no se modifica su configuración aún"
+else
+    $SUDO apt update -qq
+    $SUDO apt install -y -qq nginx > /dev/null
+    $SUDO systemctl enable --now nginx > /dev/null 2>&1
+    aviso "nginx instalado"
+fi
 
+# ---------------------------------------------------------------------------
 titulo "PASO 4 de 6  ·  Descargando el proyecto"
-CARPETA="$HOME/$USUARIO_APP"
+# ---------------------------------------------------------------------------
 if [ -d "$CARPETA/.git" ]; then
-    echo "  El proyecto ya existe, se actualiza"
+    aviso "Omega ya estaba descargado, se actualiza"
     cd "$CARPETA"
     git pull origin main
 else
     git clone https://github.com/LaoraSad/omegaComplex.git "$CARPETA" > /dev/null 2>&1
     cd "$CARPETA"
     git checkout main > /dev/null 2>&1
+    aviso "Proyecto descargado en $CARPETA"
 fi
-echo "  OK  proyecto en $CARPETA"
 
+# ---------------------------------------------------------------------------
 titulo "PASO 5 de 6  ·  Archivo de configuración"
-if [ -f ".env" ]; then
-    echo "  Tu .env ya existe, se deja como está"
-    echo ""
-    echo "  ⚠  Si vas a cambiar llaves, edítalo con:  nano .env"
-else
+# ---------------------------------------------------------------------------
+if [ ! -f ".env" ]; then
     cp deploy/plantilla-env.txt .env
     chmod 600 .env
-    echo "  Se creó el archivo .env"
+    # Puerto libre para nuestra app (respeta el de la otra persona si existe).
+    PUERTO=3000
+    while ss -ltn 2>/dev/null | grep -q ":$PUERTO "; do
+        PUERTO=$((PUERTO + 10))
+    done
+    echo "" >> .env
+    echo "PUERTO_APP=$PUERTO" >> .env
+    aviso "Se creó .env"
+    aviso "Puerto asignado para Omega: $PUERTO"
     echo ""
     echo "  ┌──────────────────────────────────────────────────────┐"
     echo "  │  NECESITAS EDITAR 6 LÍNEAS ANTES DE CONTINUAR     │"
     echo "  │                                                      │"
-    echo "  │  Busca las líneas que empiezan con  <<<  y pon      │"
-    echo "  │  los valores reales después del  =                   │"
-    echo "  │                                                      │"
-    echo "  │  1. DATABASE_URL              (Supabase > Pooler)   │"
-    echo "  │  2. JWT_SECRET                (openssl rand -hex 32) │"
-    echo "  │  3. STRIPE_SECRET_KEY         (sk_live_...)         │"
-    echo "  │  4. NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY (pk_live_..) │"
-    echo "  │  5. RESEND_API_KEY            (re_...)              │"
+    echo "  │  1. DATABASE_URL               (Supabase > Pooler)  │"
+    echo "  │  2. JWT_SECRET                 (openssl rand -hex 32)│"
+    echo "  │  3. STRIPE_SECRET_KEY          (sk_live_...)        │"
+    echo "  │  4. NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY (pk_live_..)  │"
+    echo "  │  5. RESEND_API_KEY             (re_...)             │"
     echo "  │  6. GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET         │"
-    echo "  │     ADMIN_PASSWORD            (la que quieras)      │"
+    echo "  │     ADMIN_PASSWORD             (la que quieras)     │"
     echo "  └──────────────────────────────────────────────────────┘"
     echo ""
-    echo "  Para editarlo:   nano .env"
-    echo "  Para guardar:    Ctrl+O, Enter, Ctrl+X"
+    aviso "Para editarlo:  nano .env   (Ctrl+O, Enter, Ctrl+X para guardar)"
     echo ""
-    echo "  >>> CUANDO TERMINES DE EDITAR, VUELVE A CORRER ESTE SCRIPT <<<"
-    echo ""
+    aviso "CUANDO TERMINES DE EDITAR, VUELVE A CORRER ESTE SCRIPT."
     exit 0
 fi
 
-# Si sigue having placeholders, mejor parar que arrancar roto.
 if grep -q "PEGA_AQUI\|PUNTO\|\[TU-" .env; then
-    echo "  ⚠  EL ARCHIVO .env AÚN TIENE VALORES DE EJEMPLO"
+    aviso "EL ARCHIVO .env AÚN TIENE VALORES DE EJEMPLO"
     echo ""
-    echo "  Ábrelo y completa las 6 líneas:   nano .env"
-    echo "  (Ctrl+O, Enter, Ctrl+X para guardar)"
-    echo ""
+    aviso "Edítalo:  nano .env   (Ctrl+O, Enter, Ctrl+X para guardar)"
     exit 0
 fi
 
-titulo "PASO 6 de 6  ·  Encendiendo la aplicación"
-echo "  Esto puede tardar 3-5 minutos la primera vez. Espera."
-echo ""
+# Puerto configurado (o el que se haya detectado antes).
+PUERTO=$(grep -E '^PUERTO_APP=' .env | cut -d= -f2 | tr -d '[:space:]')
+[ -z "$PUERTO" ] && PUERTO=3000
+
+# ---------------------------------------------------------------------------
+titulo "PASO 6 de 6  ·  Encendiendo Omega Complex"
+# ---------------------------------------------------------------------------
+aviso "Esto tarda 3-5 minutos la primera vez. Espera."
 docker compose up -d --build
 
-# Esperar a que esté sana antes de seguir.
 echo ""
-echo "  Esperando a que la aplicación esté lista..."
+aviso "Esperando a que la aplicación esté lista..."
+LISTO="no"
 for i in $(seq 1 40); do
-    ESTADO=$(docker inspect --format='{{.State.Health.Status}}' "$USUARIO_APP-web-1" 2>/dev/null || echo "starting")
-    if [ "$ESTADO" = "healthy" ]; then
-        echo "  ✓  La aplicación está CORRIENDO"
-        break
+    if [ "$LISTO" = "no" ]; then
+        ESTADO=$(docker inspect --format='{{.State.Health.Status}}' omega-web 2>/dev/null || echo "starting")
+        if [ "$ESTADO" = "healthy" ]; then
+            LISTO="si"
+            echo "  ✓ La aplicación está CORRIENDO en el puerto $PUERTO"
+            break
+        fi
     fi
-    if [ "$i" = "40" ]; then
-        echo "  ⚠  Tardó más de lo esperado. Revisa con: docker compose logs web"
-        break
-    fi
+    [ "$i" = "40" ] && echo "  ⚠ Tardó más de lo esperado. Revisa con: docker compose logs web"
     sleep 5
 done
 
-titulo "PASO DE nginx"
-cp deploy/nginx.conf /etc/nginx/sites-available/omega 2>/dev/null
-ln -sf /etc/nginx/sites-available/omega /etc/nginx/sites-enabled/omega
-rm -f /etc/nginx/sites-enabled/default
-nginx -t > /dev/null 2>&1 && systemctl reload nginx && echo "  OK  nginx configurado para $DOMINIO"
+# ---------------------------------------------------------------------------
+titulo "Configurando nginx para $DOMINIO"
+# ---------------------------------------------------------------------------
+# IMPORTANTE: no se borra ningún sitio previo. Solo se añade el nuestro.
+sed "s/127.0.0.1:3000/127.0.0.1:$PUERTO/g" deploy/nginx.conf > /tmp/omega-nginx.conf
+$SUDO cp /tmp/omega-nginx.conf "$SITIO_NGINX"
+$SUDO ln -sf "$SITIO_NGINX" /etc/nginx/sites-enabled/omega
+
+# Solo se recarga si la configuración completa sigue siendo válida.
+if $SUDO nginx -t > /dev/null 2>&1; then
+    $SUDO systemctl reload nginx
+    aviso "nginx configurado. Omega responde en 127.0.0.1:$PUERTO"
+else
+    # Si algo no cuadra, se deshace lo nuestro para no dejar nginx caído.
+    $SUDO rm -f /etc/nginx/sites-enabled/omega
+    aviso "✗ La configuración de nginx no validó."
+    aviso "  Se quitó Omega de nginx y NO se reinició nginx."
+    aviso "  El servidor sigue como estaba. Revisa con: sudo nginx -t"
+    exit 1
+fi
+
+echo ""
+echo "  Sitios de nginx ahora:"
+ls -1 /etc/nginx/sites-enabled/ | sed 's/^/    · /'
 
 titulo "¡LISTO! Solo falta el candado https"
 echo ""
-echo "  Ejecuta este comando:"
+echo "  Ejecuta:"
 echo ""
 echo "      sudo certbot --nginx -d $DOMINIO"
 echo ""
@@ -142,18 +196,14 @@ echo "  Te preguntará 4 cosas:"
 echo "    · tu email            -> escribelo"
 echo "    · ¿aceptas términos?  -> Y"
 echo "    · ¿compartir email?   -> N"
-echo "    - ¿redirigir a https? -> 2"
+echo "    · ¿redirigir a https? -> 2"
 echo ""
-echo "  Cuando termine, abre en el navegador:"
+echo "  Después abre:  https://$DOMINIO"
+echo "  Panel:         https://$DOMINIO/admin"
 echo ""
-echo "      https://$DOMINIO"
-echo ""
-echo "  Panel de administración:"
-echo "      https://$DOMINIO/admin"
-echo ""
-echo "  Comandos útiles (memorízalos):"
-echo "    docker compose ps               ver si está vivo"
-echo "    docker compose logs -f web      ver los logs en vivo"
-echo "    docker compose restart web      reiniciar"
-echo "    sudo certbot renew --force      renovar el https"
+echo "  Comandos útiles (desde $CARPETA):"
+echo "    docker compose ps              ver si está vivo"
+echo "    docker compose logs -f web     ver los logs"
+echo "    docker compose restart web     reiniciar"
+echo "    sudo certbot renew --force     renovar el https"
 echo ""

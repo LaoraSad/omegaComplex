@@ -34,7 +34,9 @@ services:
         # Si el seed falla, la web ni se intenta arrancar.
         condition: service_completed_successfully
     ports:
-      - "3000:3000"
+      # Puerto en el servidor. Por defecto 3000; si esa máquina ya la usa otra
+      # persona, el instalador elige otro y lo deja anotado en el .env.
+      - "${PUERTO_APP:-3000}:3000"
     env_file:
       - .env
     environment:
