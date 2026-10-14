@@ -274,8 +274,9 @@ const {
                     <button
                       type="button"
                       onClick={() => quitar(b.clave)}
-                      className="text-[11px] text-white/45 underline-offset-2 hover:text-white hover:underline cursor-pointer"
+                      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[13px] font-medium text-white/60 transition-colors hover:bg-white/10 hover:text-white cursor-pointer"
                     >
+                      <X className="h-3.5 w-3.5" />
                       quitar
                     </button>
                   </div>

@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
-import { ArrowLeft, MapPin, ScanLine, UserCheck } from "lucide-react";
+import { MapPin, ScanLine, UserCheck } from "lucide-react";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Pagination } from "@/components/admin/Pagination";
@@ -191,18 +190,18 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
                     </tr>
                   ))}
                 </tbody>
-              </table>
-            </div>
-            <Suspense>
-              <Pagination
-                page={accesses.page}
-                totalPages={accesses.totalPages}
-                total={accesses.total}
-                pageSize={accesses.pageSize}
-                itemLabel="accesos"
-              />
-            </Suspense>
+            </table>
           </div>
+          <Suspense>
+            <Pagination
+              page={accesses.page}
+              totalPages={accesses.totalPages}
+              total={accesses.total}
+              pageSize={accesses.pageSize}
+              itemLabel="accesos"
+            />
+          </Suspense>
+        </div>
         ) : (
           <EmptyState
             icon={UserCheck}

@@ -128,7 +128,7 @@ export function AdminShell({ user, children }: AdminShellProps) {
           </div>
           <Link href="/" className="admin-site-link">
             <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.9} />
-            <span>Ver sitio público</span>
+            <span>Ver sitio web</span>
           </Link>
         </div>
       </aside>
