@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { db } from "@/shared/lib/db";
 import type { Prisma } from "@prisma/client";
-import { diaDeSemana } from "@/features/schedules/colombia-holidays";
+import { diaDeSemana, ultimoDiaReservable } from "@/features/schedules/colombia-holidays";
 
 import type {
   AccessRow,
@@ -379,7 +379,7 @@ export async function upsertServiceSchedule(input: {
   });
 
   const { generateServiceSlotsForRange } = await import("@/features/availability/availability.repository");
-  await generateServiceSlotsForRange(input.serviceId, 90);
+  await generateServiceSlotsForRange(input.serviceId);
 
   return schedule;
 }
@@ -393,8 +393,8 @@ export async function deleteServiceSchedule(serviceId: string, dayOfWeek: number
   });
   if (!existing) throw new Error("Ese horario ya no existe.");
 
-  // Inicio del día en Bogotá (no medianoche del servidor): el rango de slots
-  // a revisar debe estar en la misma zona que el resto del sistema.
+  // Inicio del día en Bogotá (no medianoche del servidor) y fin en el último
+  // día reservable: el rango a revisar cubre lo mismo que la generación (P2-3).
   const hoyBogota = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Bogota",
     year: "numeric",
@@ -402,13 +402,13 @@ export async function deleteServiceSchedule(serviceId: string, dayOfWeek: number
     day: "2-digit",
   }).format(new Date());
   const today = new Date(`${hoyBogota}T05:00:00.000Z`);
-  const next90 = new Date(today);
-  next90.setDate(next90.getDate() + 90);
+  const finVentana = new Date(`${ultimoDiaReservable(hoyBogota)}T05:00:00.000Z`);
+  finVentana.setDate(finVentana.getDate() + 1);
 
   const slots = await db.serviceSlot.findMany({
     where: {
       serviceId,
-      startsAt: { gte: today, lt: next90 },
+      startsAt: { gte: today, lt: finVentana },
     },
     select: { id: true, startsAt: true },
   });

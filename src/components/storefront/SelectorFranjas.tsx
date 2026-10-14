@@ -11,6 +11,7 @@ import {
   esDiaDeMantenimiento,
   esFestivo,
   nombreFestivo,
+  ultimoDiaReservable,
 } from '@/features/schedules/colombia-holidays';
 import { bloqueDesdeSlot, cop, formatoHora, useCarrito } from './CarritoReserva';
 
@@ -26,14 +27,9 @@ function hoyEnBogota(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
 }
 
-/** Último día que se puede reservar: hoy + 3 meses. */
+/** Último día que se puede reservar: hoy + 3 meses (definición única compartida). */
 function limiteReserva(): string {
-  const hoy = hoyEnBogota();
-  const [y, m, d] = hoy.split('-').map(Number);
-  const fecha = new Date(Date.UTC(y, m - 1 + MESES_MAXIMOS, d, 12));
-  return `${fecha.getUTCFullYear()}-${String(fecha.getUTCMonth() + 1).padStart(2, '0')}-${String(
-    fecha.getUTCDate(),
-  ).padStart(2, '0')}`;
+  return ultimoDiaReservable(hoyEnBogota());
 }
 
 /** Partir "AAAA-MM-DD" en año, mes (1-12) y día, sin salto de zona horaria. */

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { liberarHoldsVencidos } from "@/features/reservations/reservations.service";
 import {
+  diasVentanaReserva,
   esDiaDeMantenimiento,
   esFestivo,
   nombreFestivo,
@@ -121,10 +122,15 @@ function dateOnlyValue(date: Date): number {
 
 export async function generateServiceSlotsForRange(
   serviceId: string,
-  rangeDays = 90,
+  rangeDays?: number,
   client: PrismaClient = db,
 ): Promise<number> {
-  if (!Number.isInteger(rangeDays) || rangeDays < 1) {
+  const firstDate = toBogotaDateKey(new Date());
+  // P2-3: por defecto se cubre toda la ventana reservable (hoy + 3 meses),
+  // no 90 días fijos. Con 90 fijos quedaba un hueco donde el backend permitía
+  // reservar pero no había franjas generadas.
+  const dias = rangeDays ?? diasVentanaReserva(firstDate);
+  if (!Number.isInteger(dias) || dias < 1) {
     throw new Error("rangeDays debe ser un entero mayor que cero.");
   }
 
@@ -139,8 +145,7 @@ export async function generateServiceSlotsForRange(
 
   if (!service) return 0;
 
-  const firstDate = toBogotaDateKey(new Date());
-  const lastDate = addBogotaDays(firstDate, rangeDays - 1);
+  const lastDate = addBogotaDays(firstDate, dias - 1);
   const firstDateValue = Date.parse(`${firstDate}T00:00:00.000Z`);
   const lastDateValue = Date.parse(`${lastDate}T00:00:00.000Z`);
   const closures = await client.serviceClosure.findMany({
@@ -153,7 +158,7 @@ export async function generateServiceSlotsForRange(
   });
   const slots: Array<{ startsAt: Date; endsAt: Date; capacity: number }> = [];
 
-  for (let offset = 0; offset < rangeDays; offset++) {
+  for (let offset = 0; offset < dias; offset++) {
     const dateKey = addBogotaDays(firstDate, offset);
 
 // Festivo y mantenimiento no generan franjas. Ojo: el festivo por sí solo NO

@@ -3,10 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   diaDeMantenimiento,
   diaDeSemana,
+  diasVentanaReserva,
   esDiaDeMantenimiento,
   esFestivo,
   festivosDe,
   nombreFestivo,
+  ultimoDiaReservable,
 } from "../colombia-holidays";
 
 // Reglas que fija el cliente:
@@ -90,5 +92,18 @@ describe("día de la semana", () => {
     expect(diaDeSemana("2026-10-12")).toBe(1);
     expect(diaDeSemana("2026-10-13")).toBe(2);
     expect(diaDeSemana("2026-10-17")).toBe(6);
+  });
+});
+
+describe("ventana de reserva (P2-3: hoy + 3 meses calendario)", () => {
+  it("suma 3 meses calendario al día de hoy", () => {
+    expect(ultimoDiaReservable("2026-10-10")).toBe("2027-01-10");
+    expect(ultimoDiaReservable("2026-10-14")).toBe("2027-01-14");
+    expect(ultimoDiaReservable("2026-12-15")).toBe("2027-03-15");
+  });
+
+  it("cubre de hoy al último día, inclusive", () => {
+    // 2026-10-10 -> 2027-01-10 son 92 días + hoy = 93.
+    expect(diasVentanaReserva("2026-10-10")).toBe(93);
   });
 });

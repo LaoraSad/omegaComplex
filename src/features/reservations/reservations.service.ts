@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
 import { db } from "@/shared/lib/db";
-import { esDiaDeMantenimiento } from "@/features/schedules/colombia-holidays";
+import { esDiaDeMantenimiento, ultimoDiaReservable } from "@/features/schedules/colombia-holidays";
 import type { CreateReservationInput } from "./reservations.schemas";
 
 // ---------------------------------------------------------------------------
@@ -19,7 +19,6 @@ import type { CreateReservationInput } from "./reservations.schemas";
 // ---------------------------------------------------------------------------
 
 export const HOLD_MINUTES = 10;
-export const MAX_ADVANCE_MONTHS = 3;
 /** Reintentos cuando varias reservas chocan por el lock de la misma franja. */
 const MAX_INTENTOS = 3;
 const BOGOTA = "America/Bogota";
@@ -91,11 +90,9 @@ export type CrearError =
   | "ya_reservado"
   | "mantenimiento";
 
-/** Anteposición máxima: hoy + 3 meses. */
-function maxAdvanceDate(ref: Date): Date {
-  const d = new Date(ref);
-  d.setMonth(d.getMonth() + MAX_ADVANCE_MONTHS);
-  return d;
+/** Anteposición máxima: hoy Bogotá + 3 meses calendario (una sola definición). */
+function fechaLimiteReserva(now: Date): string {
+  return ultimoDiaReservable(dateKeyBogota(now));
 }
 
 /** El SCRUM no permite reservar fechas anteriores. Se compara por día calendario
@@ -253,7 +250,7 @@ export async function createReservationWithHold(
     if (esDiaDeMantenimiento(b.fecha)) {
       return { ok: false, code: "mantenimiento", message: "Ese día el complejo está en mantenimiento técnico." };
     }
-    if (new Date(`${b.fecha}T23:59:59Z`) > maxAdvanceDate(now)) {
+    if (b.fecha > fechaLimiteReserva(now)) {
       return {
         ok: false,
         code: "muy_far",
