@@ -7,7 +7,7 @@ const documentSchema = z
   .max(20, "El documento es demasiado largo")
   .regex(/^[\p{L}\d][\p{L}\d.-]{2,19}$/u, "Ingresa un documento válido");
 
-const phoneSchema = z
+export const phoneSchema = z
   .string()
   .trim()
   .min(1, "El teléfono es obligatorio")
@@ -69,3 +69,19 @@ export const changePasswordSchema = z
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+/**
+ * Fase 2: edición del perfil. Solo teléfono y correo. El `.strict()` rechaza
+ * `document`/`birthDate` aunque se envíen (33-H: no editables).
+ */
+export const updateProfileSchema = z
+  .object({
+    phone: phoneSchema.optional(),
+    email: z.string().trim().toLowerCase().email("Correo electrónico inválido").max(255).optional(),
+  })
+  .strict()
+  .refine((value) => value.phone !== undefined || value.email !== undefined, {
+    message: "Indica el teléfono o el correo a actualizar",
+  });
+
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
