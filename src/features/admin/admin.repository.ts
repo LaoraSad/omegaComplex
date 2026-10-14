@@ -14,10 +14,12 @@ import type {
   EmployeeDetailRow,
   EmployeeRow,
   MetricasRango,
+  OcupacionFecha,
   Paginated,
   ReservationDetail,
   ReservationRow,
   ServiceRow,
+  UsoReservas,
   ZoneGroup,
 } from "./admin.types";
 import { RESERVATION_STATUSES } from "./admin.types";
@@ -291,8 +293,55 @@ export async function getMetricasRango(
   };
 }
 
-export async function getDashboardOverview(): Promise<DashboardOverview> {  const { start: todayStart, end: todayEnd } = bogotaDayRange();
-  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+/**
+ * Fase 4.2 (§20): ocupación de una fecha configurable. Misma agregación que
+ * el overview de hoy (`agregarOcupacion`), pero sobre el día Bogotá pedido;
+ * fecha inválida o ausente cae a hoy.
+ */
+export async function getOcupacionPorFecha(fecha: string | undefined): Promise<OcupacionFecha> {
+  const valida = fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha) ? fecha : null;
+  const ref = valida ? new Date(`${valida}T12:00:00Z`) : new Date();
+  const { start, end } = bogotaDayRange(ref);
+  const slots = await db.serviceSlot.findMany({
+    where: { startsAt: { gte: start, lt: end } },
+    select: {
+      capacity: true,
+      bookedCount: true,
+      heldCount: true,
+      service: { select: { id: true, name: true } },
+    },
+  });
+  const { occupancyToday, occupancyByService } = agregarOcupacion(slots);
+  return { fecha: valida ?? claveDiaBogota(new Date()), occupancyToday, occupancyByService };
+}
+
+/**
+ * Fase 4.2 (§20): reservas usadas vs no usadas en el rango (fecha de franja).
+ * Usada = `status used`. No usada = `confirmed` con `endsAt` pasado y ningún
+ * QR consumido. Dos conteos en una oleada.
+ */
+export async function getUsoReservas(
+  desde: string | undefined,
+  hasta: string | undefined,
+  ahora: Date = new Date(),
+): Promise<UsoReservas> {
+  const { start, end } = sanearRangoMetricas(desde, hasta, ahora);
+  const rango = { startsAt: { gte: start, lt: end } };
+  const [usadas, noUsadas] = await Promise.all([
+    db.reservation.count({ where: { ...rango, status: "used" } }),
+    db.reservation.count({
+      where: {
+        ...rango,
+        status: "confirmed",
+        endsAt: { lt: ahora },
+        qrTokens: { none: { usedAt: { not: null } } },
+      },
+    }),
+  ]);
+  return { usadas, noUsadas };
+}
+
+export async function getDashboardOverview(): Promise<DashboardOverview> {  const { start: todayStart, end: todayEnd } = bogotaDayRange();  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
   // Lecturas independientes en oleadas de 3: el pooler (session mode, 15
   // conexiones) colapsa con 10 consultas simultáneas, pero en secuencia
