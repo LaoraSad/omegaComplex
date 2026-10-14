@@ -71,7 +71,8 @@ export async function findUserCredentialsById(id: string) {
 }
 
 export async function updateUserPassword(id: string, passwordHash: string) {
-  await db.user.update({ where: { id }, data: { passwordHash } });
+  // P1-5: subir la versión revoca todas las sesiones anteriores.
+  await db.user.update({ where: { id }, data: { passwordHash, tokenVersion: { increment: 1 } } });
 }
 
 export async function createUserWithCustomer(data: {
