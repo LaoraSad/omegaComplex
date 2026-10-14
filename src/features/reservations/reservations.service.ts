@@ -443,10 +443,9 @@ export async function createReservationWithHold(
     asistentesPorBloque.set(b.slot.id, [...indices].sort((a, c) => a - c));
   }
 
-  // Antes de bloquear cupos: recuperar los cupos de los holds que ya vencieron,
-  // para no competir por un cupo que en realidad está libre.
-  await liberarHoldsVencidos(now);
-
+  // Los cupos vencidos se recuperan DENTRO de la transacción (ver abajo): así
+  // la limpieza, el lock, el chequeo de solape y la creación son atómicos y el
+  // choque no ve holds que ya expiraron pero aún no se liberaron (P2-2).
   const expiresAt = new Date(now.getTime() + HOLD_MINUTES * 60 * 1000);
 
   const totalCop = ordenados.reduce((suma, b) => {
@@ -472,6 +471,11 @@ export async function createReservationWithHold(
     try {
       return await db.$transaction(
         async (tx) => {
+          // Primero se liberan los holds vencidos, con el cliente de la
+          // transacción: lo que sigue (cupos, lock, solape, creación) ve el
+          // inventario ya limpio y nada se cuela en la carrera.
+          await liberarHoldsVencidos(now, tx);
+
           // Todos o nada: si un solo bloque pierde su cupo, la transacción
           // entera se revierte y no queda ninguna franja retenida a medias.
           for (const b of ordenados) {
