@@ -1,10 +1,36 @@
+# Omega Complex — despliegue con un solo comando: `docker compose up -d --build`
+#
+# El servicio `migrate` aplica las migraciones y el seed ANTES de que arranque
+# la app. Si eso falla, `web` no arranca: es preferible que el contenedor caiga
+# y lo notes a que levante una app contra una base sin tablas.
+#
+# `migrate` se construye sobre la etapa `builder` del Dockerfile porque la
+# imagen final de Next (standalone) no incluye el CLI de Prisma.
+
 services:
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    command: >
+      sh -c "npx prisma migrate deploy && npx prisma db seed"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    restart: "no"
+
   web:
     build:
       context: .
       dockerfile: Dockerfile
     image: omega-complex:latest
     restart: unless-stopped
+    depends_on:
+      migrate:
+        # Si el seed falla, la web ni se intenta arrancar.
+        condition: service_completed_successfully
     ports:
       - "3000:3000"
     env_file:
@@ -13,26 +39,27 @@ services:
       NODE_ENV: production
       PORT: 3000
       HOSTNAME: 0.0.0.0
-    # Healthcheck real: Next responde 200 en / cuando está sano.
+      DATABASE_URL: ${DATABASE_URL}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+    # 127.0.0.1 y no "localhost": dentro del contenedor localhost resuelve a
+    # ::1 (IPv6) y el server de Next solo escucha en IPv4, así que con
+    # localhost el healthcheck falla aunque la app esté perfecta.
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/"]
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000/"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 20s
-    # En producción la BD suele estar afuera (Supabase). Si algún día se quiere
-    # levantar Postgres en el mismo compose, descomentar el servicio y el depends_on.
-    # depends_on:
-    #   db:
-    #     condition: service_healthy
+      start_period: 30s
 
+  # Si algún día quieres Postgres en el mismo VPS, descomenta esto y quita el
+  # DATABASE_URL del .env apuntando a "db" en vez de Supabase.
   # db:
   #   image: postgres:16-alpine
   #   restart: unless-stopped
   #   environment:
   #     POSTGRES_USER: omega
-  #     POSTGRES_PASSWORD: omega
-  #     POSTGRES_DB: omega
+  #     POSTGRES_PASSWORD: cambia-esta-clave
+  #     POSTGRES_DB: omega_complex
   #   volumes:
   #     - pgdata:/var/lib/postgresql/data
   #   healthcheck:
