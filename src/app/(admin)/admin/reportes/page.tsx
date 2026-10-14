@@ -3,14 +3,10 @@ import { ChartColumn, Download, FileSpreadsheet } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { formatCOP, formatNumber, formatPercent } from "@/components/admin/format";
 import {
+  getConteosReportes,
   getMetricasRango,
   getOcupacionPorFecha,
   getUsoReservas,
-  listAccesses,
-  listCustomers,
-  listEmployees,
-  listReservations,
-  listServices,
 } from "@/features/admin/admin.repository";
 
 export const metadata: Metadata = { title: "Reportes" };
@@ -27,21 +23,21 @@ export default async function ReportesPage({
   searchParams: Promise<ReportesSearchParams>;
 }) {
   const { desde, hasta, fecha } = await searchParams;
-  // Secuencial para no presionar el pool de conexiones.
-  const metricas = await getMetricasRango(desde, hasta);
-  const ocupacion = await getOcupacionPorFecha(fecha);
-  const uso = await getUsoReservas(desde, hasta);
-  const reservations = await listReservations({ page: 1, pageSize: 1 });
-  const accesses = await listAccesses({ page: 1, pageSize: 1 });
-  const services = await listServices();
-  const employees = await listEmployees();
-  const customers = await listCustomers();
+  // Dos oleadas en vez de 8 consultas secuenciales: el pooler aguanta ~5
+  // simultáneas y cada roundtrip cuesta ~270 ms. Los conteos son `count()`
+  // puros: antes se traían listas completas solo para mostrar el total.
+  const [metricas, ocupacion, uso] = await Promise.all([
+    getMetricasRango(desde, hasta),
+    getOcupacionPorFecha(fecha),
+    getUsoReservas(desde, hasta),
+  ]);
+  const conteos = await getConteosReportes();
 
   const cards = [
     {
       tipo: "reservas",
       title: "Reservas",
-      count: reservations.total,
+      count: conteos.reservas,
       unit: "registros",
       text: "Cliente, servicio, horario, pago y estado. Puedes acotar por rango de fechas antes de descargar.",
       withDates: true,
@@ -49,7 +45,7 @@ export default async function ReportesPage({
     {
       tipo: "accesos",
       title: "Accesos",
-      count: accesses.total,
+      count: conteos.accesos,
       unit: "registros",
       text: "Entradas validadas con QR: cliente, servicio, autorizador, fecha y hora exacta.",
       withDates: true,
@@ -57,7 +53,7 @@ export default async function ReportesPage({
     {
       tipo: "servicios",
       title: "Servicios",
-      count: services.length,
+      count: conteos.servicios,
       unit: "instalaciones",
       text: "Catálogo completo con categoría, precio, capacidad y días con horario.",
       withDates: false,
@@ -65,7 +61,7 @@ export default async function ReportesPage({
     {
       tipo: "empleados",
       title: "Empleados",
-      count: employees.length,
+      count: conteos.empleados,
       unit: "personas",
       text: "Asignación por zona y accesos validados. Sin información sensible.",
       withDates: false,
@@ -73,7 +69,7 @@ export default async function ReportesPage({
     {
       tipo: "clientes",
       title: "Clientes",
-      count: customers.total,
+      count: conteos.clientes,
       unit: "cuentas",
       text: "Directorio operativo: contacto, documento y número de reservas.",
       withDates: false,

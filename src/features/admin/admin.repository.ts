@@ -341,6 +341,31 @@ export async function getUsoReservas(
   return { usadas, noUsadas };
 }
 
+/**
+ * Conteos para las tarjetas de `/admin/reportes`. Un solo roundtrip con
+ * UNION ALL: la página traía listas completas (servicios con horarios, 100
+ * clientes, filas con includes) solo para mostrar el total, y eso costaba
+ * ~5 s secuenciales. Cada roundtrip al pooler cuesta ~270 ms, así que 5
+ * `count()` en oleada seguirían costando ~1 s.
+ */
+export async function getConteosReportes(): Promise<{
+  reservas: number;
+  accesos: number;
+  servicios: number;
+  empleados: number;
+  clientes: number;
+}> {
+  const filas = await db.$queryRaw<Array<{ total: bigint }>>`
+    SELECT COUNT(*)::bigint AS total FROM "Reservation"
+    UNION ALL SELECT COUNT(*) FROM "Access"
+    UNION ALL SELECT COUNT(*) FROM "Service"
+    UNION ALL SELECT COUNT(*) FROM "Employee"
+    UNION ALL SELECT COUNT(*) FROM "Customer"
+  `;
+  const [reservas, accesos, servicios, empleados, clientes] = filas.map((f) => Number(f.total));
+  return { reservas, accesos, servicios, empleados, clientes };
+}
+
 export async function getDashboardOverview(): Promise<DashboardOverview> {  const { start: todayStart, end: todayEnd } = bogotaDayRange();  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
   // Lecturas independientes en oleadas de 3: el pooler (session mode, 15
