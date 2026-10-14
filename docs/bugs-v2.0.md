@@ -95,10 +95,14 @@ Convención: **P0** = rompe operación real / cobra mal / inconsistencia de dato
   no invalidan tokens robados. Además `completePasswordReset` no chequea `isActive`.
 - Fix: `passwordChangedAt/tokenVersion` en el JWT o lista de revocación + check `isActive`.
 
-### P1-6. `src/proxy.ts` puede no ejecutarse en Next 16
-- Vive en `src/proxy.ts`; verificar que el middleware corre en deploy.
-  Si no, `/admin`, `/validar`, `/reservas` dependen solo de layouts.
-- Verificación: sin cookie, `GET /admin` debe redirigir a `/login?next=…`.
+### P1-6. `src/proxy.ts` verificado en Next 16 (sin cambios)
+- Confirmado contra el framework instalado (16.3.6): `src/proxy.ts` es
+  ubicación válida (`isProxyFile`), el export nombrado `proxy` es aceptado y
+  `config.matcher` se parsea igual que en middleware.
+- Verificado en vivo (`next dev -p 3101`): `/admin`, `/validar` y `/reservas`
+  sin cookie responden `307` a `/login?next=…`.
+- Queda `src/proxy.test.ts` como regresión (5 casos). Nota: el middleware edge
+  no tiene BD, así que la revocación P1-5 la aplican layouts/APIs, no el proxy.
 
 ### P1-7. Admin muestra zona errónea en multizona
 - `listAccesses` incluye `reservation.service`, no `block.service`;
