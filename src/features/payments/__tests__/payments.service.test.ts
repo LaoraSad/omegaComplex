@@ -7,11 +7,13 @@ const mocks = vi.hoisted(() => ({
     liberarCuposDeReserva: vi.fn(),
     rejectPayment: vi.fn(),
     settlePayment: vi.fn(),
+    obtenerContactoAviso: vi.fn(),
   },
   qr: {
     emitirQrDeReserva: vi.fn(),
   },
   sendQrEmail: vi.fn(),
+  sendPagoRechazadoEmail: vi.fn(),
   enviarEvento: vi.fn(),
   db: {
     reservation: { findUnique: vi.fn() },
@@ -27,7 +29,10 @@ vi.mock("@/shared/lib/db", () => ({ db: mocks.db }));
 // El envío de correo vive ahora en este servicio. `@/lib/email/resend` es
 // server-only y revienta si se importa sin mock; acá solo interesa comprobar
 // que se intente entregar.
-vi.mock("@/lib/email/resend", () => ({ sendQrEmail: mocks.sendQrEmail }));
+vi.mock("@/lib/email/resend", () => ({
+  sendQrEmail: mocks.sendQrEmail,
+  sendPagoRechazadoEmail: mocks.sendPagoRechazadoEmail,
+}));
 vi.mock("@/shared/integrations/n8n", () => ({
   enviarEvento: mocks.enviarEvento,
   n8nConfigurado: () => false,
@@ -288,6 +293,7 @@ describe("aCentimos (P0-2: puente pesos -> Stripe, comportamiento congelado)", (
 describe("rechazarPago", () => {  it("marca fallido y libera los cupos retenidos", async () => {
     mocks.repository.rejectPayment.mockResolvedValue({ id: "pay-1", reservationId: "res-1" });
     mocks.repository.liberarCuposDeReserva.mockResolvedValue({ applied: true });
+    mocks.repository.obtenerContactoAviso.mockResolvedValue(null);
 
     await rechazarPago({ paymentId: "pay-1", reason: "Fondos insuficientes" });
 
@@ -296,5 +302,49 @@ describe("rechazarPago", () => {  it("marca fallido y libera los cupos retenidos
       reason: "Fondos insuficientes",
     });
     expect(mocks.repository.liberarCuposDeReserva).toHaveBeenCalledWith("res-1");
+  });
+
+  it("avisa al cliente por correo con el motivo (Fase 3.1)", async () => {
+    mocks.repository.rejectPayment.mockResolvedValue({ id: "pay-1", reservationId: "res-1" });
+    mocks.repository.liberarCuposDeReserva.mockResolvedValue({ applied: true });
+    mocks.repository.obtenerContactoAviso.mockResolvedValue({
+      email: "cliente@ejemplo.com",
+      nombre: "Ana López",
+      startsAt: new Date("2026-11-01T13:00:00Z"),
+      servicio: "Piscina adultos 1",
+      totalCop: 24000,
+    });
+
+    await rechazarPago({ paymentId: "pay-1", reason: "Fondos insuficientes" });
+
+    expect(mocks.sendPagoRechazadoEmail).toHaveBeenCalledWith(
+      "cliente@ejemplo.com",
+      expect.objectContaining({
+        nombre: "Ana López",
+        servicio: "Piscina adultos 1",
+        montoCop: 24000,
+        motivo: "Fondos insuficientes",
+      }),
+    );
+  });
+
+  it("no tumba el rechazo si el correo falla o no hay contacto", async () => {
+    mocks.repository.rejectPayment.mockResolvedValue({ id: "pay-1", reservationId: "res-1" });
+    mocks.repository.liberarCuposDeReserva.mockResolvedValue({ applied: true });
+    mocks.sendPagoRechazadoEmail.mockClear();
+
+    mocks.repository.obtenerContactoAviso.mockResolvedValue(null);
+    await expect(rechazarPago({ paymentId: "pay-1" })).resolves.toMatchObject({ id: "pay-1" });
+    expect(mocks.sendPagoRechazadoEmail).not.toHaveBeenCalled();
+
+    mocks.repository.obtenerContactoAviso.mockResolvedValue({
+      email: "cliente@ejemplo.com",
+      nombre: "Ana López",
+      startsAt: new Date("2026-11-01T13:00:00Z"),
+      servicio: "Piscina adultos 1",
+      totalCop: 24000,
+    });
+    mocks.sendPagoRechazadoEmail.mockRejectedValue(new Error("Resend caído"));
+    await expect(rechazarPago({ paymentId: "pay-1" })).resolves.toMatchObject({ id: "pay-1" });
   });
 });

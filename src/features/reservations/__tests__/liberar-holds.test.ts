@@ -51,4 +51,35 @@ describe("liberarHoldsVencidos (P2-4: lote acotado)", () => {
     );
     expect(cliente.$executeRaw).toHaveBeenCalledOnce();
   });
+
+  it("avisa por cada reserva que esta pasada expiró (Fase 3.1)", async () => {
+    const cliente = clienteCon([
+      { id: "res-1", slots: [{ slotId: "slot-1", quantity: 1 }] },
+      { id: "res-2", slots: [{ slotId: "slot-2", quantity: 1 }] },
+    ]);
+    const avisadas: string[] = [];
+
+    const liberadas = await liberarHoldsVencidos(new Date(), cliente as never, 50, (id) => {
+      avisadas.push(id);
+    });
+
+    expect(liberadas).toBe(2);
+    expect(avisadas).toEqual(["res-1", "res-2"]);
+  });
+
+  it("no avisa la que ya expiró otra petición (carrera perdida)", async () => {
+    const cliente = clienteCon([
+      { id: "res-1", slots: [{ slotId: "slot-1", quantity: 1 }] },
+    ]);
+    cliente.reservation.updateMany.mockResolvedValue({ count: 0 });
+    const avisadas: string[] = [];
+
+    const liberadas = await liberarHoldsVencidos(new Date(), cliente as never, 50, (id) => {
+      avisadas.push(id);
+    });
+
+    expect(liberadas).toBe(0);
+    expect(avisadas).toEqual([]);
+    expect(cliente.$executeRaw).not.toHaveBeenCalled();
+  });
 });

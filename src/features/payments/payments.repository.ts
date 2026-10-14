@@ -282,6 +282,35 @@ export async function obtenerContactoQr(
   };
 }
 
+/**
+ * Fase 3.1: contacto + detalle de una reserva para los avisos de pago
+ * rechazado y hold expirado (email y nombre del titular, fecha, instalación
+ * y monto). Null si la reserva ya no existe.
+ */
+export async function obtenerContactoAviso(
+  reservationId: string,
+): Promise<{ email: string; nombre: string; startsAt: Date; servicio: string; totalCop: number } | null> {
+  const row = await db.reservation.findUnique({
+    where: { id: reservationId },
+    select: {
+      startsAt: true,
+      totalCop: true,
+      service: { select: { name: true } },
+      customer: {
+        select: { user: { select: { email: true, firstName: true, lastName: true } } },
+      },
+    },
+  });
+  if (!row) return null;
+  return {
+    email: row.customer.user.email,
+    nombre: `${row.customer.user.firstName} ${row.customer.user.lastName}`.trim(),
+    startsAt: row.startsAt,
+    servicio: row.service.name,
+    totalCop: row.totalCop,
+  };
+}
+
 function isUniqueViolation(error: unknown): boolean {
   return (
     typeof error === "object" &&

@@ -17,7 +17,7 @@ import { db } from "@/shared/lib/db";
 import { env } from "@/shared/lib/env";
 import { getStripe } from "@/shared/lib/stripe";
 import { logger } from "@/shared/lib/logger";
-import { sendQrEmail, type QrParaCorreo } from "@/lib/email/resend";
+import { sendPagoRechazadoEmail, sendQrEmail, type QrParaCorreo } from "@/lib/email/resend";
 import { enviarEvento, n8nConfigurado } from "@/shared/integrations/n8n";
 import { generarPdfQr } from "@/shared/pdf/qr-pdf";
 
@@ -26,6 +26,7 @@ import {
   createPendingPayment,
   liberarCuposDeReserva,
   rejectPayment,
+  obtenerContactoAviso,
   obtenerContactoQr,
   settlePayment,
 } from "./payments.repository";
@@ -409,11 +410,39 @@ async function enviarPdfPorN8n(input: {
 return entregado;
 }
 
-/** Marca el pago como fallido y devuelve los cupos retenidos al inventario. */
+/** Marca el pago como fallido, devuelve los cupos retenidos y avisa al cliente.
+ *
+ * Fase 3.1: el aviso nunca tumba el rechazo. Si el correo falla (o no hay
+ * contacto), queda en el log para revisión manual, igual que el QR.
+ */
 export async function rechazarPago(input: { paymentId: string; reason?: string | null }) {
   const payment = await rejectPayment({ paymentId: input.paymentId, reason: input.reason });
   await liberarCuposDeReserva(payment.reservationId);
+  await notificarPagoRechazado(payment.reservationId, input.reason);
   return payment;
+}
+
+/** Aviso de pago rechazado por Resend directo (sin n8n: no existe workflow
+ * para este evento y crearlo le toca a su responsable). Nunca lanza. */
+async function notificarPagoRechazado(reservationId: string, motivo?: string | null): Promise<void> {
+  try {
+    const contacto = await obtenerContactoAviso(reservationId);
+    if (!contacto) return;
+    await sendPagoRechazadoEmail(contacto.email, {
+      nombre: contacto.nombre,
+      fecha: contacto.startsAt.toLocaleDateString("es-CO", {
+        timeZone: "America/Bogota",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+      servicio: contacto.servicio,
+      montoCop: contacto.totalCop,
+      motivo,
+    });
+  } catch (error) {
+    logger.error("pago.rechazo_email_fallido", { reservationId, error });
+  }
 }
 
 export function appUrl(): string {
