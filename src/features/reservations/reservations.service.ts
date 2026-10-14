@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
 import { db } from "@/shared/lib/db";
+import { esDiaDeMantenimiento } from "@/features/schedules/colombia-holidays";
 import type { CreateReservationInput } from "./reservations.schemas";
 
 // ---------------------------------------------------------------------------
@@ -87,7 +88,8 @@ export type CrearError =
   | "bloque_repetido"
   | "asistentes_inconsistentes"
   | "sin_acompanyantes"
-  | "ya_reservado";
+  | "ya_reservado"
+  | "mantenimiento";
 
 /** Anteposición máxima: hoy + 3 meses. */
 function maxAdvanceDate(ref: Date): Date {
@@ -244,6 +246,12 @@ export async function createReservationWithHold(
   for (const b of input.bloques) {
     if (isPastDate(b.fecha, now)) {
       return { ok: false, code: "franja_pasada", message: "No se puede reservar en una fecha pasada." };
+    }
+    // P1-3: el día de mantenimiento (lunes, o martes si el lunes es festivo)
+    // cierra el complejo igual que si no hubiera horario: la escritura lo
+    // defiende, no solo la lectura del calendario.
+    if (esDiaDeMantenimiento(b.fecha)) {
+      return { ok: false, code: "mantenimiento", message: "Ese día el complejo está en mantenimiento técnico." };
     }
     if (new Date(`${b.fecha}T23:59:59Z`) > maxAdvanceDate(now)) {
       return {
