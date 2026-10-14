@@ -130,10 +130,17 @@ export async function settlePayment(input: {
 export async function rejectPayment(input: {
   paymentId: string;
   reason?: string | null;
-}): Promise<PaymentRow> {  return db.$transaction(async (tx) => {
-    const payment = await tx.payment.update({
-      where: { id: input.paymentId },
+}): Promise<PaymentRow> {
+  return db.$transaction(async (tx) => {
+    // P1-2: condicional por estado, como en settlePayment. Si el pago ya quedó
+    // `succeeded` (carrera con el webhook de éxito), no se voltea a `failed`:
+    // el dinero entró y la fila debe decir la verdad.
+    await tx.payment.updateMany({
+      where: { id: input.paymentId, status: "pending" },
       data: { status: "failed" },
+    });
+    const payment = await tx.payment.findUniqueOrThrow({
+      where: { id: input.paymentId },
       select: paymentSelect,
     });
     await tx.reservation.updateMany({
