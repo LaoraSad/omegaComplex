@@ -1,0 +1,94 @@
+# ============================================================================
+#  LO QUE TIENES QUE COPIAR AL VPS  (no va al repositorio, es tuyo y secreto)
+# ============================================================================
+#
+#  En el VPS, dentro de la carpeta del proyecto:
+#
+#      cp deploy/plantilla-env.txt .env
+#
+#  y luego abres  nano .env  y cambias SOLO las 6 líneas marcadas con  <<<
+#  El resto ya está listo con tu dominio.
+# ============================================================================
+
+
+# ---------------------------------------------------------------------------
+#  1. BASE DE DATOS
+#  >>> OBTENER: dashboard de Supabase > Project Settings > Database >
+#      Connection string > botón "Pooler"  (NO el de "Direct")
+#      Copia TODO y reemplaza [YOUR-PASSWORD] por tu contraseña.
+#
+#      OJO: la URL debe empezar por postgresql:// y terminar en
+#      ?pgbouncer=true&connection_limit=5
+# ---------------------------------------------------------------------------
+DATABASE_URL="postgresql://postgres.[TU-PROYECTO]:[TU-PASSWORD]@aws-0-us-west-2.pooler.supabase.com:5432/postgres?pgbouncer=true&connection_limit=5"
+
+
+# ---------------------------------------------------------------------------
+#  2. LLAVE SECRETA DE LOS USUARIOS
+#  >>> GENERAR: ejecuta  openssl rand -hex 32  en el VPS y copia el resultado
+# ---------------------------------------------------------------------------
+JWT_SECRET=PEGA_AQUI_LO_QUE_DEVUELVA_OPENSSL_RAND_HEX_32
+
+
+# ---------------------------------------------------------------------------
+#  3. DIRECCIÓN WEB PÚBLICA
+#  Ya está lista con tu dominio. No la cambies.
+# ---------------------------------------------------------------------------
+NEXT_PUBLIC_APP_URL=https://omegacomplex.coderhivex.com
+
+
+# ---------------------------------------------------------------------------
+#  4. STRIPE  (las llaves LIVE, no las de prueba sk_test / pk_test)
+#  >>> OBTENER: dashboard.stripe.com > "¿Pruebas?" arriba a la derecha >
+#      cambiar a MODO LIVE >/developers/api-keys
+#      - STRIPE_SECRET_KEY empieza por  sk_live_
+#      - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY empieza por  pk_live_
+#      - STRIPE_WEBHOOK_SECRET lo recibimas DESPUÉS de crear el webhook
+#        (ver paso 8 de la guía); por ahora déjalo vacío y lo pones luego.
+# ---------------------------------------------------------------------------
+STRIPE_SECRET_KEY=sk_live_PEGA_AQUI
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_PEGA_AQUI
+STRIPE_WEBHOOK_SECRET=
+
+
+# ---------------------------------------------------------------------------
+#  5. RESEND  (el que manda los correos con el QR)
+#  >>> OBTENER: resend.com > API Keys > Create API Key > copiar
+#      - RESEND_FROM_EMAIL debe ser un dominio YA VERIFICADO en Resend
+#        (agrega coderhivex.com en "Domains" y sigue los pasos de DNS).
+#        Para empezar rápido puedes usar:  Omega Complex <onboarding@resend.dev>
+# ---------------------------------------------------------------------------
+RESEND_API_KEY=re_PEGA_AQUI
+RESEND_FROM_EMAIL=Omega Complex <onboarding@resend.dev>
+
+
+# ---------------------------------------------------------------------------
+#  6. GOOGLE (login con Google)
+#  >>> OBTENER: console.cloud.google.com > APIs y servicios > Credenciales >
+#      Credentials > tu cliente OAuth 2.0 > Client ID y Client secret
+#      (genera uno NUEVO, no reutilices el de desarrollo: el secret de
+#       desarrollo quedó expuesto en un chat)
+# ---------------------------------------------------------------------------
+GOOGLE_CLIENT_ID=PUNTO.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=Pega_Aqui_el_client_secret
+
+
+# ============================================================================
+#  ESTO YA ESTÁ LISTO — NO LO CAMBIES
+# ============================================================================
+
+# n8n: vacío = los correos salen directo por Resend. Si algún día lo usas,
+# pega aquí la URL de tu workflow y el secreto compartido.
+N8N_WEBHOOK_URL=
+N8N_WEBHOOK_SECRET=
+
+# Código de verificación de correo
+VERIFICATION_CODE_TTL_MINUTES=15
+VERIFICATION_CODE_LENGTH=6
+
+# Usuario administrador del panel /admin
+ADMIN_EMAIL=admin@omegacomplex.com
+ADMIN_PASSWORD=PEGA_AQUI_LA_CONTRASENA_DEL_ADMIN
+
+# Llave del cron que libera las reservas temporales caducadas
+CRON_SECRET=PUNTO_UN_SEGUNDO_VALOR_ALEATORIO_LARGO
