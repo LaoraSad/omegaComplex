@@ -156,50 +156,62 @@ export async function crearServicioConFranja(
   return { serviceId: servicio.id, slotId: slot.id, serviceName };
 }
 
-/** Borra en orden de dependencias todo lo creado con un sufijo. */
+/** Borra en orden de dependencias todo lo creado con un sufijo.
+ *
+ * En una sola transacción interactiva: ocupa una única conexión del pooler
+ * (los ~15 `deleteMany` sueltos por spec tumbaban el engine con specs en
+ * paralelo) y la limpieza queda atómica.
+ */
 export async function limpiarSufijo(
   db: PrismaClient,
   sufijo: string,
   reservaIds: string[],
 ): Promise<void> {
-  if (reservaIds.length > 0) {
-    const bloques = await db.reservationBlock.findMany({
-      where: { reservationId: { in: reservaIds } },
-      select: { id: true },
-    });
-    const bloqueIds = bloques.map((b) => b.id);
-    if (bloqueIds.length > 0) {
-      await db.reservationBlockGuest.deleteMany({ where: { blockId: { in: bloqueIds } } });
-    }
-    await db.reservationBlock.deleteMany({ where: { reservationId: { in: reservaIds } } });
-    await db.reservationGuest.deleteMany({ where: { reservationId: { in: reservaIds } } });
-    await db.reservationSlot.deleteMany({ where: { reservationId: { in: reservaIds } } });
-    await db.reservationHold.deleteMany({ where: { reservationId: { in: reservaIds } } });
-    // Los accesos referencian al QR: van antes que los QR.
-    await db.access.deleteMany({
-      where: { qrToken: { reservationId: { in: reservaIds } } },
-    });
-    await db.qrToken.deleteMany({ where: { reservationId: { in: reservaIds } } });
-    await db.reservation.deleteMany({ where: { id: { in: reservaIds } } });
-  }
-  await db.serviceSlot.deleteMany({ where: { service: { slug: { startsWith: `e2e-servicio-${sufijo}` } } } });
-  await db.serviceSchedule.deleteMany({
-    where: { service: { slug: { startsWith: `e2e-servicio-${sufijo}` } } },
-  });
-  await db.service.deleteMany({ where: { slug: { startsWith: `e2e-servicio-${sufijo}` } } });
-  await db.category.deleteMany({ where: { slug: { startsWith: `e2e-cat-${sufijo}` } } });
-  const usuarios = await db.user.findMany({
-    where: { email: { startsWith: `e2e.${sufijo}.` } },
-    select: { id: true },
-  });
-  const userIds = usuarios.map((u) => u.id);
-  if (userIds.length > 0) {
-    await db.customer.deleteMany({ where: { userId: { in: userIds } } });
-    // El registro emite códigos: van antes que el usuario (FK).
-    await db.emailVerification.deleteMany({ where: { userId: { in: userIds } } });
-    await db.passwordReset.deleteMany({ where: { userId: { in: userIds } } });
-    await db.user.deleteMany({ where: { id: { in: userIds } } });
-  }
+  await db.$transaction(
+    async (tx) => {
+      if (reservaIds.length > 0) {
+        const bloques = await tx.reservationBlock.findMany({
+          where: { reservationId: { in: reservaIds } },
+          select: { id: true },
+        });
+        const bloqueIds = bloques.map((b) => b.id);
+        if (bloqueIds.length > 0) {
+          await tx.reservationBlockGuest.deleteMany({ where: { blockId: { in: bloqueIds } } });
+        }
+        await tx.reservationBlock.deleteMany({ where: { reservationId: { in: reservaIds } } });
+        await tx.reservationGuest.deleteMany({ where: { reservationId: { in: reservaIds } } });
+        await tx.reservationSlot.deleteMany({ where: { reservationId: { in: reservaIds } } });
+        await tx.reservationHold.deleteMany({ where: { reservationId: { in: reservaIds } } });
+        // Los accesos referencian al QR: van antes que los QR.
+        await tx.access.deleteMany({
+          where: { qrToken: { reservationId: { in: reservaIds } } },
+        });
+        await tx.qrToken.deleteMany({ where: { reservationId: { in: reservaIds } } });
+        await tx.payment.deleteMany({ where: { reservationId: { in: reservaIds } } });
+        await tx.reservation.deleteMany({ where: { id: { in: reservaIds } } });
+      }
+      await tx.serviceSlot.deleteMany({ where: { service: { slug: { startsWith: `e2e-servicio-${sufijo}` } } } });
+      await tx.serviceSchedule.deleteMany({
+        where: { service: { slug: { startsWith: `e2e-servicio-${sufijo}` } } },
+      });
+      await tx.service.deleteMany({ where: { slug: { startsWith: `e2e-servicio-${sufijo}` } } });
+      await tx.category.deleteMany({ where: { slug: { startsWith: `e2e-cat-${sufijo}` } } });
+      const usuarios = await tx.user.findMany({
+        where: { email: { startsWith: `e2e.${sufijo}.` } },
+        select: { id: true },
+      });
+      const userIds = usuarios.map((u) => u.id);
+      if (userIds.length > 0) {
+        await tx.customer.deleteMany({ where: { userId: { in: userIds } } });
+        // El registro emite códigos: van antes que el usuario (FK).
+        await tx.emailVerification.deleteMany({ where: { userId: { in: userIds } } });
+        await tx.passwordReset.deleteMany({ where: { userId: { in: userIds } } });
+        await tx.user.deleteMany({ where: { id: { in: userIds } } });
+      }
+    },
+    // Pooler lento (~270 ms por consulta): el default de 5 s no alcanza.
+    { maxWait: 10_000, timeout: 30_000 },
+  );
 }
 
 /** Hash del token tal como lo guarda la emisión (SHA-256 hex). */
