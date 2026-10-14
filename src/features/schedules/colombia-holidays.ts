@@ -191,3 +191,31 @@ export function diaDeMantenimiento(clave: string): number {
 export function esDiaDeMantenimiento(clave: string): boolean {
   return diaDeSemana(clave) === diaDeMantenimiento(clave);
 }
+
+/** Anticipación máxima del SCRUM: 3 meses calendario, no 90 días fijos. */
+export const MESES_MAXIMOS_RESERVA = 3;
+
+/**
+ * Último día reservable: hoy + 3 meses calendario, en clave `YYYY-MM-DD`.
+ *
+ * P2-3: esta es la única definición de la ventana. La usan el backend (rechazo
+ * `muy_far`), el calendario del frontend (límite navegable) y la generación de
+ * franjas (hasta dónde se generan). Antes cada lado calculaba a su manera
+ * (meses locales del servidor vs 90 días fijos) y quedaba un hueco de 1-2 días
+ * donde el backend permitía pero no había franjas generadas.
+ */
+export function ultimoDiaReservable(hoyClave: string): string {
+  const [y, m, d] = hoyClave.split("-").map(Number);
+  const fecha = new Date(Date.UTC(y, m - 1 + MESES_MAXIMOS_RESERVA, d, 12));
+  const mm = String(fecha.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(fecha.getUTCDate()).padStart(2, "0");
+  return `${fecha.getUTCFullYear()}-${mm}-${dd}`;
+}
+
+/** Días que cubre la ventana de reserva, incluyendo hoy y el último día. */
+export function diasVentanaReserva(hoyClave: string): number {
+  const ms =
+    Date.parse(`${ultimoDiaReservable(hoyClave)}T00:00:00.000Z`) -
+    Date.parse(`${hoyClave}T00:00:00.000Z`);
+  return Math.round(ms / 86_400_000) + 1;
+}
