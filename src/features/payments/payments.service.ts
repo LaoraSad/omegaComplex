@@ -224,20 +224,82 @@ export type ConfirmacionPago =
   | { transitioned: true; emitidos: QrEmitido[] }
   | { transitioned: false; emitidos: [] };
 
+/** El cobro entró pero el hold de 10 min ya expiró: no hay qué liquidar. */
+export const PAGO_TARDIO_CODE = "PAGO_TARDIO_REQUIERE_REVISION";
+
 /**
  * Liquida un pago confirmado por Stripe: reserva a confirmed, hold consumido,
  * cupos a booked y QR emitidos. Los tokens crudos se devuelven UNA vez para
  * enviarlos por correo (solo se guardan los hashes).
+ *
+ * P0-3: si el hold expiró antes de que llegara la confirmación (webhook lento
+ * o pantalla de espera tardía), NO se liquida ni se emiten QRs. El dinero sí
+ * puede estar cobrado en Stripe, así que el caso se registra para revisión
+ * manual: reembolsar o revivir la reserva lo decide el negocio, fuera de la app.
  */
 export async function confirmarPagoExitoso(input: {
   paymentId: string;
   stripePaymentIntentId: string;
 }): Promise<ConfirmacionPago> {
+  const pago = await db.payment.findFirst({
+    where: { id: input.paymentId },
+    select: { reservationId: true, status: true },
+  });
+  if (!pago) throw new NotFoundError("Pago no encontrado");
+  if (pago.status !== "pending") return { transitioned: false, emitidos: [] };
+
+  const reserva = await db.reservation.findUnique({
+    where: { id: pago.reservationId },
+    select: { status: true },
+  });
+  const holdVigente =
+    reserva?.status === "pending_payment"
+      ? await db.reservationHold.findFirst({
+          where: {
+            reservationId: pago.reservationId,
+            status: "active",
+            expiresAt: { gt: new Date() },
+          },
+          select: { id: true },
+        })
+      : null;
+  if (!reserva || reserva.status !== "pending_payment" || !holdVigente) {
+    logger.error("pago.tardio_requiere_revision_manual", {
+      paymentId: input.paymentId,
+      reservationId: pago.reservationId,
+      estadoReserva: reserva?.status ?? null,
+    });
+    throw new HttpError(
+      409,
+      PAGO_TARDIO_CODE,
+      "El pago llegó tras expirar el bloqueo de 10 minutos. Requiere revisión manual: no se emitieron QRs.",
+    );
+  }
+
   const { payment, transitioned } = await settlePayment({
     paymentId: input.paymentId,
     stripePaymentIntentId: input.stripePaymentIntentId,
   });
   if (!transitioned) return { transitioned: false, emitidos: [] };
+
+  // Cierra la carrera: el hold pudo expirar entre la verificación y la
+  // liquidación. Si la reserva no quedó confirmed, no se emiten QRs.
+  const confirmada = await db.reservation.findUnique({
+    where: { id: payment.reservationId },
+    select: { status: true },
+  });
+  if (!confirmada || confirmada.status !== "confirmed") {
+    logger.error("pago.tardio_requiere_revision_manual", {
+      paymentId: input.paymentId,
+      reservationId: payment.reservationId,
+      estadoReserva: confirmada?.status ?? null,
+    });
+    throw new HttpError(
+      409,
+      PAGO_TARDIO_CODE,
+      "El pago llegó tras expirar el bloqueo de 10 minutos. Requiere revisión manual: no se emitieron QRs.",
+    );
+  }
 
   await consumirHoldYTrasladarCupos(payment.reservationId);
 

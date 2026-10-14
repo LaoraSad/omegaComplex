@@ -9,8 +9,9 @@ import {
   getPaymentBySessionId,
   recordStripeEvent,
 } from "@/features/payments/payments.repository";
-import { confirmarPagoExitoso, rechazarPago } from "@/features/payments/payments.service";
+import { confirmarPagoExitoso, PAGO_TARDIO_CODE, rechazarPago } from "@/features/payments/payments.service";
 import { logger } from "@/shared/lib/logger";
+import { HttpError } from "@/shared/http/errors";
 
 // ---------------------------------------------------------------------------
 // Webhook de Stripe (SCRUM seccion 13).
@@ -116,13 +117,24 @@ async function handleCheckoutCompleted(
     typeof session.payment_intent === "string" ? session.payment_intent : null;
   if (!intentId) return { qrEmitidos: 0 };
 
-  const confirmacion = await confirmarPagoExitoso({
-    paymentId: payment.id,
-    stripePaymentIntentId: intentId,
-  });
+  try {
+    const confirmacion = await confirmarPagoExitoso({
+      paymentId: payment.id,
+      stripePaymentIntentId: intentId,
+    });
 
-  // El correo con los QR lo manda confirmarPagoExitoso(), no esta ruta: la
-  // reserva se puede liquidar tambien desde la pantalla de espera, y si el
-  // envío viviera acá ese camino confirmaría sin mandarle nada al cliente.
-  return { qrEmitidos: confirmacion.emitidos.length };
+    // El correo con los QR lo manda confirmarPagoExitoso(), no esta ruta: la
+    // reserva se puede liquidar tambien desde la pantalla de espera, y si el
+    // envío viviera acá ese camino confirmaría sin mandarle nada al cliente.
+    return { qrEmitidos: confirmacion.emitidos.length };
+  } catch (error) {
+    // Pago tardío: el dinero entró pero el hold expiró. Reintentarlo no sirve
+    // (el hold no vuelve): se acusa recibo para que Stripe no reintente y el
+    // caso queda en el log para revisión manual (reembolso o revivir).
+    if (error instanceof HttpError && error.code === PAGO_TARDIO_CODE) {
+      logger.error("webhook.pago_tardio_revision_manual", { paymentId: payment.id });
+      return { qrEmitidos: 0 };
+    }
+    throw error;
+  }
 }
