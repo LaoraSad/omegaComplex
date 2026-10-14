@@ -43,6 +43,7 @@ const SLOT = {
   service: {
     name: "Cancha 1",
     price: 24000,
+    isActive: true,
     category: { name: "Canchas" },
     serviceSchedules: [{ dayOfWeek: 2, openTime: "08:00", closeTime: "17:00" }],
   },
