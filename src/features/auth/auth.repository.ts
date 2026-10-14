@@ -1,3 +1,4 @@
+// Acceso a datos de autenticación: búsqueda de usuario/cliente por email o documento.
 import { db } from "@/shared/lib/db";
 
 export function normalizeEmail(email: string): string {

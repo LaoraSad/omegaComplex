@@ -1,3 +1,4 @@
+// Detalle de piscina.
 import { NextResponse } from "next/server";
 
 import { handler } from "@/shared/http/handler";

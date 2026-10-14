@@ -1,3 +1,4 @@
+// Lógica de reserva: bloqueos temporales, confirmación, liberación, solape y ventana.
 import type { Prisma } from "@prisma/client";
 
 import { db } from "@/shared/lib/db";

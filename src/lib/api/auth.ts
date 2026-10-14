@@ -1,3 +1,4 @@
+// Helpers de API para autenticación desde cliente.
 import type { LoginData, RegisterData, ResetPasswordData } from "@/types/auth";
 import { borrarCarritoGuardado } from "@/components/storefront/CarritoReserva";
 

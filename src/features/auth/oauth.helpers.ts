@@ -1,3 +1,4 @@
+// Ayudas para configurar clientes y URLs de Google OAuth.
 // Utilidades de SERVIDOR del flujo OAuth con Google.
 // No se importa desde componentes de cliente: usa next/headers.
 

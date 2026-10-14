@@ -1,3 +1,4 @@
+// Estado del pago: consulta a Stripe si es necesario.
 import { NextResponse, type NextRequest } from "next/server";
 
 import { db } from "@/shared/lib/db";

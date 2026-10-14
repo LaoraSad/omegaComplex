@@ -1,3 +1,4 @@
+// Envío de correo transaccional (Resend) y plantillas.
 import "server-only";
 
 import { readFile } from "node:fs/promises";

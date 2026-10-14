@@ -1,3 +1,4 @@
+// Tipos del reporte/métricas admin.
 import type { Prisma } from "@prisma/client";
 
 // ---------------------------------------------------------------------------

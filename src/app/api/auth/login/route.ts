@@ -1,3 +1,4 @@
+// Inicio de sesión con rate limit y verificación de correo.
 import { NextRequest, NextResponse } from "next/server";
 
 import { loginSchema } from "@/features/auth/auth.schemas";

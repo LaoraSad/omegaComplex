@@ -1,3 +1,4 @@
+// Tipos de franjas y días disponibles.
 // Tipos de disponibilidad. Derivados de los modelos reales: franjas, cupos y
 // su estado, sin inventar campos.
 

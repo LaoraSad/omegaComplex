@@ -1,3 +1,4 @@
+// Emisión y gestión de QR por reserva/persona/zona (token hash, short code, préstamo).
 /**
  * Emisión de los QR de una reserva pagada.
  *

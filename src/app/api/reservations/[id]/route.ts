@@ -1,3 +1,4 @@
+// Detalle de reserva propia y creación de checkout de Stripe.
 import { NextResponse } from "next/server";
 
 import { handler } from "@/shared/http/handler";

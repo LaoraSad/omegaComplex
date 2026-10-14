@@ -1,3 +1,4 @@
+// Reenvío de código de verificación.
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { resendVerificationCode } from "@/features/auth/email-flow.service";

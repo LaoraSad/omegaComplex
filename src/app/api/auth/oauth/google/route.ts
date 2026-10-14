@@ -1,3 +1,4 @@
+// Inicio del flujo OAuth Google (state anti-CSRF).
 import { cookies } from "next/headers";
 
 import { newOAuthState } from "@/features/auth/oauth.repository";

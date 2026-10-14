@@ -1,3 +1,4 @@
+// Consulta de disponibilidad por servicio y fecha.
 import { NextResponse } from "next/server";
 
 import { handler } from "@/shared/http/handler";

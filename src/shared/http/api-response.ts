@@ -1,3 +1,4 @@
+// Envelope {data, error} para respuestas HTTP.
 // Formato único de respuesta API.
 export type ApiSuccess<T> = { data: T; error: null };
 export type ApiFailure = { data: null; error: { code: string; message: string } };

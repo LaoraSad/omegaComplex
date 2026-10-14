@@ -1,3 +1,4 @@
+// Webhook de Stripe (fuente de verdad del pago): verifica firma e idempotencia.
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 

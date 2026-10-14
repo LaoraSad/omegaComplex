@@ -1,3 +1,4 @@
+// Establece nueva contraseña con token de un uso.
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { completePasswordReset } from "@/features/auth/email-flow.service";

@@ -1,3 +1,4 @@
+// Endpoint de control de acceso: lookup de QR y confirmación por empleado.
 import { NextResponse } from "next/server";
 
 import { handler } from "@/shared/http/handler";

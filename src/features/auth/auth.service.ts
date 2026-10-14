@@ -1,3 +1,4 @@
+// Lógica de autenticación y registro: valida credenciales, rate limit, crea usuario/cliente y sesión.
 import bcrypt from "bcryptjs";
 
 import { createSession } from "@/shared/auth/session";

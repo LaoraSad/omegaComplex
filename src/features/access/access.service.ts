@@ -1,3 +1,4 @@
+// Orquesta validación de QR (sección 16) y concesión de acceso (sección 17); sin acceso automático.
 import { formatClock, formatInTimeZone } from "./access-dates";
 import {
   findEmployeeByUserId,

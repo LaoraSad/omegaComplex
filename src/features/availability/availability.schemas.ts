@@ -1,3 +1,4 @@
+// Validaciones Zod de consulta de disponibilidad por servicio y fecha.
 import { z } from "zod";
 
 // Entradas del módulo de disponibilidad.

@@ -1,3 +1,4 @@
+// Detalle y edición de categoría (admin).
 import { NextRequest, NextResponse } from "next/server";
 import {
   archiveCategory,

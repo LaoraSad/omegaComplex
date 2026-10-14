@@ -1,3 +1,4 @@
+// Usuario actual a partir de la sesión.
 import { NextResponse } from "next/server";
 import { handler } from "@/shared/http/handler";
 import { ok } from "@/shared/http/api-response";

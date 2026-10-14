@@ -1,3 +1,4 @@
+// Catálogo de piscinas (datos reales).
 import { NextResponse } from "next/server";
 
 import { handler } from "@/shared/http/handler";

@@ -1,3 +1,4 @@
+// Logger JSON sin secretos para eventos críticos.
 // Registro estructurado de eventos críticos (auditoría mínima del MVP).
 // Una sola línea JSON por evento: timestamp, evento y contexto. En producción
 // la plataforma de despliegue recolecta stdout; aquí no se imprimen secretos.

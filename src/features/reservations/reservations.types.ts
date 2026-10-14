@@ -1,3 +1,4 @@
+// Tipos de reserva y bloques.
 import type {
   HoldStatus,
   ReservationChannel,

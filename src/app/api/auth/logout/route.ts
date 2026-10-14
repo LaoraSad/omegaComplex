@@ -1,3 +1,4 @@
+// Cierre de sesión (invalida cookie).
 import { NextResponse } from "next/server";
 import { handler } from "@/shared/http/handler";
 import { ok } from "@/shared/http/api-response";

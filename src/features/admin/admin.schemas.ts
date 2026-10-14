@@ -1,3 +1,4 @@
+// Validaciones Zod de formularios admin.
 import { z } from "zod";
 
 import { slugifyCategory } from "@/features/catalog/catalog.schemas";

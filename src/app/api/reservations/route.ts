@@ -1,3 +1,4 @@
+// Lista y crea reservas con hold temporal.
 import { NextResponse } from "next/server";
 
 import { handler } from "@/shared/http/handler";

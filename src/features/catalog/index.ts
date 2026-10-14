@@ -1,3 +1,4 @@
+// Barril del módulo de catálogo.
 export {
 	archiveCategory,
 	createCategory,

@@ -1,3 +1,4 @@
+// Inicialización del cliente Stripe para pagos.
 // Cliente Stripe (solo servidor).
 // Se inicializa de forma perezosa para no exigir claves en build/test.
 import Stripe from "stripe";

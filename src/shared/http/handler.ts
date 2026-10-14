@@ -1,3 +1,4 @@
+// Manejo uniforme de errores en route handlers.
 import { NextRequest, NextResponse } from "next/server";
 import { HttpError } from "./errors";
 import { fail } from "./api-response";

@@ -1,3 +1,4 @@
+// Repositorio de admin: métricas, reportes, reservas, accesos, servicios, empleados y clientes.
 import bcrypt from "bcryptjs";
 import { db } from "@/shared/lib/db";
 import type { Prisma } from "@prisma/client";

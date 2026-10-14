@@ -1,3 +1,4 @@
+// Callback de Google: crea/vincula cuenta.
 import { cookies } from "next/headers";
 
 import {

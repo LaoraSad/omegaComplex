@@ -1,3 +1,4 @@
+// Disponibilidad real: cruza horarios, cierres y slots con cupos; destaca festivos/mantenimiento.
 import { randomUUID } from "node:crypto";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { liberarHoldsVencidos } from "@/features/reservations/reservations.service";

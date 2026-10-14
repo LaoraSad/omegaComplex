@@ -1,3 +1,4 @@
+// Constantes de Google OAuth.
 // Datos puros del flujo OAuth con Google. Sin dependencias de servidor: este
 // archivo se importa tanto desde las rutas como desde componentes de cliente.
 

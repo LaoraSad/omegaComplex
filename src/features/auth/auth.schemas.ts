@@ -1,3 +1,4 @@
+// Validaciones Zod de registro, login y actualización de perfil/documento/teléfono.
 import { z } from "zod";
 
 const documentSchema = z

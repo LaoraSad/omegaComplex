@@ -1,3 +1,4 @@
+// Persistencia de reservas: holds, bloques por zona, invitados, solapes y ventana de reserva.
 import type { Prisma } from "@prisma/client";
 
 import { db } from "@/shared/lib/db";

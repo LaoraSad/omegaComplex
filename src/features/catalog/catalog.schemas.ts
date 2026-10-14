@@ -1,3 +1,4 @@
+// Validaciones Zod de categoría: nombre, slug, descripción y toggle de activar/inactivar.
 import { z } from "zod";
 
 export function slugifyCategory(value: string): string {

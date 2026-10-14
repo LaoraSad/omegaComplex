@@ -1,3 +1,4 @@
+// Registro: crea User + Customer y emite verificación.
 import { NextRequest, NextResponse } from "next/server";
 
 import { registerSchema } from "@/features/auth/auth.schemas";

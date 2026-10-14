@@ -1,3 +1,4 @@
+// Errores HTTP tipados (400-503).
 // Clases de error del dominio HTTP.
 export class HttpError extends Error {
   constructor(

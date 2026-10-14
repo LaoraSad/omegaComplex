@@ -1,3 +1,4 @@
+// Limitación de intentos de login por correo e IP.
 import { db } from "@/shared/lib/db";
 import { HttpError } from "@/shared/http/errors";
 
