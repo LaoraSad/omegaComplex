@@ -504,7 +504,7 @@ NEXT_PUBLIC_APP_URL=https://tu-dominio-en-produccion
 ```
 
 Fuera del alcance de la app: desplegar, dominio y `migrate deploy` en prod
-(lo gestiona infra). Ver `docs/decisiones-v2.0.md`.
+(lo gestiona infra).
 
 </details>
 

@@ -1,1 +1,0 @@
-// TODO(reservations): componente placeholder
