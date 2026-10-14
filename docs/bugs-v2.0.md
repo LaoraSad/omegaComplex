@@ -1,159 +1,174 @@
-# Bugs v2.0 — detalle con evidencia
+# Bugs v2.0 — detalle con evidencia + estado de ejecución
 
-Rama: `update/version-2.0`. Todo verificado leyendo el código el 2026-10-14.
+Rama: `update/version-2.0`. Todo verificado leyendo el código.
 Convención: **P0** = rompe operación real / cobra mal / inconsistencia de datos.
 **P1** = carrera o bypass serio. **P2** = inconsistencia UX/reglas.
 
-> Restricción v2.0: no se toca Stripe real ni n8n (otra persona).
-> Los fixes P0 se hacen con mocks + reloj congelado, sin `stripe listen`.
+> Restricción v2.0: no se toca Stripe real ni n8n (otra persona). Los fixes se
+> prueban con mocks + reloj congelado, sin `stripe listen`.
+> Cada bug lleva su commit a nombre local. Estado a 2026-10-14: P2-6 pendiente,
+> resto hecho.
+
+## Migraciones aplicadas (BD dev al día)
+
+- `20261014025705_user_token_version`: `User.tokenVersion Int @default(0)` (P1-5).
+- `20261014030928_access_invalidacion_manual`: `Access.invalidacionManual Boolean @default(false)` (P2-5).
 
 ## P0
 
-### P0-1. `isPastDate` bloquea todo el día en curso
-- `src/features/reservations/reservations.service.ts:100-104`:
-  ```ts
-  const start = new Date(Date.UTC(y, m - 1, d, 5, 0, 0, 0)); // 00:00 Bogotá
-  return start < now;
-  ```
-  Para `fecha == hoy`, `start` (00:00) siempre es `< now` → **toda reserva de hoy
-  se rechaza** con `franja_pasada` (`:240-241`), aunque la franja sea futura.
-- Fix: comparar `dateKey < hoyBogota` (strings `YYYY-MM-DD`), no `start < now`.
-- Test: reserva hoy con slot futuro debe pasar; fecha ayer debe dar `franja_pasada`.
+### P0-1. `isPastDate` bloqueaba todo el día en curso — HECHO (`3b4cebb`)
+- Causa: `src/features/reservations/reservations.service.ts:100` comparaba
+  `00:00 Bogotá < now`, siempre true para hoy → toda reserva de hoy se
+  rechazaba con `franja_pasada`.
+- Qué se hizo: compara día calendario en `America/Bogota` (`date < hoy`); hoy
+  nunca es pasado. Función exportada para probarla.
+- Qué cambió: reservas para franjas futuras de hoy vuelven a pasar.
+- Tests: `is-past-date.test.ts` (4, incluye regresión 00:00:01).
 
-### P0-2. Monto Stripe: `cop * 100` cobra 100x si COP es cero-decimal
-- `src/features/payments/payments.service.ts:60-73` (`aCentimos`): asume que la API
-  de Stripe usa 2 decimales para COP y envía `100.000 COP → 10.000.000`.
-- Stripe lista COP como moneda **cero-decimal** (monto en pesos, sin centavos).
-  Si es así, se cobra 100 veces el precio real.
-- **Hecho en v2.0 (vía A, sin tocar Stripe):**
-  - `aCentimos` exportada y aislada como único puente pesos → Stripe, con
-    advertencia en el comentario: no cambiar el multiplicador sin pago de prueba.
-  - Tests que congelan el comportamiento actual (`payments.service.test.ts`:
-    bloque `aCentimos` + asserts `100000→10000000` en checkout).
-  - El comportamiento NO cambió: las reservas nuevas envían lo mismo que antes.
-    Stripe no recibe nada retroactivo; lo ya creado allá queda intacto.
-- **Pendiente (responsable de Stripe, antes de producción):**
-  1. Confirmar en la cuenta/docs si COP espera centavos (×100) o pesos (×1).
-  2. Pago real en modo prueba y comparar lo mostrado en el checkout vs la app.
-  3. Si es ×1: cambiar `aCentimos` a identidad + validar monto mínimo,
-     actualizar tests y repetir el pago de prueba. Si es ×100: solo dejar constancia.
+### P0-4. Bypass del token QR — HECHO (`616e142`)
+- Causa: `findQrByTokenHash` (`access.repository.ts`) aceptaba `id` UUID y
+  `reservationId` (visibles en APIs/admin) además del hash.
+- Qué se hizo: se quitaron los dos fallbacks; solo `tokenHash + shortCode`.
+  Verificado que los únicos llamadores son lookup/confirm/deny del escaneo.
+- Tests: `qr-lookup.test.ts` (UUID desconocido → null sin tocar `reservationId`).
 
-### P0-3. Pago tardío tras expirar deja pago `succeeded` + reserva `expired` + QRs emitidos
-- `src/app/api/reservations/[id]/estado-pago/route.ts:62-70`: si Stripe dice `paid`,
-  llama `confirmarPagoExitoso` verificando solo `record.status === "pending"`
-  (`:65`). No chequea `hold.expiresAt` ni `reservation.status`.
-- `handleCheckoutCompleted` (`src/app/api/payments/webhook/route.ts:109-128`):
-  mismo hueco, solo mira `payment.status !== "pending"` (`:113`).
-- `settlePayment` (`payments.repository.ts:94-127`): `payment pending→succeeded`
-  siempre; la reserva solo avanza si sigue `pending_payment` (`:120-123`).
-  Si ya estaba `expired`, el pago queda cobrado, la reserva expirada,
-  `consumirHoldYTrasladarCupos` no aplica (hold ya `released`) y aun así se emiten QRs.
-- Fix: antes de liquidar, exigir hold vigente y reserva en `pending_payment`;
-  si expiró, no emitir QR y dejar el caso marcado para reembolso/revivir
-  explícito (decisión de negocio, fuera de app en v2.0).
+### P0-3. Pago tardío tras expirar — HECHO (`dc26bd1`)
+- Causa: `confirmarPagoExitoso` y el webhook liquidaban mirando solo
+  `payment.status === "pending"`: pago `succeeded` + reserva `expired` + QRs
+  emitidos sin cupos que trasladar.
+- Qué se hizo: pre-chequeo (reserva `pending_payment` + hold vigente) y
+  re-verificación post-liquidación (cierra la carrera); si expiró, no se
+  liquida ni se emiten QRs, se registra `pago.tardio_requiere_revision_manual`
+  y se lanza `409 PAGO_TARDIO_REQUIERE_REVISION`. Webhook lo acusa (sin
+  reintentos inútiles); `estado-pago` responde `requiere-revision`.
+- Por qué así: el dinero puede estar cobrado de verdad; reembolsar/revivir lo
+  decide el negocio fuera de la app.
+- Tests: 3 casos tardíos nuevos en `payments.service.test.ts`.
 
-### P0-4. Bypass del token QR: acepta `id` UUID y `reservationId`
-- `src/features/access/access.repository.ts:191-203`: si no hubo match por
-  `tokenHash` ni `shortCode`, y el texto parece UUID, busca por `id` y por
-  `reservationId` (`findFirst where reservationId`).
-- `reservationId` es visible en APIs/admin → permite validar sin el token,
-  rompe §14 (token seguro) y §27.
-- Fix: quitar esos dos fallbacks; dejar solo `tokenHash + shortCode`.
-  (El `shortCode` impreso se mantiene como respaldo legítimo.)
+### P0-2. Monto Stripe `cop * 100` — CONTENIDO (`eeddbec`), pendiente Stripe
+- Riesgo: si COP fuera cero-decimal en la cuenta, se cobraría 100x.
+- Qué se hizo (vía A, sin tocar Stripe): `aCentimos` exportada y aislada como
+  único puente pesos → Stripe, con advertencia de no cambiar el multiplicador
+  sin pago de prueba; tests que congelan el mapeo actual.
+- Qué NO cambió: el comportamiento es idéntico; Stripe no recibe nada
+  retroactivo.
+- Pendiente (responsable de Stripe, antes de producción): confirmar COP,
+  pago en test mode comparando checkout vs app, y solo entonces ajustar si aplica.
 
 ## P1
 
-### P1-1. Webhook pierde el reintento tras un crash
-- `webhook/route.ts:61-69`: `recordStripeEvent` **antes** de procesar; si
-  `handleCheckoutCompleted` lanza, el reintento de Stripe ve `applied=false`
-  y retorna `duplicate` sin re-liquidar → reserva cobrada queda `pending`.
-- Fix: registrar después de procesar, o en duplicado re-chequear
-  `payment.status === "pending"` y re-liquidar.
+### P1-1. Webhook perdía el reintento tras un crash — HECHO (`53ad018`)
+- Causa: `recordStripeEvent` antes de procesar; si la liquidación se caía, el
+  reintento veía duplicado y lo ignoraba → reserva cobrada en `pending`.
+- Qué se hizo: duplicado con pago aún `pending` termina la liquidación
+  (`recuperado: true`); duplicado liquidado solo acusa. Errores reales siguen
+  dando 500 para que Stripe reintente.
+- Tests: `webhook-duplicate.test.ts`, primer test de un route handler del repo.
 
-### P1-2. `rejectPayment` puede voltear `succeeded → failed`
-- `payments.repository.ts:130-145`: `tx.payment.update` incondicional.
-  Una carrera `succeeded` vs `payment_failed/session.expired` corrompe el pago
-  (la reserva se salva por `updateMany pending`, el pago no).
-- Fix: `updateMany(where status=pending)` como en `settlePayment`.
+### P1-2. `rejectPayment` volteaba `succeeded → failed` — HECHO (`801d77e`)
+- Causa: `tx.payment.update` incondicional en carrera con el webhook de éxito.
+- Qué se hizo: `updateMany(where status=pending)` + relectura, igual que
+  `settlePayment`. Verificado que `rechazarPago` solo usa `reservationId`.
+- Tests: `payments.repository.test.ts` con transacción simulada.
 
-### P1-3. Mantenimiento de lunes no se defiende en escritura
-- `createReservationWithHold` valida `schedule + closure` pero nunca llama
-  `cerradoPorMantenimiento / esDiaDeMantenimiento`. Si existe `ServiceSchedule`
-  de lunes o un `ServiceSlot` huérfano, la reserva pasa aunque el calendario lo cierre.
-- Fix: mismo chequeo de `availability.repository` en la escritura.
+### P1-3. Mantenimiento no defendido en escritura — HECHO (`fa1103b`)
+- Causa: `createReservationWithHold` validaba schedule/cierre pero nunca el
+  día de mantenimiento; un `ServiceSchedule` de lunes dejaba reservar.
+- Qué se hizo: gate temprano con código `mantenimiento`, usando
+  `esDiaDeMantenimiento` del módulo puro (se evitó importar
+  `availability.repository` por ciclo con este servicio). La ruta devuelve el
+  código tal cual (400 + mensaje).
+- Tests: `mantenimiento.test.ts` (lunes rechaza, martes pasa, martes
+  desplazado por lunes festivo rechaza).
 
-### P1-4. OAuth: sin chequeo `isActive`, sin puerta de verificación
-- `callback/route.ts:66-72`: con `OAuthAccount` existente abre sesión con solo
-  `if (!existing.role)`. Desactivados (`User/Employee.isActive=false`) siguen entrando.
-- `:74-87`: si Google devolvió `email_verified=false`, igual hace `startSession`
-  (`:86`) sin forzar `/verify-email`.
-- Fix: chequear `isActive` + redirigir a verificación si pendiente.
+### P1-8. `deleteServiceSchedule` filtraba mal el día — HECHO (`5e1e0cb`)
+- Causa: `new Date("YYYY-MM-DD").getDay()` (UTC vs servidor) + ternaria
+  redundante → borraba otro día o nada; además `deleteMany` fuera de
+  transacción y sin validar 0-6.
+- Qué se hizo: `diaDeSemana` en Bogotá (misma convención del schedule),
+  rango con medianoche Bogotá, borrado + delete en `db.$transaction`,
+  validación 0-6 como el upsert.
+- Tests: `delete-schedule.test.ts` (filtra solo el día, todo en tx,
+  inexistente no toca nada).
 
-### P1-5. Cambio/recovery de clave no revoca JWTs
-- JWT stateless 7 días (`shared/auth/jwt.ts`, `session.ts`). `changePassword`
-  (`auth.service.ts:174`) y `completePasswordReset` (`email-flow.service.ts:183`)
-  no invalidan tokens robados. Además `completePasswordReset` no chequea `isActive`.
-- Fix: `passwordChangedAt/tokenVersion` en el JWT o lista de revocación + check `isActive`.
+### P1-4. OAuth sin `isActive` ni puerta de verificación — HECHO (`97a6512`)
+- Causa: callback abría sesión con solo `if (!existing.role)`; con Google
+  `email_verified=false` igual entraba.
+- Qué se hizo: `OAuthUser` trae `isActive/emailVerified`; helper puro
+  `destinoOAuth()` (inactivo → login con error; sin verificar → sin sesión a
+  `/verify-email?email=` donde pide el código por reenvío); callback lo aplica
+  en cuenta existente y en alta/vinculación.
+- Tests: `oauth-gate.test.ts` (3) + `oauth.repository.test.ts` (3).
 
-### P1-6. `src/proxy.ts` verificado en Next 16 (sin cambios)
-- Confirmado contra el framework instalado (16.3.6): `src/proxy.ts` es
-  ubicación válida (`isProxyFile`), el export nombrado `proxy` es aceptado y
-  `config.matcher` se parsea igual que en middleware.
-- Verificado en vivo (`next dev -p 3101`): `/admin`, `/validar` y `/reservas`
-  sin cookie responden `307` a `/login?next=…`.
-- Queda `src/proxy.test.ts` como regresión (5 casos). Nota: el middleware edge
-  no tiene BD, así que la revocación P1-5 la aplican layouts/APIs, no el proxy.
+### P1-5. Cambio/recovery no revocaba JWTs — HECHO (`5c2e79f`)
+- Causa: JWT stateless 7 días; clave robada seguía válida tras cambiarla.
+- Qué se hizo: `User.tokenVersion` + `tv` en el JWT. `createSession` incrusta
+  la vigente; `getSession` la compara y exige cuenta activa. Cambio y recovery
+  incrementan la versión; recovery exige cuenta activa (mismo error genérico).
+- Qué cambió (atención al desplegar): **todas las sesiones actuales se
+  cierran una vez** (tokens legacy sin `tv`). El middleware edge no tiene BD:
+  la revocación la aplican layouts/APIs, no el proxy.
+- Tests: `session.test.ts` (5) + repositorio + recovery inactivo/versión.
 
-### P1-7. Admin muestra zona errónea en multizona
-- `listAccesses` incluye `reservation.service`, no `block.service`;
-  `accesos/page.tsx:147` pinta el servicio principal aunque el QR sea de otra zona.
-- Fix: incluir `qrToken.block.service`.
+### P1-6. `src/proxy.ts` — VERIFICADO, sin cambios (`14d618a`, `cc052dd`)
+- Confirmado contra Next 16.3.6 instalado: `src/proxy.ts` es ubicación
+  válida, el export `proxy` es aceptado y `config.matcher` se parsea.
+- En vivo (`next dev -p 3101`): `/admin`, `/validar`, `/reservas` sin cookie
+  → `307` a `/login?next=…`. Quedó `src/proxy.test.ts` (5) como regresión.
 
-### P1-8. `deleteServiceSchedule` filtra el día mal
-- `admin.repository.ts:405-419`: `new Date(dateKey).getDay()` parsea `YYYY-MM-DD`
-  como UTC (desfase vs Bogotá) + ternaria redundante. Puede borrar slots del día
-  equivocado. Además `deleteMany` fuera de transacción con `schedule.delete`.
-- Fix: día de semana en zona Bogotá + transacción.
+### P1-7. Zona errónea en multizona — HECHO (`3910061`)
+- Causa: accesos mostraban/filtraban por `reservation.service` en vez del
+  bloque del QR.
+- Qué se hizo: include `qrToken.block.service`, helper `zonaDeAcceso()`
+  (bloque manda, reserva solo en QR legacy), filtro por bloque O reserva
+  legacy. Aplicado en tabla de accesos y CSV de export (que duplicaba el include).
+- Tests: `access-zone.test.ts` (display + filtro solo/combinado).
 
 ## P2
 
-### P2-1. Ventana "pasado" inconsistente
-- Disponibilidad marca `past` si `endsAt <= now`; creación exige `startsAt > now`
-  (`reservations.service.ts:349`, UPDATE `startsAt > now` en `:469`).
-  Franja ya iniciada se muestra disponible y falla con `ya_reservado` genérico.
-- Fix: `startsAt <= now → past/no reservable` (§12 franjas ya iniciadas).
+### P2-1. Ventana "pasado" inconsistente — HECHO (`9c0759a`)
+- Causa: lectura marcaba `past` solo si terminó; escritura exige
+  `startsAt > now` → franja iniciada se mostraba disponible y fallaba genérico.
+- Qué se hizo: helper puro `estadoDeSlot()` (`startsAt <= now → past`) en día
+  y rango; texto "ya empezaron o terminaron" (códigos y UI intactos).
+- Tests: `slot-status.test.ts` (4).
 
-### P2-2. Solape ignora holds vencidos no limpiados
-- `chocarConOtraReserva` (`:193-196`) filtra por estado sin `expiresAt`;
-  la limpieza (`liberarHoldsVencidos`, `:435`) corre con `db` fuera de la tx → carrera.
-- Fix: limpieza dentro de la tx o excluir holds expirados del choque.
+### P2-2. Solape veía holds vencidos sin liberar — HECHO (`9088d1a`)
+- Causa: limpieza con cliente global fuera de la tx + chequeo por estado.
+- Qué se hizo: `liberarHoldsVencidos(now, tx)` como primer paso dentro del
+  `$transaction` (la función ya aceptaba cliente). Limpieza, cupos, lock,
+  solape y creación atómicos.
+- Tests: `solape-limpieza.test.ts` (flujo simulado: limpia en tx, nunca fuera).
 
-### P2-3. Ventana 3 meses con TZ del servidor + generación 90 días
-- `reservations.service.ts:93-97` usa `setMonth` local vs resto Bogotá;
-  frontend y generación usan 90 días. Hueco 90-92 días: backend permite pero no hay slots.
-- Fix: `hoyBogotá + 3 meses calendario` en los tres lados.
+### P2-3. Ventana 3 meses en tres dialectos — HECHO (`e46a5e9`)
+- Causa: backend `setMonth` local vs frontend meses-UTC vs generación 90 días
+  → hueco donde se permitía pero no había franjas.
+- Qué se hizo: fuente única `ultimoDiaReservable()` + `diasVentanaReserva()`
+  en `colombia-holidays`; backend compara claves Bogotá, frontend delega,
+  generación cubre la ventana por defecto (upsert y delete usan el mismo rango).
+- Tests: helper (3) + gate backend (límite/borde).
 
-### P2-4. Limpieza lazy sin límite en cada lectura
-- `getDayAvailability/getSlotsInRange` llaman `liberarHoldsVencidos` sincrónico
-  (`findMany` + N updates). Lento con holds colgados.
-- Fix: acotar (`take 50`) y/o dejarlo al cron + escritura.
+### P2-4. Limpieza lazy sin límite — HECHO (`27ebd22`)
+- Causa: cada lectura de calendario barría todos los vencidos + N updates.
+- Qué se hizo: `limite = 50` por defecto (lecturas y escritura); cron con
+  `null` (barrido completo, que es su trabajo). Idempotente: lo pendiente lo
+  toma la siguiente pasada.
+- Tests: `liberar-holds.test.ts` (take por defecto, null sin take, liberación).
 
-### P2-5. `denyAccess{consumeQr:true}` es invalidación manual (prohibida 33-E)
-- Consume un QR válido por decisión subjetiva. Requiere confirmación +
-  auditoría separada `invalidated_by` vs `denied`.
+### P2-5. Denegación = invalidación manual sin rastro — HECHO (`8d9a0bf`)
+- Causa (33-E): `denyAccess{consumeQr:true}` mataba un QR válido con un llamado
+  simple y se auditaba igual que un denied del sistema.
+- Qué se hizo: migración `Access.invalidacionManual`; `denyRequestSchema`
+  exige `confirmacion: true` (UI la manda tras su doble paso, flujo intacto
+  para el empleado); admin muestra "Invalidación manual del QR" con quién/
+  cuándo/motivo.
+- Tests: servicio asserts el flag + schema rechaza sin confirmación.
 
-### P2-6. Spam de `Access denied`
-- `access/validate/route.ts:73-75` crea fila `denied` en cada `lookup` fallido.
-  Escaneos repetidos contaminan métricas. Deduplicar / rate-limit.
+### P2-6. Spam de `Access denied` — PENDIENTE
+- `access/validate/route.ts:73-75` crea fila `denied` en cada lookup fallido.
+- Fix previsto: deduplicar / rate-limit por QR+empleado+ventana.
 
-### P2-7. Dominio remitente vs Gmail
-- Requisito: `omegacomplex@gmail.com`. Código: `RESEND_FROM_EMAIL` debe ser
-  dominio verificado (`resend.ts:22-26`). Gmail como `from` falla/spam.
-- Decisión pendiente con el cliente (ver `decisiones-v2.0.md` §9); en app no se cambia.
-
-## Orden de ejecución v2.0
-1. P0-1 → P0-4 → P0-3 → P0-2 (este orden: fecha, token, tardío, monto).
-2. P1-1, P1-2 (pagos sin tocar Stripe real).
-3. P1-3, P1-8, P2-1, P2-2, P2-3, P2-4 (reservas/disponibilidad).
-4. P1-4, P1-5, P1-6 (auth).
-5. P1-7, P2-5, P2-6 (acceso/admin). P2-7 queda pendiente cliente.
+## Orden restante
+1. P2-6.
+2. Alcance `decisiones-v2.0.md`: perfil cliente, correos app, métricas,
+   `.env.example` + URL, E2E y concurrencia.
