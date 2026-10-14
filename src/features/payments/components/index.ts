@@ -1,1 +1,0 @@
-// TODO(payments): componente placeholder

@@ -1,17 +1,21 @@
-# Bugs v2.0 — detalle con evidencia + estado de ejecución
+# Bugs y cambios v2.0 — detalle con evidencia
 
 Rama: `update/version-2.0`. Todo verificado leyendo el código.
 Convención: **P0** = rompe operación real / cobra mal / inconsistencia de datos.
 **P1** = carrera o bypass serio. **P2** = inconsistencia UX/reglas.
+Estado: bugs P0-1 → P2-6 hechos al 100% y Fases 1–5 implementadas.
+Suite: 225 tests Vitest + 6 E2E Playwright en verde.
 
-> Restricción v2.0: no se toca Stripe real ni n8n (otra persona). Los fixes se
-> prueban con mocks + reloj congelado, sin `stripe listen`.
-> Cada bug lleva su commit a nombre local. Estado: todos hechos (P2-6 el último).
+> Restricción v2.0: no se toca la configuración de Stripe real ni n8n
+> (otra persona). Los fixes se prueban con mocks + reloj congelado.
+> El flujo con Stripe test mode se verificó aparte con `stripe listen`
+> (registro → reserva → checkout → webhook → QR → validación).
 
 ## Migraciones aplicadas (BD dev al día)
 
 - `20261014025705_user_token_version`: `User.tokenVersion Int @default(0)` (P1-5).
 - `20261014030928_access_invalidacion_manual`: `Access.invalidacionManual Boolean @default(false)` (P2-5).
+- `20261014033446_service_imagen_activo`: `Service.imagen String?` + `Service.isActive Boolean @default(true)` (Fase 1).
 
 ## P0
 
@@ -170,6 +174,65 @@ Convención: **P0** = rompe operación real / cobra mal / inconsistencia de dato
   5 min) y `recordDenial` omite el duplicado. El primer rechazo siempre queda.
 - Tests: servicio (registra/omite) + repositorio (where + ventana).
 
-## Orden restante
-1. Alcance `decisiones-v2.0.md`: perfil cliente, correos app, métricas,
-   `.env.example` + URL, E2E y concurrencia.
+## Fases v2.0 — qué se hizo y por qué
+
+### Fase 1. CRUD de servicios del admin (`0ac46e8`)
+- Por qué: sin catálogo editable no hay operación real (§5 requisitos); todo
+  cambio iba por SQL.
+- Qué: `createService` (categoría, precio, capacidad, horarios iniciales en
+  transacción), `updateService`, `setServiceActive`, columna `imagen?`
+  opcional, regeneración acotada de `ServiceSlot`, API `POST/PATCH` solo
+  admin + `ServiceForm`, guards (no bajar capacidad bajo lo reservado,
+  desactivar no toca reservas vivas, slug único, lo nuevo rige franjas
+  futuras).
+- Tests: slug duplicado, capacidad bajo lo reservado, sin duplicar slots.
+
+### Fase 2. Perfil cliente (`6dab719`)
+- Por qué: el cliente solo podía ver sus datos y cambiar la clave; el
+  teléfono y el correo no eran editables.
+- Qué: `PATCH /api/auth/me` (solo teléfono/correo; `document`/`birthDate`
+  rechazados por schema estricto), cambio de correo con re-verificación
+  (`emailVerified=false` + código nuevo + `tokenVersion++` que cierra las
+  sesiones), UI con formularios + banner pendiente + reenvío, historial y
+  futuras enlazadas a `/mis-reservas`.
+- Tests: colisión de correo, P2002 en carrera, rate-limit, no-op con mismo
+  correo, inactivo/inexistente.
+
+### Fase 3. Correos de la app (3.1 `fc72f0d`, 3.2 `cfb29ea`, 3.3 `364d2c7`)
+- Por qué: el rechazo de pago y el hold expirado eran silenciosos; el evento
+  `usuario.verificado` existía tipado pero nunca se emitía; el `documento`
+  solo viajaba por n8n; `mailer.ts` era un stub que lanzaba.
+- Qué: avisos Resend directo de pago rechazado y hold expirado (el cron
+  avisa lo que su barrido expira; las liberaciones perezosas no avisan),
+  emisión de `usuario.verificado` al verificar, `documento` también por
+  Resend, retiro del stub. Envío directo sin eventos n8n nuevos: crearlos
+  exigiría workflows que su responsable no ha montado. Nada que falle en
+  correo tumba el flujo principal (queda en log).
+- Tests: aviso con motivo, fallo de correo no tumba, cron notifica/omite,
+  callback de expiración solo al ganador.
+
+### Fase 4. Métricas §20, solo visualización (4.1 `654f3b5`, 4.2 `f299c92`, 4.3 `b61e150`)
+- Por qué: §20 exige ingresos por rango/servicio/categoría, reservas por
+  categoría, ocupación por fecha configurable y usadas vs no usadas; solo
+  existían totales y la foto de hoy. Export Excel/PDF fuera de alcance.
+- Qué: `getMetricasRango` (ingresos por `paidAt`, reservas por `startsAt`;
+  rango saneado a 30 días por defecto, máx. 90), `getOcupacionPorFecha`,
+  `getUsoReservas` (no usada = confirmada pasada sin ningún QR consumido),
+  sección Métricas en `/admin/reportes` con filtros, sin exportación.
+- Tests: saneado de rango, agregadores, where estrictos.
+
+### Fase 5. Cierre (5.1 `75d6610`, 5.2 `608a73c`, 5.3 `f9a616c`)
+- Por qué: entregar v2.0 verificable de punta a punta.
+- Qué: `.env.example` sincronizado (faltaban `CRON_SECRET` y
+  `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`; N8N/QA/Resend intactos) + placeholder
+  de URL de despliegue en README; concurrencia real contra Postgres (último
+  cupo: gana uno, otro `ya_reservado`; mismo cliente en paralelo:
+  `horario_chocante`); E2E Playwright de los 3 flujos con Stripe mockeado
+  (cliente, empleado con QR fixture, admin).
+- Notas: specs E2E con pool acotado (pooler de 15) y trasplante de cookie
+  `Secure` en `next start`; sin restos en BD tras correr.
+
+### Fix adicional: mock P2-2 con `isActive` (`bd46168`)
+- Por qué: el guard de Fase 1 (`!slot.service.isActive`) dejó obsoleto el
+  mock de `solape-limpieza.test.ts`, que no traía el campo y fallaba.
+- Qué: una línea en el mock. Falla pre-existente en árbol limpio, ajena a Fase 2.
