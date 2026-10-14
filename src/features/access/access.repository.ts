@@ -252,6 +252,8 @@ export async function grantAccess(input: {
   denialReason?: string | null;
   /** Consume el QR también en un rechazo. */
   consumeQr?: boolean;
+  /** P2-5: true solo en invalidación manual (deny explícito de QR válido). */
+  invalidacionManual?: boolean;
 }): Promise<GrantResult> {
   const accessedAt = new Date();
 
@@ -272,6 +274,7 @@ export async function grantAccess(input: {
         employeeId: input.employeeId,
         result: input.result,
         denialReason: input.denialReason ?? null,
+        invalidacionManual: input.invalidacionManual ?? false,
       },
       select: { id: true },
     });
