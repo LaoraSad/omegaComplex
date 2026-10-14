@@ -140,11 +140,17 @@ type ClienteReserva = Pick<
  * apertura de calendario con un barrido total; el cron pasa `null` (sin
  * límite) porque ese sí es su trabajo. La operación es idempotente, así que
  * lo que no alcance una pasada lo toma la siguiente.
+ *
+ * Fase 3.1: `alExpirar` avisa por cada reserva que ESTA llamada expiró (solo
+ * la gana quien marcó el update condicional, así no hay doble aviso). Las
+ * lecturas no lo pasan: el aviso sale únicamente del barrido del cron, no en
+ * mitad de la consulta del calendario de otro cliente.
  */
 export async function liberarHoldsVencidos(
   now: Date = new Date(),
   cliente: ClienteReserva = db,
   limite: number | null = 50,
+  alExpirar?: (reservationId: string) => void | Promise<void>,
 ): Promise<number> {
   // Los cupos se devuelven con la cantidad de la tabla puente, no con la del
   // hold: así una reserva de varias franjas devuelve exactamente lo que tomó.
@@ -174,10 +180,11 @@ export async function liberarHoldsVencidos(
       await cliente.$executeRaw`
         UPDATE "ServiceSlot"
            SET "heldCount" = GREATEST("heldCount" - ${s.quantity}, 0)
-         WHERE id = ${s.slotId}::uuid
+          WHERE id = ${s.slotId}::uuid
       `;
     }
     liberadas += 1;
+    await alExpirar?.(reserva.id);
   }
   return liberadas;
 }
