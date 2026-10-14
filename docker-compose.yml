@@ -26,6 +26,8 @@ services:
       context: .
       dockerfile: Dockerfile
     image: omega-complex:latest
+    # Nombre fijo: el instalador y los comandos de la guía lo buscan por aquí.
+    container_name: omega-web
     restart: unless-stopped
     depends_on:
       migrate:
