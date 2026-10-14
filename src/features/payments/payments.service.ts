@@ -451,3 +451,24 @@ async function notificarPagoRechazado(reservationId: string, motivo?: string | n
 export function appUrl(): string {
   return env.NEXT_PUBLIC_APP_URL;
 }
+
+/**
+ * Consulta una Checkout Session ya abierta.
+ *
+ * La usa /pagando/[id] para no abrir una sesión nueva cada vez que el cliente
+ * recarga o hace clic otra vez. Si la sesión ya se completó o expiró, Stripe lo
+ * dice y el flujo sigue por la creación de una nueva.
+ */
+export async function getCheckoutSession(
+  sessionId: string,
+  stripeClient: StripeCheckoutClient = getStripe(),
+): Promise<{ status: string; url: string | null } | null> {
+  try {
+    const sesion = await stripeClient.checkout.sessions.retrieve(sessionId);
+    return { status: sesion.status ?? "unknown", url: sesion.url ?? null };
+  } catch {
+    // Una sesión que Stripe ya no conoce vale lo mismo que no tener ninguna:
+    // se avisa con null y quien llama abre una nueva.
+    return null;
+  }
+}

@@ -3,11 +3,11 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { TriangleAlert } from "lucide-react";
 
-import { createCheckoutSession } from "@/features/payments/payments.service";
+import { createCheckoutSession, getCheckoutSession } from "@/features/payments/payments.service";
 import { getSession } from "@/shared/auth/session";
 import { db } from "@/shared/lib/db";
 import { getCustomerReservation } from "@/features/reservations/reservations.repository";
-import { getPaymentBySessionId } from "@/features/payments/payments.repository";
+import { listPaymentsByReservation } from "@/features/payments/payments.repository";
 
 export const metadata: Metadata = { title: "Ir a pagar" };
 
@@ -51,10 +51,35 @@ export default async function PagandoPage({
     redirect(`/mis-reservas?reserva=${id}&pago=exitoso`);
   }
 
-  // Reintento del mismo clic: si ya existe una sesión abierta se reutiliza en
-  // lugar de crear otra, así no se acumulan sesiones ni cobros.
-  const pagoPrevio = await getPaymentBySessionId;
-  void pagoPrevio;
+  // Reintento del mismo clic: si ya existe una sesión de pago viva se reutiliza
+  // en lugar de abrir otra.
+  //
+  // Antes esto no hacía nada: asignaba la función `getPaymentBySessionId` a una
+  // variable y la descartaba, sin consultar nada. Con eso, cada recarga de esta
+  // página abría una Checkout Session nueva: en tres visitas a /pagando/[id]
+  // quedaron tres sesiones de Stripe para la misma reserva. El dinero no se
+  // cobraba dos veces (la reserva solo transiciona una vez), pero se acumulaban
+  // sesiones abiertas que el cliente podía pagar por error.
+  const pagos = await listPaymentsByReservation(reserva.id);
+  const pagoVivo = pagos.find(
+    (p) =>
+      p.status === "pending" &&
+      typeof p.stripeSessionId === "string" &&
+      p.stripeSessionId.startsWith("cs_"),
+  );
+
+  if (pagoVivo) {
+    try {
+      const sesion = await getCheckoutSession(pagoVivo.stripeSessionId!);
+      // `open` significa que el cliente todavía puede pagar por esa sesión.
+      if (sesion && sesion.status === "open" && sesion.url) {
+        redirect(sesion.url);
+      }
+    } catch {
+      // Si Stripe no responde, se cae al flujo normal de abajo y se abre una
+      // sesión nueva en vez de dejar al cliente sin salida.
+    }
+  }
 
   try {
     const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
