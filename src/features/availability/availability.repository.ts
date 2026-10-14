@@ -7,7 +7,7 @@ import {
   nombreFestivo,
 } from "@/features/schedules/colombia-holidays";
 import { db } from "@/shared/lib/db";
-import type { DayAvailability, SlotAvailability } from "./availability.types";
+import type { DayAvailability, SlotAvailability, SlotStatus } from "./availability.types";
 
 // ---------------------------------------------------------------------------
 // Disponibilidad real: se cruzan ServiceSchedule (horario semanal),
@@ -300,14 +300,13 @@ export async function getDayAvailability(
   const disponibles: SlotAvailability[] = slots.map((s) => {
     const occupied = s.bookedCount + s.heldCount;
     const free = Math.max(s.capacity - occupied, 0);
-    const pasado = s.endsAt <= now;
     return {
       id: s.id,
       startsAt: s.startsAt,
       endsAt: s.endsAt,
       capacity: s.capacity,
       free,
-      status: pasado ? "past" : free === 0 ? "full" : "available",
+      status: estadoDeSlot(s.startsAt, free, now),
     };
   });
 
@@ -329,7 +328,7 @@ export async function getDayAvailability(
     reason: hayDisponibilidad
       ? null
       : disponibles.every((s) => s.status === "past")
-        ? "Las franjas de hoy ya terminaron"
+        ? "Las franjas de hoy ya empezaron o terminaron"
         : "Todas las franjas de este día están completas",
     openTime: schedule.openTime,
     closeTime: schedule.closeTime,
@@ -403,9 +402,22 @@ export async function getSlotsInRange(
       endsAt: s.endsAt,
       capacity: s.capacity,
       free,
-      status: s.endsAt <= now ? "past" : free === 0 ? "full" : "available",
+      status: estadoDeSlot(s.startsAt, free, now),
     };
   });
+}
+
+/**
+ * Estado de una franja frente al reloj.
+ *
+ * P2-1: pasado = ya empezó (`startsAt <= now`), no ya terminó. La escritura
+ * exige `startsAt > now` (§12 franjas ya iniciadas), así que una franja
+ * iniciada se mostraba disponible y luego fallaba al reservar.
+ */
+export function estadoDeSlot(startsAt: Date, free: number, now: Date): SlotStatus {
+  if (startsAt <= now) return "past";
+  if (free === 0) return "full";
+  return "available";
 }
 
 /** Date-only para comparar con las columnas @db.Date de ServiceClosure. */
