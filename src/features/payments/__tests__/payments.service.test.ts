@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   db: {
     reservation: { findUnique: vi.fn() },
     reservationHold: { findFirst: vi.fn() },
-    payment: { update: vi.fn() },
+    payment: { update: vi.fn(), findFirst: vi.fn() },
   },
   createSession: vi.fn(),
 }));
@@ -166,9 +166,25 @@ describe("createCheckoutSession", () => {
 describe("confirmarPagoExitoso", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    // Caso base: pago pendiente, reserva pendiente y hold vigente.
+    mocks.db.payment.findFirst.mockResolvedValue({
+      id: "pay-1",
+      reservationId: "res-1",
+      status: "pending",
+    });
+    mocks.db.reservation.findUnique.mockResolvedValue({
+      id: "res-1",
+      status: "pending_payment",
+    });
+    mocks.db.reservationHold.findFirst.mockResolvedValue({ id: "hold-1" });
   });
 
   it("liquida, traslada cupos y emite QR una sola vez", async () => {
+    // Primera lectura (pre-chequeo): pendiente. Segunda (post-liquidación):
+    // confirmed. Así se cierra la carrera del hold que expira en el medio.
+    mocks.db.reservation.findUnique
+      .mockResolvedValueOnce({ id: "res-1", status: "pending_payment" })
+      .mockResolvedValue({ id: "res-1", status: "confirmed" });
     mocks.repository.settlePayment.mockResolvedValue({
       payment: { id: "pay-1", reservationId: "res-1" },
       transitioned: true,
@@ -188,6 +204,11 @@ describe("confirmarPagoExitoso", () => {
   });
 
   it("si el pago ya estaba liquidado no toca cupos ni QR", async () => {
+    mocks.db.payment.findFirst.mockResolvedValue({
+      id: "pay-1",
+      reservationId: "res-1",
+      status: "succeeded",
+    });
     mocks.repository.settlePayment.mockResolvedValue({
       payment: { id: "pay-1", reservationId: "res-1" },
       transitioned: false,
@@ -199,7 +220,48 @@ describe("confirmarPagoExitoso", () => {
     });
 
     expect(result).toEqual({ transitioned: false, emitidos: [] });
+    expect(mocks.repository.settlePayment).not.toHaveBeenCalled();
     expect(mocks.repository.consumirHoldYTrasladarCupos).not.toHaveBeenCalled();
+    expect(mocks.qr.emitirQrDeReserva).not.toHaveBeenCalled();
+  });
+
+  it("P0-3: reserva expirada no se liquida ni emite QRs", async () => {
+    mocks.db.reservation.findUnique.mockResolvedValue({ id: "res-1", status: "expired" });
+
+    await expect(
+      confirmarPagoExitoso({ paymentId: "pay-1", stripePaymentIntentId: "pi_1" }),
+    ).rejects.toMatchObject({ code: "PAGO_TARDIO_REQUIERE_REVISION" });
+
+    expect(mocks.repository.settlePayment).not.toHaveBeenCalled();
+    expect(mocks.repository.consumirHoldYTrasladarCupos).not.toHaveBeenCalled();
+    expect(mocks.qr.emitirQrDeReserva).not.toHaveBeenCalled();
+  });
+
+  it("P0-3: sin hold vigente no se liquida ni emite QRs", async () => {
+    mocks.db.reservationHold.findFirst.mockResolvedValue(null);
+
+    await expect(
+      confirmarPagoExitoso({ paymentId: "pay-1", stripePaymentIntentId: "pi_1" }),
+    ).rejects.toMatchObject({ code: "PAGO_TARDIO_REQUIERE_REVISION" });
+
+    expect(mocks.repository.settlePayment).not.toHaveBeenCalled();
+    expect(mocks.qr.emitirQrDeReserva).not.toHaveBeenCalled();
+  });
+
+  it("P0-3: si la reserva no quedó confirmed tras liquidar, no emite QRs", async () => {
+    // El hold expiró entre la verificación y la liquidación (carrera).
+    mocks.db.reservation.findUnique
+      .mockResolvedValueOnce({ id: "res-1", status: "pending_payment" })
+      .mockResolvedValue({ id: "res-1", status: "expired" });
+    mocks.repository.settlePayment.mockResolvedValue({
+      payment: { id: "pay-1", reservationId: "res-1" },
+      transitioned: true,
+    });
+
+    await expect(
+      confirmarPagoExitoso({ paymentId: "pay-1", stripePaymentIntentId: "pi_1" }),
+    ).rejects.toMatchObject({ code: "PAGO_TARDIO_REQUIERE_REVISION" });
+
     expect(mocks.qr.emitirQrDeReserva).not.toHaveBeenCalled();
   });
 });

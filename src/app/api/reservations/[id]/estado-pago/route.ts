@@ -4,10 +4,10 @@ import { db } from "@/shared/lib/db";
 import { getStripe } from "@/shared/lib/stripe";
 import { handler } from "@/shared/http/handler";
 import { ok } from "@/shared/http/api-response";
-import { NotFoundError, UnauthorizedError } from "@/shared/http/errors";
+import { NotFoundError, UnauthorizedError, HttpError } from "@/shared/http/errors";
 import { getSession } from "@/shared/auth/session";
 import { getPaymentBySessionId } from "@/features/payments/payments.repository";
-import { confirmarPagoExitoso } from "@/features/payments/payments.service";
+import { confirmarPagoExitoso, PAGO_TARDIO_CODE } from "@/features/payments/payments.service";
 
 /**
  * Estado del pago de una reserva, para la pantalla de espera.
@@ -76,7 +76,13 @@ export const GET = handler(
               recuperado: r.transitioned,
             }),
           );
-        } catch {
+        } catch (error) {
+          // Pago tardío: decir "procesando" sería mentira, el hold ya expiró.
+          if (error instanceof HttpError && error.code === PAGO_TARDIO_CODE) {
+            return NextResponse.json(
+              ok({ estado: "requiere-revision", qrDisponibles: false }),
+            );
+          }
           // El pago esta cobrado pero algo del lado nuestro fallo. Se dice
           // explicitamente para que la pagina no prometa QR que no hay.
           return NextResponse.json(
