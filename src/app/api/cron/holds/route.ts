@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { liberarHoldsVencidos } from "@/features/reservations/reservations.service";
+import { db } from "@/shared/lib/db";
 import { ok } from "@/shared/http/api-response";
 import { handler } from "@/shared/http/handler";
 import { logger } from "@/shared/lib/logger";
@@ -19,7 +20,7 @@ export const GET = handler(async (req: NextRequest) => {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const liberadas = await liberarHoldsVencidos();
+  const liberadas = await liberarHoldsVencidos(new Date(), db, null);
   logger.info("cron.holds_liberados", { liberadas });
   return NextResponse.json(ok({ liberadas }));
 });

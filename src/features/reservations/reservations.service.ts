@@ -131,9 +131,19 @@ type ClienteReserva = Pick<
  * condicionado por estado hace que la operación sea idempotente: si dos
  * peticiones intentan expirar la misma reserva, solo una devuelve cupos.
  */
+/**
+ * Libera los holds vencidos y devuelve sus cupos al inventario.
+ *
+ * P2-4: `limite` acota el trabajo por llamada (50 por defecto). Las lecturas
+ * de disponibilidad y la escritura llaman con el default para no frenar cada
+ * apertura de calendario con un barrido total; el cron pasa `null` (sin
+ * límite) porque ese sí es su trabajo. La operación es idempotente, así que
+ * lo que no alcance una pasada lo toma la siguiente.
+ */
 export async function liberarHoldsVencidos(
   now: Date = new Date(),
   cliente: ClienteReserva = db,
+  limite: number | null = 50,
 ): Promise<number> {
   // Los cupos se devuelven con la cantidad de la tabla puente, no con la del
   // hold: así una reserva de varias franjas devuelve exactamente lo que tomó.
@@ -142,6 +152,7 @@ export async function liberarHoldsVencidos(
       status: "pending_payment",
       holds: { some: { status: "active", expiresAt: { lte: now } } },
     },
+    ...(limite === null ? {} : { take: limite }),
     select: { id: true, slots: { select: { slotId: true, quantity: true } } },
   });
 
