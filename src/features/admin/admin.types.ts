@@ -206,6 +206,22 @@ export interface MetricasRango {
   reservasPorCategoria: Array<{ categoryName: string; total: number }>;
 }
 
+/** Fase 4.2 (§20): ocupación de una fecha configurable (misma forma que hoy). */
+export interface OcupacionFecha {
+  fecha: string;
+  occupancyToday: { used: number; total: number } | null;
+  occupancyByService: Array<{ serviceId: string; serviceName: string; used: number; total: number }>;
+}
+
+/**
+ * Fase 4.2 (§20): usadas vs no usadas. No usada = confirmada con fecha
+ * pasada y ningún QR consumido (definición estricta aprobada).
+ */
+export interface UsoReservas {
+  usadas: number;
+  noUsadas: number;
+}
+
 export const RESERVATION_STATUSES = [
   "pending_payment",
   "payment_processing",
