@@ -65,7 +65,21 @@ export const POST = handler(async (req) => {
     payload: event.data.object as unknown,
   });
   if (!applied) {
-    // Evento repetido: se acusa recibo para que Stripe deje de reintentar.
+    // Evento repetido: normalmente se acusa recibo sin reprocesar. Pero si el
+    // intento anterior se cayó a mitad de la liquidación (P1-1), el pago sigue
+    // `pending` y hay que terminar el trabajo en vez de ignorarlo; si no, la
+    // reserva quedaría cobrada y sin confirmar para siempre.
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const payment = await getPaymentBySessionId(session.id);
+      if (payment && payment.status === "pending") {
+        logger.warn("webhook.reintento_termina_liquidacion", { paymentId: payment.id });
+        const { qrEmitidos } = await handleCheckoutCompleted(session);
+        return NextResponse.json(
+          ok({ received: true, duplicate: true, recuperado: true, qrEmitidos }),
+        );
+      }
+    }
     return NextResponse.json(ok({ received: true, duplicate: true }));
   }
 
