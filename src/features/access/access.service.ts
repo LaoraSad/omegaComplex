@@ -3,6 +3,7 @@ import {
   findEmployeeByUserId,
   findQrByTokenHash,
   grantAccess,
+  huboDenegacionReciente,
   marcarQrExpirado,
   type EmployeeForAccess,
 } from "./access.repository";
@@ -237,6 +238,11 @@ export async function recordDenial(input: {
 }): Promise<void> {
   const qr = await findQrByTokenHash(input.rawToken);
   if (!qr) return;
+  // P2-6: sin este freno, reintentar el mismo QR llenaba Accesos de filas
+  // idénticas. El primer rechazo queda; los siguientes (5 min) se omiten.
+  if (await huboDenegacionReciente({ qrTokenId: qr.qrTokenId, employeeId: input.employee.id, reason: input.reason })) {
+    return;
+  }
   await grantAccess({
     qrTokenId: qr.qrTokenId,
     employeeId: input.employee.id,

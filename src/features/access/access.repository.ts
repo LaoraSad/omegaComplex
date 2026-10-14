@@ -283,6 +283,32 @@ export async function grantAccess(input: {
   });
 }
 
+/**
+ * ¿Ya se registró este mismo rechazo hace poco? (P2-6)
+ *
+ * Cada lookup fallido se registra para auditoría, pero un empleado probando el
+ * mismo QR generaba N filas idénticas que contaminan las métricas. Ventana de
+ * 5 minutos por (QR, empleado, motivo): dentro de ella el duplicado se omite.
+ */
+export async function huboDenegacionReciente(input: {
+  qrTokenId: string;
+  employeeId: string;
+  reason: string;
+  ventanaMs?: number;
+}): Promise<boolean> {
+  const desde = new Date(Date.now() - (input.ventanaMs ?? 5 * 60 * 1000));
+  const count = await db.access.count({
+    where: {
+      qrTokenId: input.qrTokenId,
+      employeeId: input.employeeId,
+      result: "denied",
+      denialReason: input.reason,
+      accessedAt: { gte: desde },
+    },
+  });
+  return count > 0;
+}
+
 /** Historial de ingresos del propio empleado para su vista. */
 export async function countAllowedAccessToday(employeeId: string): Promise<number> {
   const { start, end } = bogotaRange(new Date());
