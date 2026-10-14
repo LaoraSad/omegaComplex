@@ -6,8 +6,7 @@ Convención: **P0** = rompe operación real / cobra mal / inconsistencia de dato
 
 > Restricción v2.0: no se toca Stripe real ni n8n (otra persona). Los fixes se
 > prueban con mocks + reloj congelado, sin `stripe listen`.
-> Cada bug lleva su commit a nombre local. Estado a 2026-10-14: P2-6 pendiente,
-> resto hecho.
+> Cada bug lleva su commit a nombre local. Estado: todos hechos (P2-6 el último).
 
 ## Migraciones aplicadas (BD dev al día)
 
@@ -164,11 +163,13 @@ Convención: **P0** = rompe operación real / cobra mal / inconsistencia de dato
   cuándo/motivo.
 - Tests: servicio asserts el flag + schema rechaza sin confirmación.
 
-### P2-6. Spam de `Access denied` — PENDIENTE
-- `access/validate/route.ts:73-75` crea fila `denied` en cada lookup fallido.
-- Fix previsto: deduplicar / rate-limit por QR+empleado+ventana.
+### P2-6. Spam de `Access denied` — HECHO (`9297068`)
+- Causa: la ruta creaba fila `denied` en cada lookup fallido; reintentar el
+  mismo QR generaba N filas idénticas que contaminan métricas.
+- Qué se hizo: `huboDenegacionReciente()` (mismo QR + empleado + motivo en
+  5 min) y `recordDenial` omite el duplicado. El primer rechazo siempre queda.
+- Tests: servicio (registra/omite) + repositorio (where + ventana).
 
 ## Orden restante
-1. P2-6.
-2. Alcance `decisiones-v2.0.md`: perfil cliente, correos app, métricas,
+1. Alcance `decisiones-v2.0.md`: perfil cliente, correos app, métricas,
    `.env.example` + URL, E2E y concurrencia.
