@@ -36,6 +36,7 @@ vi.mock("@/shared/pdf/qr-pdf", () => ({ generarPdfQr: async () => new Uint8Array
 
 import { ConflictError, NotFoundError } from "@/shared/http/errors";
 import {
+  aCentimos,
   confirmarPagoExitoso,
   createCheckoutSession,
   rechazarPago,
@@ -266,8 +267,25 @@ describe("confirmarPagoExitoso", () => {
   });
 });
 
-describe("rechazarPago", () => {
-  it("marca fallido y libera los cupos retenidos", async () => {
+describe("aCentimos (P0-2: puente pesos -> Stripe, comportamiento congelado)", () => {
+  it("100.000 COP viajan como 10.000.000", () => {
+    expect(aCentimos(100000)).toBe(10000000);
+  });
+
+  it("24.000 COP viajan como 2.400.000", () => {
+    expect(aCentimos(24000)).toBe(2400000);
+  });
+
+  it("redondea fracciones a la unidad mínima entera", () => {
+    expect(aCentimos(100.5)).toBe(10050);
+  });
+
+  // NOTA para el responsable de Stripe: si COP fuera cero-decimal en la
+  // cuenta, este ×100 cobraría 100x. No cambiar sin pago de prueba en test
+  // mode que confirme que el checkout muestra lo mismo que la app.
+});
+
+describe("rechazarPago", () => {  it("marca fallido y libera los cupos retenidos", async () => {
     mocks.repository.rejectPayment.mockResolvedValue({ id: "pay-1", reservationId: "res-1" });
     mocks.repository.liberarCuposDeReserva.mockResolvedValue({ applied: true });
 

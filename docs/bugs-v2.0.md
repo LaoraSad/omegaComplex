@@ -25,10 +25,18 @@ Convención: **P0** = rompe operación real / cobra mal / inconsistencia de dato
   de Stripe usa 2 decimales para COP y envía `100.000 COP → 10.000.000`.
 - Stripe lista COP como moneda **cero-decimal** (monto en pesos, sin centavos).
   Si es así, se cobra 100 veces el precio real.
-- **No tocar Stripe en v2.0**: el fix en app es aislar la conversión en `aCentimos`
-  + test que congele el comportamiento actual, y dejar marcada la verificación
-  contra la cuenta de Stripe (lo hace la otra persona) antes de producción.
-  Si COP es cero-decimal, `aCentimos` debe ser identidad + validar monto mínimo.
+- **Hecho en v2.0 (vía A, sin tocar Stripe):**
+  - `aCentimos` exportada y aislada como único puente pesos → Stripe, con
+    advertencia en el comentario: no cambiar el multiplicador sin pago de prueba.
+  - Tests que congelan el comportamiento actual (`payments.service.test.ts`:
+    bloque `aCentimos` + asserts `100000→10000000` en checkout).
+  - El comportamiento NO cambió: las reservas nuevas envían lo mismo que antes.
+    Stripe no recibe nada retroactivo; lo ya creado allá queda intacto.
+- **Pendiente (responsable de Stripe, antes de producción):**
+  1. Confirmar en la cuenta/docs si COP espera centavos (×100) o pesos (×1).
+  2. Pago real en modo prueba y comparar lo mostrado en el checkout vs la app.
+  3. Si es ×1: cambiar `aCentimos` a identidad + validar monto mínimo,
+     actualizar tests y repetir el pago de prueba. Si es ×100: solo dejar constancia.
 
 ### P0-3. Pago tardío tras expirar deja pago `succeeded` + reserva `expired` + QRs emitidos
 - `src/app/api/reservations/[id]/estado-pago/route.ts:62-70`: si Stripe dice `paid`,
