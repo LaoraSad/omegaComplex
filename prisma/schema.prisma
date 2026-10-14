@@ -77,6 +77,10 @@ model Service {
   description String?
   price       Int
   capacity    Int
+  // Fase 1: el admin gestiona servicios sin SQL. Foto para portada/360
+  // (validar 2:1 en el formulario) y activo para ocultar sin borrar.
+  imagen      String?
+  isActive    Boolean @default(true)
 
   category            Category             @relation(fields: [categoryId], references: [id])
   serviceSchedules    ServiceSchedule[]

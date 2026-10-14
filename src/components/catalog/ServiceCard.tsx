@@ -14,7 +14,7 @@ interface ServiceCardProps {
 }
 
 export default function ServiceCard({ service, onElegirFranja }: ServiceCardProps) {
-  const image = servicePhoto(service.slug);
+  const image = service.imagen ?? servicePhoto(service.slug);
   const formattedPrice = new Intl.NumberFormat('es-CO', {
     style: 'currency',
     currency: 'COP',

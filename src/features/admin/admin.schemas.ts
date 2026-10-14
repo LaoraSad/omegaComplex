@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { slugifyCategory } from "@/features/catalog/catalog.schemas";
+
 // Validación de la gestión de empleados (SCRUM sección 21).
 // El documento y el correo son únicos en la base de datos, por eso se
 // recortan y normalizan antes de validar.
@@ -81,3 +83,55 @@ export type EmployeeZonesInput = z.infer<typeof employeeZonesSchema>;
 export function firstIssue(error: z.ZodError): string {
   return error.issues[0]?.message ?? "Revisa los datos ingresados.";
 }
+
+// Gestión de servicios (Fase 1, SCRUM sección 5).
+// El slug se deriva del nombre como en categorías; la proporción 2:1 de la
+// foto (tour 360) se valida en el formulario con el objeto Image del navegador,
+// porque acá solo llega la ruta y no las dimensiones.
+const serviceNameSchema = z
+  .string()
+  .trim()
+  .min(2, "El nombre debe tener al menos 2 caracteres")
+  .max(80)
+  .refine((name) => slugifyCategory(name).length > 0, "El nombre debe contener letras o números");
+
+const serviceDescriptionSchema = z.string().trim().max(500, "La descripción no puede superar 500 caracteres").optional();
+
+const servicePriceSchema = z.coerce
+  .number({ message: "Indica un precio válido" })
+  .int("El precio debe ser un número entero")
+  .min(0, "El precio no puede ser negativo")
+  .max(100_000_000, "El precio es demasiado alto");
+
+const serviceCapacitySchema = z.coerce
+  .number({ message: "Indica una capacidad válida" })
+  .int("La capacidad debe ser un número entero")
+  .min(1, "La capacidad mínima es 1 persona")
+  .max(1000, "La capacidad es demasiado alta");
+
+const serviceImageSchema = z.string().trim().max(500).optional();
+
+const serviceCategorySchema = z.string().trim().uuid("La categoría no es válida");
+
+export const serviceCreateSchema = z.object({
+  categoryId: serviceCategorySchema,
+  name: serviceNameSchema,
+  description: serviceDescriptionSchema,
+  price: servicePriceSchema,
+  capacity: serviceCapacitySchema,
+  imagen: serviceImageSchema,
+  isActive: z.boolean().optional(),
+});
+
+export const serviceUpdateSchema = z.object({
+  categoryId: serviceCategorySchema.optional(),
+  name: serviceNameSchema.optional(),
+  description: serviceDescriptionSchema.nullable().optional(),
+  price: servicePriceSchema.optional(),
+  capacity: serviceCapacitySchema.optional(),
+  imagen: serviceImageSchema.nullable().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export type ServiceCreateInput = z.infer<typeof serviceCreateSchema>;
+export type ServiceUpdateInput = z.infer<typeof serviceUpdateSchema>;

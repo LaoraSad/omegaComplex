@@ -225,6 +225,10 @@ function AvisoSinFranjas({ dia }: { dia: DayAvailability | null }) {
       titulo: dia.reason ?? 'Instalación cerrada',
       detalle: 'El administrador la cerró temporalmente. Elige otra fecha.',
     },
+    servicio_inactivo: {
+      titulo: 'Instalación no disponible',
+      detalle: 'Esta instalación está desactivada por el administrador. Elige otra.',
+    },
     sin_horario: { titulo: 'Cerrado este día', detalle: 'Esta instalación no atiende hoy.' },
     horario_invalido: { titulo: 'Horario no válido', detalle: 'Elige otra fecha.' },
     sin_franjas: { titulo: 'Sin franjas', detalle: 'Ese día no tiene franjas generadas.' },
