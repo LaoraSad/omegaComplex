@@ -4,15 +4,16 @@
 # la app. Si eso falla, `web` no arranca: es preferible que el contenedor caiga
 # y lo notes a que levante una app contra una base sin tablas.
 #
-# `migrate` se construye sobre la etapa `builder` del Dockerfile porque la
-# imagen final de Next (standalone) no incluye el CLI de Prisma.
+# `migrate` se construye sobre la etapa `migrator` del Dockerfile porque la
+# imagen final de Next (standalone) no incluye el CLI de Prisma. Ojo: NO usar
+# `builder` aqui, que corre `next build` y duplicaria el build en el VPS.
 
 services:
   migrate:
     build:
       context: .
       dockerfile: Dockerfile
-      target: builder
+      target: migrator
     command: >
       sh -c "npx prisma migrate deploy && npx prisma db seed"
     env_file:
