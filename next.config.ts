@@ -3,7 +3,6 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactCompiler: true,
   output: "standalone",
-  turbopack: false,
   images: {
     // AVIF primero (más liviano), WebP como fallback. Sharp hace el encodeo.
     formats: ["image/avif", "image/webp"],
