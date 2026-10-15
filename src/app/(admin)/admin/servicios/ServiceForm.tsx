@@ -241,11 +241,6 @@ export function ServiceForm({
             <label htmlFor={mode === "create" ? "svc-img" : "svc-img-edit"} className={labelCls}>
               Foto de la instalación
             </label>
-            {/* Antes era un campo de texto donde había que escribir la ruta a
-                mano (/newassets/mi-foto.webp), y lo fácil era equivocarse:
-                una ruta mal escrita deja la publicación en negro sin aviso.
-                Ahora se elige de una lista que sale de los archivos que de
-                verdad están en public/newassets. */}
             <select
               id={mode === "create" ? "svc-img" : "svc-img-edit"}
               value={imagen}
