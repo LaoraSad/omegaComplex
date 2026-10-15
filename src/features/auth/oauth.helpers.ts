@@ -13,8 +13,25 @@ export function googleConfigured(): boolean {
 
 /** Debe coincidir exactamente con la URI de redireccion registrada en Google. */
 export function googleRedirectUri(): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  return `${base.replace(/\/+$/, "")}/api/auth/oauth/google/callback`;
+  const base = process.env.NEXT_PUBLIC_APP_URL;
+  if (!base) {
+    throw new Error(
+      "NEXT_PUBLIC_APP_URL no está configurado. Define la URL pública de la app (ej. https://tudominio.com) en las variables de entorno.",
+    );
+  }
+  try {
+    const parsed = new URL(base);
+    if (parsed.hostname === "0.0.0.0" || parsed.hostname === "localhost") {
+      if (process.env.NODE_ENV === "production") {
+        throw new Error(
+          `NEXT_PUBLIC_APP_URL apunta a ${parsed.hostname}, no válido en producción. Configura tu dominio real.`,
+        );
+      }
+    }
+    return `${parsed.origin}/api/auth/oauth/google/callback`;
+  } catch {
+    throw new Error(`NEXT_PUBLIC_APP_URL inválido: "${base}". Debe ser una URL completa (ej. https://tudominio.com).`);
+  }
 }
 
 export function googleAuthUrl(state: string): string {
