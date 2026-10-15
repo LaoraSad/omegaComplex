@@ -255,11 +255,6 @@ export function ServiceForm({
                 </option>
               ))}
             </select>
-            <p className="text-[0.7rem] leading-relaxed text-white/45">
-              Son las fotos que hay en <code className="text-white/60">public/newassets</code>.
-              Si eliges “sin foto propia”, el catálogo usa la que tiene asignada por
-              defecto; el tour 360 también.
-            </p>
             {aviso360 ? <p role="status" className="text-xs font-semibold text-amber-300">{aviso360}</p> : null}
           </div>
 
