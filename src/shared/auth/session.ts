@@ -1,5 +1,5 @@
-// Lectura de sesión actual.
-import { cookies } from "next/headers";
+// Lectura de sesión actual. Soporta Authorization header (sessionStorage) y cookie (legacy).
+import { cookies, headers } from "next/headers";
 
 import { db } from "@/shared/lib/db";
 import { verifyToken, createToken } from "./jwt";
@@ -11,9 +11,22 @@ export type Session = {
 
 const SESSION_COOKIE = "session";
 
-export async function getSession(): Promise<Session> {
+async function extractTokenFromHeaders(): Promise<string | null> {
+  const headersList = await headers();
+  const authHeader = headersList.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.slice(7);
+  }
+  return null;
+}
+
+async function extractTokenFromCookie(): Promise<string | null> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  return cookieStore.get(SESSION_COOKIE)?.value ?? null;
+}
+
+export async function getSession(): Promise<Session> {
+  const token = await extractTokenFromHeaders() ?? await extractTokenFromCookie();
 
   if (!token) {
     return null;
@@ -21,8 +34,6 @@ export async function getSession(): Promise<Session> {
 
   try {
     const payload = await verifyToken(token);
-    // P1-5: la firma no basta. Si la contraseña cambió (tokenVersion) o la
-    // cuenta se desactivó, el token queda revocado aunque no haya vencido.
     const user = await db.user.findUnique({
       where: { id: payload.userId },
       select: { isActive: true, tokenVersion: true },
@@ -35,12 +46,11 @@ export async function getSession(): Promise<Session> {
     return null;
   }
 }
+
 export async function createSession(
   userId: string,
   role: "user" | "admin" | "employee",
-) {
-  // La versión vigente viaja en el token: así un cambio de contraseña
-  // posterior revoca esta sesión sin lista de revocación.
+): Promise<string> {
   const user = await db.user.findUnique({
     where: { id: userId },
     select: { tokenVersion: true },
@@ -60,10 +70,11 @@ export async function createSession(
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
   });
+
+  return token;
 }
 
-export async function deleteSession() {
+export async function deleteSession(): Promise<void> {
   const cookieStore = await cookies();
-
   cookieStore.delete(SESSION_COOKIE);
 }

@@ -10,6 +10,7 @@ export type AuthUser = {
   phone?: string | null;
   role: string;
   emailVerified?: boolean;
+  token?: string;
 };
 
 export type UpdateProfileResult = {
@@ -34,12 +35,17 @@ export const AUTH_API_PATHS = {
 export type RegistrationResult = {
   email: string;
   verificationEmailSent: boolean;
+  token?: string;
+  id?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string | null;
+  role?: string;
+  emailVerified?: boolean;
 };
 
 export class AuthApiError extends Error {
   status?: number;
-  /** Código de negocio del servidor, por ejemplo `EMAIL_NOT_VERIFIED`. Permite
-   * que la interfaz reaccione sin tener que adivinarlo por el texto. */
   code?: string;
 
   constructor(message: string, status?: number, code?: string) {
@@ -64,7 +70,6 @@ function getErrorCode(value: unknown): string | undefined {
 function getErrorMessage(value: unknown): string | undefined {
   if (!isRecord(value)) return undefined;
 
-  // Formato interno { data, error: { code, message } }
   const nested = value.error;
   if (isRecord(nested) && typeof nested.message === "string" && nested.message.trim()) {
     return nested.message;
@@ -74,12 +79,35 @@ function getErrorMessage(value: unknown): string | undefined {
   return typeof message === "string" && message.trim() ? message : undefined;
 }
 
+const TOKEN_KEY = "auth_token";
+
+function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(TOKEN_KEY);
+}
+
+function setToken(token: string): void {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(TOKEN_KEY, token);
+}
+
+function clearToken(): void {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(TOKEN_KEY);
+}
+
 async function request<T>(path: string, body?: unknown): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch(path, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
     credentials: "include",
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
@@ -88,8 +116,15 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
 }
 
 async function requestGet<T>(path: string): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch(path, {
     method: "GET",
+    headers,
     credentials: "include",
   });
 
@@ -97,11 +132,17 @@ async function requestGet<T>(path: string): Promise<T> {
 }
 
 async function requestPatch<T>(path: string, body: unknown): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch(path, {
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
     credentials: "include",
     body: JSON.stringify(body),
   });
@@ -120,9 +161,12 @@ async function readEnvelope<T>(response: Response): Promise<T> {
   }
 
   if (response.ok) {
-    // La API responde { data, error: null }
     if (isRecord(payload) && "data" in payload) {
-      return payload.data as T;
+      const data = payload.data as Record<string, unknown>;
+      if (typeof data.token === "string") {
+        setToken(data.token);
+      }
+      return data as T;
     }
     return payload as T;
   }
@@ -134,20 +178,26 @@ async function readEnvelope<T>(response: Response): Promise<T> {
   throw new AuthApiError(message, response.status, getErrorCode(payload));
 }
 
-export function login(data: LoginData): Promise<AuthUser> {
-  return request<AuthUser>(AUTH_API_PATHS.login, data);
+export async function login(data: LoginData): Promise<AuthUser> {
+  const result = await request<AuthUser>(AUTH_API_PATHS.login, data);
+  if (result.token) {
+    setToken(result.token);
+  }
+  return result;
 }
 
-export function register(data: RegisterData): Promise<RegistrationResult> {
-  return request<RegistrationResult>(AUTH_API_PATHS.register, data);
+export async function register(data: RegisterData): Promise<RegistrationResult> {
+  const result = await request<RegistrationResult>(AUTH_API_PATHS.register, data);
+  if (result.token) {
+    setToken(result.token);
+  }
+  return result;
 }
 
 export async function logout(): Promise<void> {
-  // Antes de cerrar la sesión: el carrito en sessionStorage guarda nombres y
-  // documentos de acompañantes. Sin sesión cerrada el logout deja en memoria
-  // lo que se puede reutilizar, así que se limpia de una.
   borrarCarritoGuardado();
-  return request<void>(AUTH_API_PATHS.logout);
+  clearToken();
+  await request<void>(AUTH_API_PATHS.logout);
 }
 
 export function me(): Promise<AuthUser> {
@@ -178,8 +228,14 @@ export function updateProfile(data: { phone?: string; email?: string }): Promise
   return requestPatch<UpdateProfileResult>(AUTH_API_PATHS.me, data);
 }
 
-// No hay loginWithGoogle a propósito: el OAuth con Google vive en su
-// callback y un stub de login lo deshabilitaría.
 export function getAuthErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
+}
+
+export function isAuthenticated(): boolean {
+  return getToken() !== null;
+}
+
+export function getStoredToken(): string | null {
+  return getToken();
 }

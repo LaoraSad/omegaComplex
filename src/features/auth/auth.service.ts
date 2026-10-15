@@ -109,7 +109,16 @@ export async function register(input: RegisterInput) {
       requiereCodigo: true,
     });
 
-    return { email: user.email, verificationEmailSent };
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      role: user.role.name,
+      emailVerified: user.emailVerified,
+      verificationEmailSent,
+    };
   } catch (error) {
     // Condición de carrera en unique (email/document).
     if (

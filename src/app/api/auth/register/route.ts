@@ -6,6 +6,7 @@ import { register } from "@/features/auth/auth.service";
 import { ok } from "@/shared/http/api-response";
 import { ValidationError } from "@/shared/http/errors";
 import { handler } from "@/shared/http/handler";
+import { createSession } from "@/shared/auth/session";
 
 export const POST = handler(async (req: NextRequest) => {
   const body = await req.json();
@@ -17,8 +18,9 @@ export const POST = handler(async (req: NextRequest) => {
   }
 
   const user = await register(result.data);
+  const token = await createSession(user.id, user.role as "user" | "admin" | "employee");
 
-  return NextResponse.json(ok(user), {
+  return NextResponse.json(ok({ ...user, token }), {
     status: 201,
   });
 });

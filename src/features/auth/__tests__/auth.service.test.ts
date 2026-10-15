@@ -34,6 +34,7 @@ const newUser = {
   lastName: "Lopez",
   phone: "+573001234567",
   role: { name: "user" },
+  emailVerified: false,
 };
 
 describe("auth service email verification", () => {
@@ -59,7 +60,16 @@ describe("auth service email verification", () => {
       birthDate: "1990-05-15",
     });
 
-    expect(result).toEqual({ email: newUser.email, verificationEmailSent: true });
+    expect(result).toEqual({
+      id: newUser.id,
+      email: newUser.email,
+      firstName: newUser.firstName,
+      lastName: newUser.lastName,
+      phone: newUser.phone,
+      role: "user",
+      emailVerified: false,
+      verificationEmailSent: true,
+    });
     expect(mocks.issueVerificationCode).toHaveBeenCalledWith({ id: newUser.id, email: newUser.email });
     expect(mocks.createSession).not.toHaveBeenCalled();
   });
