@@ -154,7 +154,8 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
       {result.rows.length > 0 ? (
         <div>
           <div className="atable-wrap">
-            <table className="atable">
+            <div className="atable-scroll">
+              <table className="atable">
               <thead>
                 <tr>
                   <th scope="col">Cliente</th>
@@ -211,7 +212,8 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
                   );
                 })}
               </tbody>
-            </table>
+              </table>
+            </div>
           </div>
           <Suspense>
             <Pagination

@@ -124,7 +124,8 @@ export default async function AccesosPage({ searchParams }: AccesosPageProps) {
       {result.rows.length > 0 ? (
         <div>
           <div className="atable-wrap">
-            <table className="atable">
+            <div className="atable-scroll">
+              <table className="atable">
               <thead>
                 <tr>
                   <th scope="col">Fecha y hora</th>
@@ -162,7 +163,8 @@ export default async function AccesosPage({ searchParams }: AccesosPageProps) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </div>
           </div>
           <Suspense>
             <Pagination

@@ -63,7 +63,8 @@ export default async function ClientesPage({ searchParams }: ClientesPageProps) 
       {rows.length > 0 ? (
         <div>
           <div className="atable-wrap">
-            <table className="atable">
+            <div className="atable-scroll">
+              <table className="atable">
               <thead>
                 <tr>
                   <th scope="col">Cliente</th>
@@ -98,7 +99,8 @@ export default async function ClientesPage({ searchParams }: ClientesPageProps) 
                   </tr>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </div>
           </div>
           <Suspense>
             <p className="apagination-info pt-4">

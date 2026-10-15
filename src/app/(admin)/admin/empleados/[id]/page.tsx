@@ -154,6 +154,7 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
         {accesses.rows.length > 0 ? (
           <div>
             <div className="atable-wrap">
+              <div className="atable-scroll">
               <table className="atable">
                 <thead>
                   <tr>
@@ -190,7 +191,8 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
                     </tr>
                   ))}
                 </tbody>
-            </table>
+              </table>
+              </div>
           </div>
           <Suspense>
             <Pagination

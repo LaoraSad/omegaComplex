@@ -48,7 +48,8 @@ export default async function HorariosPage() {
         </div>
         {services.some((s) => s.serviceSchedules.length > 0) ? (
           <div className="atable-wrap" style={{ border: "none" }}>
-            <table className="atable">
+            <div className="atable-scroll">
+              <table className="atable">
               <thead>
                 <tr>
                   <th scope="col">Instalación</th>
@@ -85,6 +86,7 @@ export default async function HorariosPage() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         ) : (
           <EmptyState

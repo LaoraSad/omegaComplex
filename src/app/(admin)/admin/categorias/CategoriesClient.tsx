@@ -156,7 +156,8 @@ export function CategoriesClient({ initialCategories }: { initialCategories: Cat
           <span className="akpi-label">{categories.length} en total</span>
         </div>
         <div className="atable-wrap">
-          <table className="atable">
+          <div className="atable-scroll">
+            <table className="atable">
             <thead>
               <tr><th scope="col">Nombre</th><th scope="col">Slug</th><th scope="col">Servicios</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr>
             </thead>
@@ -199,7 +200,8 @@ export function CategoriesClient({ initialCategories }: { initialCategories: Cat
               ))}
               {categories.length === 0 ? <tr><td colSpan={5} className="py-8 text-center text-sm text-[#b8aca6]">Aún no hay categorías registradas.</td></tr> : null}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       </section>
 

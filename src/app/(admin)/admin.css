@@ -1221,14 +1221,23 @@ a.atimeline-link:hover {
 /* ---------- Tablas ---------- */
 
 .atable-wrap {
-  overflow-x: auto;
   border: 1px solid var(--admin-border);
   border-radius: var(--admin-radius);
   background: var(--admin-surface);
-  /* En móvil el contenedor se desplaza en horizontal en vez de dejar que las
-     columnas se aplasten hasta ilegibles. `max-width:100%` evita que la tabla
-     estire el layout y empuje el resto del panel. */
+  /* La tarjeta NO desplaza: lleva el borde y el aro dorado (::before/::after),
+     que son `position:absolute` y por eso quedarían fijos mientras la tabla se
+     mueve. Quien desplaza es `.atable-scroll` (hijo). `max-width:100%` evita
+     que la tabla estire el layout y empuje el resto del panel. */
   max-width: 100%;
+}
+
+.atable-scroll {
+  /* En móvil este contenedor se desplaza en horizontal en vez de dejar que las
+     columnas se aplasten hasta ilegibles. `border-radius:inherit` recorta las
+     esquinas cuadradas de la tabla al radio de la tarjeta. */
+  overflow-x: auto;
+  max-width: 100%;
+  border-radius: inherit;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
 }
@@ -2988,7 +2997,6 @@ li[id^="servicio-"]:target {
 
 .atable-wrap {
   overflow: hidden;
-  overflow-x: auto;
   padding: 0;
 }
 
