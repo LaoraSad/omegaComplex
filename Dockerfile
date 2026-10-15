@@ -19,6 +19,13 @@ RUN npm ci
 # ---------------------------------------------------------------------------
 FROM node:20-alpine AS builder
 WORKDIR /app
+
+# NEXT_PUBLIC_* se incrusta en `next build`, no vale solo con el .env de
+# runtime. Se pasan como --build-arg (ver docker-compose.yml).
+ARG NEXT_PUBLIC_APP_URL=http://localhost:3000
+ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
