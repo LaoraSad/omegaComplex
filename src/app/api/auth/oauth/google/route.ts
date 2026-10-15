@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { newOAuthState } from "@/features/auth/oauth.repository";
 import { OAUTH_STATE_COOKIE } from "@/features/auth/oauth.constants";
 import { googleAuthUrl, googleConfigured } from "@/features/auth/oauth.helpers";
+import { appUrl } from "@/shared/lib/app-url";
 
 // ---------------------------------------------------------------------------
 // Paso 1 del acceso con Google: el boton del formulario apunta aqui.
@@ -13,9 +14,9 @@ import { googleAuthUrl, googleConfigured } from "@/features/auth/oauth.helpers";
 // El state se guarda en cookie httpOnly y se compara en el callback (CSRF).
 // ---------------------------------------------------------------------------
 
-export async function GET(request: Request): Promise<Response> {
+export async function GET(): Promise<Response> {
   if (!googleConfigured()) {
-    return Response.redirect(new URL("/login?error=oauth_no_configurado", request.url), 302);
+    return Response.redirect(appUrl("/login?error=oauth_no_configurado"), 302);
   }
 
   const state = newOAuthState();
