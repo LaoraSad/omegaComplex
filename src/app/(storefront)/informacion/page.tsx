@@ -11,6 +11,9 @@ import {
 } from "lucide-react";
 
 import { listCatalogServices } from "@/features/catalog";
+import DarkSection from "@/components/ui/DarkSection";
+import OmegaCard from "@/components/ui/OmegaCard";
+import SectionHeading from "@/components/ui/SectionHeading";
 
 export const metadata: Metadata = { title: "Información del complejo" };
 
@@ -42,24 +45,18 @@ export default async function InfoPage() {
   }
 
   return (
-    <div className="mega-dark-section relative min-h-screen overflow-hidden bg-[#0e0b0d] text-white">
+    <DarkSection className="min-h-screen">
       <main className="relative mx-auto max-w-5xl space-y-10 px-4 py-12 sm:px-6 lg:px-8">
         {/* Encabezado */}
-        <header className="space-y-2 text-center">
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#e3bd74]">
-            Guía del usuario
-          </span>
-          <h1 className="text-3xl font-black uppercase tracking-tight sm:text-4xl">
-            Información del complejo
-          </h1>
-          <p className="mx-auto max-w-xl text-sm text-white/60 sm:text-base">
-            Todo lo que necesitas saber antes de tu visita: horarios, acceso con QR y aforo de cada
-            área.
-          </p>
-        </header>
+        <SectionHeading
+          align="center"
+          kicker="Guía del usuario"
+          title="Información del complejo"
+          subtitle="Todo lo que necesitas saber antes de tu visita: horarios, acceso con QR y aforo de cada área."
+        />
 
         {/* Horarios y mantenimiento */}
-        <section className="space-y-5 rounded-2xl border border-white/10 bg-[#141013] p-6 sm:p-8">
+        <OmegaCard className="space-y-5" innerClassName="space-y-5 p-6 sm:p-8">
           <EncabezadoSeccion
             icono={<Clock className="h-5 w-5" />}
             titulo="Horario general y mantenimiento"
@@ -87,10 +84,10 @@ export default async function InfoPage() {
               </p>
             </div>
           </div>
-        </section>
+        </OmegaCard>
 
         {/* Protocolo QR */}
-        <section className="space-y-5 rounded-2xl border border-white/10 bg-[#141013] p-6 sm:p-8">
+        <OmegaCard className="space-y-5" innerClassName="space-y-5 p-6 sm:p-8">
           <EncabezadoSeccion
             icono={<QrCode className="h-5 w-5" />}
             titulo="Protocolo de ingreso con código QR"
@@ -116,10 +113,10 @@ export default async function InfoPage() {
               recibes un código por cada persona.
             </Regla>
           </div>
-        </section>
+        </OmegaCard>
 
         {/* Aforos, desde la base */}
-        <section className="space-y-5 rounded-2xl border border-white/10 bg-[#141013] p-6 sm:p-8">
+        <OmegaCard className="space-y-5" innerClassName="space-y-5 p-6 sm:p-8">
           <EncabezadoSeccion
             icono={<Users className="h-5 w-5" />}
             titulo="Aforo por instalación"
@@ -153,7 +150,7 @@ export default async function InfoPage() {
               Todavía no hay instalaciones cargadas en el sistema.
             </p>
           )}
-        </section>
+        </OmegaCard>
 
         {/* Cierre */}
         <div className="pt-2 text-center">
@@ -166,7 +163,7 @@ export default async function InfoPage() {
           </Link>
         </div>
       </main>
-    </div>
+    </DarkSection>
   );
 }
 

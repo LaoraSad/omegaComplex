@@ -16,6 +16,9 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
+import DarkSection from "@/components/ui/DarkSection";
+import OmegaCard from "@/components/ui/OmegaCard";
+import SectionHeading from "@/components/ui/SectionHeading";
 import { etiquetaEstado, fecha, hora, type MisReserva } from "./reservas-view";
 
 // ---------------------------------------------------------------------------
@@ -70,20 +73,13 @@ export default function MisReservasView({ reservas }: Props) {
   const visibles = pestana === "futuras" ? futuras : historial;
 
   return (
-    <div className="mega-dark-section relative min-h-screen overflow-hidden bg-[#0e0b0d] text-white">
+    <DarkSection className="min-h-screen">
       <main className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <header className="space-y-2">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#e3bd74]">
-            Panel del cliente
-          </p>
-          <h1 className="text-3xl font-black uppercase tracking-tight sm:text-4xl">
-            Mis reservas
-          </h1>
-          <p className="max-w-2xl text-sm text-white/60 sm:text-base">
-            Consulta tus reservas vigentes, completa los pagos pendientes y revisa el estado de tus
-            pases de acceso.
-          </p>
-        </header>
+        <SectionHeading
+          kicker="Panel del cliente"
+          title="Mis reservas"
+          subtitle="Consulta tus reservas vigentes, completa los pagos pendientes y revisa el estado de tus pases de acceso."
+        />
 
         {pendientes.length > 0 ? (
           <p
@@ -133,7 +129,7 @@ export default function MisReservasView({ reservas }: Props) {
             ))}
           </div>
         ) : (
-          <div className="mx-auto mt-10 max-w-md space-y-4 rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center">
+          <OmegaCard className="mx-auto mt-10 max-w-md" innerClassName="space-y-4 p-8 text-center">
             <Calendar className="mx-auto h-10 w-10 text-white/30" />
             <h2 className="text-lg font-bold text-white">
               {pestana === "futuras" ? "No tienes reservas próximas" : "Tu historial está vacío"}
@@ -148,10 +144,10 @@ export default function MisReservasView({ reservas }: Props) {
               Explorar servicios
               <ArrowRight className="h-4 w-4" />
             </Link>
-          </div>
+          </OmegaCard>
         )}
       </main>
-    </div>
+    </DarkSection>
   );
 }
 
@@ -203,7 +199,7 @@ function Tarjeta({
           : null;
 
   return (
-    <article className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-[#141013] p-5">
+    <OmegaCard className="h-full" innerClassName="flex h-full flex-col gap-4 p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[0.6rem] font-bold uppercase tracking-wider text-white/40">
@@ -271,7 +267,7 @@ function Tarjeta({
           El QR se genera al confirmar el pago.
         </p>
       ) : null}
-    </article>
+    </OmegaCard>
   );
 }
 

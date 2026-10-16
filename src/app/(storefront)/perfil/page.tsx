@@ -4,6 +4,9 @@ import { redirect } from "next/navigation";
 import { ArrowLeft, Lock, ShieldCheck, UserRound } from "lucide-react";
 import { cargarUsuarioDeSesion } from "@/shared/auth/session-user";
 import { getSession } from "@/shared/auth/session";
+import DarkSection from "@/components/ui/DarkSection";
+import OmegaCard from "@/components/ui/OmegaCard";
+import SectionHeading from "@/components/ui/SectionHeading";
 import { ChangePasswordForm } from "./ChangePasswordForm";
 import { EditEmailForm } from "./EditEmailForm";
 import { EditPhoneForm } from "./EditPhoneForm";
@@ -35,99 +38,91 @@ export default async function ProfilePage() {
   const roleLabel = ROLE_LABEL[user.role] ?? "Cliente";
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
-      {/* Encabezado */}
-      <div className="space-y-1">
-        <span className="text-xs font-bold uppercase tracking-wider text-[#C8A96B]">
-          Configuración de Cuenta
-        </span>
-        <h1 className="text-3xl font-black text-[#1F1F1F] tracking-tight">
-          Perfil del {roleLabel}
-        </h1>
-        <p className="text-sm text-[#6B7280]">
-          Información de tu cuenta en Omega Complex, tal como está registrada en el sistema.
-        </p>
-      </div>
+    <DarkSection className="min-h-screen">
+      <div className="mx-auto max-w-3xl space-y-8 px-4 py-12 sm:px-6 lg:px-8">
+        <SectionHeading
+          kicker="Configuración de Cuenta"
+          title={`Perfil del ${roleLabel}`}
+          subtitle="Información de tu cuenta en Omega Complex, tal como está registrada en el sistema."
+        />
 
-      <section
-        aria-label="Datos de tu cuenta"
-        className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E5E7EB] shadow-xs space-y-6"
-      >
-        {/* Identidad */}
-        <div className="flex items-center gap-4 pb-6 border-b border-[#E5E7EB]">
-          <span
-            aria-hidden="true"
-            className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[#7A1F3D] text-lg font-bold text-white"
-          >
-            {initials(user.firstName, user.lastName)}
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-lg font-extrabold text-[#1F1F1F]">
-              {user.firstName} {user.lastName}
-            </p>
-            <p className="truncate text-sm text-[#6B7280]">{user.email}</p>
-            <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-[#7A1F3D]/10 px-2.5 py-0.5 text-[11px] font-bold text-[#7A1F3D]">
-              <ShieldCheck className="h-3 w-3" />
-              {roleLabel}
-            </p>
-          </div>
-        </div>
-
-        {/* Datos de identificación */}
-        <div className="space-y-4">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-[#6B7280] pb-2 border-b border-[#E5E7EB] flex items-center gap-1.5">
-            <Lock className="w-3.5 h-3.5" />
-            <span>Datos de Identificación (No modificables)</span>
-          </h2>
-
-          {user.emailVerified ? null : <PendingEmailBanner email={user.email} />}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <p className="block text-xs font-semibold text-[#6B7280] mb-1">Nombre</p>
-              <p className="w-full px-3.5 py-2.5 bg-[#F5F5F5] border border-[#E5E7EB] rounded-xl text-sm font-bold text-[#1F1F1F]">
-                {user.firstName}
-              </p>
-            </div>
-            <div>
-              <p className="block text-xs font-semibold text-[#6B7280] mb-1">Apellido</p>
-              <p className="w-full px-3.5 py-2.5 bg-[#F5F5F5] border border-[#E5E7EB] rounded-xl text-sm font-bold text-[#1F1F1F]">
-                {user.lastName}
-              </p>
-            </div>
-          </div>
-
-          <p className="text-[11px] leading-relaxed text-[#6B7280] flex items-start gap-1.5 rounded-xl bg-[#F5F5F5] border border-[#E5E7EB] px-3.5 py-2.5">
-            <UserRound className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-            <span>
-              Por seguridad, el nombre, el apellido, el documento y la fecha de nacimiento no se pueden
-              modificar desde esta vista. El documento y la fecha de nacimiento no se muestran en tu sesión actual.
-            </span>
-          </p>
-        </div>
-
-        <EditEmailForm currentEmail={user.email} />
-
-        <EditPhoneForm initialPhone={user.phone} />
-
-        <ChangePasswordForm />
-
-        {/* Acciones */}
-        <div className="pt-4 flex items-center justify-between border-t border-[#E5E7EB]">
-          <Link href="/mis-reservas" className="text-xs font-bold text-[#6B7280] hover:text-[#7A1F3D] flex items-center gap-1">
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Ir a mis reservas</span>
-          </Link>
-          {user.role === "admin" ? (
-            <Link
-              href="/admin"
-              className="px-6 py-3 rounded-xl bg-[#7A1F3D] hover:bg-[#631730] text-white text-xs font-bold shadow-xs transition-all"
+        <OmegaCard innerClassName="space-y-6 p-6 sm:p-8">
+          {/* Identidad */}
+          <div className="flex items-center gap-4 border-b border-white/10 pb-6">
+            <span
+              aria-hidden="true"
+              className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[#7a1f3d] text-lg font-bold text-white"
             >
-              Ir al panel
+              {initials(user.firstName, user.lastName)}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-lg font-extrabold text-white">
+                {user.firstName} {user.lastName}
+              </p>
+              <p className="truncate text-sm text-white/60">{user.email}</p>
+              <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-[#e3bd74]/10 px-2.5 py-0.5 text-[11px] font-bold text-[#e3bd74]">
+                <ShieldCheck className="h-3 w-3" />
+                {roleLabel}
+              </p>
+            </div>
+          </div>
+
+          {/* Datos de identificación */}
+          <div className="space-y-4">
+            <h2 className="flex items-center gap-1.5 border-b border-white/10 pb-2 text-xs font-bold uppercase tracking-wider text-[#e3bd74]">
+              <Lock className="h-3.5 w-3.5" />
+              <span>Datos de Identificación (No modificables)</span>
+            </h2>
+
+            {user.emailVerified ? null : <PendingEmailBanner email={user.email} />}
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <p className="mb-1 block text-xs font-semibold text-white/55">Nombre</p>
+                <p className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm font-bold text-white">
+                  {user.firstName}
+                </p>
+              </div>
+              <div>
+                <p className="mb-1 block text-xs font-semibold text-white/55">Apellido</p>
+                <p className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm font-bold text-white">
+                  {user.lastName}
+                </p>
+              </div>
+            </div>
+
+            <p className="flex items-start gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-[11px] leading-relaxed text-white/55">
+              <UserRound className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>
+                Por seguridad, el nombre, el apellido, el documento y la fecha de nacimiento no se pueden
+                modificar desde esta vista. El documento y la fecha de nacimiento no se muestran en tu sesión actual.
+              </span>
+            </p>
+          </div>
+
+          <EditEmailForm currentEmail={user.email} />
+
+          <EditPhoneForm initialPhone={user.phone} />
+
+          <ChangePasswordForm />
+
+          {/* Acciones */}
+          <div className="flex items-center justify-between border-t border-white/10 pt-4">
+            <Link href="/mis-reservas" className="flex items-center gap-1 text-xs font-bold text-white/60 hover:text-[#e3bd74]">
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Ir a mis reservas</span>
             </Link>
-          ) : null}
-        </div>
-      </section>
-    </div>
+            {user.role === "admin" ? (
+              <Link
+                href="/admin"
+                className="rounded-xl bg-[#7a1f3d] px-6 py-3 text-xs font-bold text-white shadow-xs transition-all hover:bg-[#8f2547]"
+              >
+                Ir al panel
+              </Link>
+            ) : null}
+          </div>
+        </OmegaCard>
+      </div>
+    </DarkSection>
   );
 }
