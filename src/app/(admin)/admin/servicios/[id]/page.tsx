@@ -108,7 +108,7 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
       />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
-        <section aria-label="Fotografía y capacidad" className="acard overflow-hidden xl:col-span-3">
+        <section aria-label="Fotografía y capacidad" className="acard omega-ring overflow-hidden xl:col-span-3">
           <div className="relative aspect-[16/9] w-full bg-[#1a1519]">
             {photo ? (
               <Image
@@ -171,7 +171,7 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
           </div>
         </section>
 
-        <section aria-label="Reservas del servicio" className="acard acard-pad xl:col-span-2">
+        <section aria-label="Reservas del servicio" className="acard omega-ring acard-pad xl:col-span-2">
           <div className="acard-head">
             <div>
               <h2 className="acard-title">Reservas recientes</h2>
@@ -209,7 +209,7 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
         </section>
       </div>
 
-      <section aria-label="Accesos del servicio" className="acard acard-pad">
+      <section aria-label="Accesos del servicio" className="acard omega-ring acard-pad">
         <div className="acard-head">
           <div>
             <h2 className="acard-title">Accesos recientes</h2>

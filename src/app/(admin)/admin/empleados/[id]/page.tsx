@@ -72,7 +72,7 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
       />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <section aria-label="Resumen" className="acard acard-pad">
+        <section aria-label="Resumen" className="acard omega-ring acard-pad">
           <div className="flex items-center gap-3">
             <span
               aria-hidden="true"
@@ -140,7 +140,7 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
         assignedIds={assignedIds}
       />
 
-      <section aria-label="Accesos del empleado" className="acard acard-pad">
+      <section aria-label="Accesos del empleado" className="acard omega-ring acard-pad">
         <div className="acard-head">
           <div>
             <h2 className="acard-title">Accesos de {name}</h2>
@@ -153,7 +153,7 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
 
         {accesses.rows.length > 0 ? (
           <div>
-            <div className="atable-wrap">
+            <div className="atable-wrap omega-ring">
               <div className="atable-scroll">
               <table className="atable">
                 <thead>

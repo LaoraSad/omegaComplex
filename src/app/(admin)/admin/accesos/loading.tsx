@@ -8,7 +8,7 @@ export default function Loading() {
         <div className="askeleton h-7 w-48" />
         <div className="askeleton h-4 w-full max-w-md" />
       </div>
-      <div className="acard acard-pad">
+      <div className="acard omega-ring acard-pad">
         <div className="afilters">
           <div className="askeleton h-10 flex-1" />
           <div className="askeleton h-10 w-40" />

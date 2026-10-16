@@ -68,7 +68,7 @@ export default async function AccesosPage({ searchParams }: AccesosPageProps) {
         }
       />
 
-      <form method="GET" action="/admin/accesos" className="acard acard-pad" role="search">
+      <form method="GET" action="/admin/accesos" className="acard omega-ring acard-pad" role="search">
         <div className="afilters">
           <div className="afield afield-grow">
             <label className="alabel" htmlFor="a-q">Buscar</label>
@@ -123,7 +123,7 @@ export default async function AccesosPage({ searchParams }: AccesosPageProps) {
 
       {result.rows.length > 0 ? (
         <div>
-          <div className="atable-wrap">
+          <div className="atable-wrap omega-ring">
             <div className="atable-scroll">
               <table className="atable">
               <thead>
@@ -177,7 +177,7 @@ export default async function AccesosPage({ searchParams }: AccesosPageProps) {
           </Suspense>
         </div>
       ) : (
-        <div className="acard">
+        <div className="acard omega-ring">
           <EmptyState
             icon={ScanSearch}
             title={hasFilters ? "Sin resultados para estos filtros" : "Aún no hay accesos registrados"}

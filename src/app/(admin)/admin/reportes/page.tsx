@@ -86,7 +86,7 @@ export default async function ReportesPage({
 
       {/* (§20, solo visualización): métricas por rango de fechas de
         franja. Sin exportación: el CSV de abajo no incluye estos desgloses. */}
-      <section aria-label="Métricas" className="acard acard-pad space-y-4">
+      <section aria-label="Métricas" className="acard omega-ring acard-pad space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="akpi-label">Métricas</p>
@@ -190,7 +190,7 @@ export default async function ReportesPage({
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {cards.map((c) => (
-          <section key={c.tipo} aria-label={`Reporte de ${c.title}`} className="acard acard-pad">
+          <section key={c.tipo} aria-label={`Reporte de ${c.title}`} className="acard omega-ring acard-pad">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="akpi-label">{c.title}</p>

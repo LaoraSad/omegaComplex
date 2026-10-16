@@ -12,7 +12,7 @@ interface StatCardProps {
 export function StatCard({ label, value, context, icon: Icon, accent }: StatCardProps) {
   return (
     <div
-      className="acard acard-pad"
+      className="acard omega-ring acard-pad"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
