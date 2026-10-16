@@ -3,6 +3,7 @@
 // No se importa desde componentes de cliente: usa next/headers.
 
 import { createSession } from "@/shared/auth/session";
+import { appOrigin } from "@/shared/lib/app-url";
 
 const AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
 
@@ -11,27 +12,14 @@ export function googleConfigured(): boolean {
   return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 }
 
-/** Debe coincidir exactamente con la URI de redireccion registrada en Google. */
+/**
+ * Debe coincidir exactamente con la URI de redirección registrada en Google.
+ *
+ * Usa el mismo origen público que el resto de redirecciones (`appOrigin`), para
+ * que no haya dos formas distintas de resolver la URL de la app.
+ */
 export function googleRedirectUri(): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL;
-  if (!base) {
-    throw new Error(
-      "NEXT_PUBLIC_APP_URL no está configurado. Define la URL pública de la app (ej. https://tudominio.com) en las variables de entorno.",
-    );
-  }
-  try {
-    const parsed = new URL(base);
-    if (parsed.hostname === "0.0.0.0" || parsed.hostname === "localhost") {
-      if (process.env.NODE_ENV === "production") {
-        throw new Error(
-          `NEXT_PUBLIC_APP_URL apunta a ${parsed.hostname}, no válido en producción. Configura tu dominio real.`,
-        );
-      }
-    }
-    return `${parsed.origin}/api/auth/oauth/google/callback`;
-  } catch {
-    throw new Error(`NEXT_PUBLIC_APP_URL inválido: "${base}". Debe ser una URL completa (ej. https://tudominio.com).`);
-  }
+  return `${appOrigin()}/api/auth/oauth/google/callback`;
 }
 
 export function googleAuthUrl(state: string): string {
