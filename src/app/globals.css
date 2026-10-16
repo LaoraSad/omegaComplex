@@ -1159,3 +1159,18 @@ input {
     #0e0b0d;
   border: 1px solid rgb(255 255 255 / 9%);
 }
+
+/* Fondos de sección oscuros reutilizables en TODA la app (antes solo storefront).
+   Misma base que el Inicio: resplandores vino + dorado sobre #0e0b0d / #141013. */
+.omega-dark-section {
+  background:
+    radial-gradient(60rem 22rem at 15% -10%, rgb(122 31 61 / 22%), transparent 60%),
+    radial-gradient(48rem 20rem at 90% 0%, rgb(201 169 107 / 8%), transparent 55%),
+    #0e0b0d;
+}
+
+.omega-dark-section-2 {
+  background:
+    radial-gradient(56rem 20rem at 85% -10%, rgb(122 31 61 / 16%), transparent 60%),
+    #141013;
+}

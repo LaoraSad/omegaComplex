@@ -47,20 +47,9 @@ html {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
-/* Utilidades de la landing oscura: superficies y filetes elegantes. */
-.omega-dark-section {
-  background:
-    radial-gradient(60rem 22rem at 15% -10%, rgb(122 31 61 / 22%), transparent 60%),
-    radial-gradient(48rem 20rem at 90% 0%, rgb(201 169 107 / 8%), transparent 55%),
-    var(--color-fondo);
-}
-
-.omega-dark-section-2 {
-  background:
-    radial-gradient(56rem 20rem at 85% -10%, rgb(122 31 61 / 16%), transparent 60%),
-    var(--color-fondo-2);
-}
-
+/* Utilidades de la landing oscura: superficies y filetes elegantes.
+   `.omega-dark-section` / `-2` viven ahora en globals.css para poder
+   reutilizarse en admin, empleado y auth. */
 .omega-hairline {
   border-color: rgb(255 255 255 / 9%);
 }
