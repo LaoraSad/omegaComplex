@@ -14,6 +14,7 @@ import { listCatalogServices } from "@/features/catalog";
 import DarkSection from "@/components/ui/DarkSection";
 import OmegaCard from "@/components/ui/OmegaCard";
 import SectionHeading from "@/components/ui/SectionHeading";
+import SectionDivider from "@/components/SectionDivider";
 
 export const metadata: Metadata = { title: "Información del complejo" };
 
@@ -55,6 +56,8 @@ export default async function InfoPage() {
           subtitle="Todo lo que necesitas saber antes de tu visita: horarios, acceso con QR y aforo de cada área."
         />
 
+        <SectionDivider />
+
         {/* Horarios y mantenimiento */}
         <OmegaCard className="space-y-5" innerClassName="space-y-5 p-6 sm:p-8">
           <EncabezadoSeccion
@@ -86,6 +89,8 @@ export default async function InfoPage() {
           </div>
         </OmegaCard>
 
+        <SectionDivider />
+
         {/* Protocolo QR */}
         <OmegaCard className="space-y-5" innerClassName="space-y-5 p-6 sm:p-8">
           <EncabezadoSeccion
@@ -114,6 +119,8 @@ export default async function InfoPage() {
             </Regla>
           </div>
         </OmegaCard>
+
+        <SectionDivider />
 
         {/* Aforos, desde la base */}
         <OmegaCard className="space-y-5" innerClassName="space-y-5 p-6 sm:p-8">

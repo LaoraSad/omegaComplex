@@ -19,6 +19,7 @@ import {
 import DarkSection from "@/components/ui/DarkSection";
 import OmegaCard from "@/components/ui/OmegaCard";
 import SectionHeading from "@/components/ui/SectionHeading";
+import SectionDivider from "@/components/SectionDivider";
 import { etiquetaEstado, fecha, hora, type MisReserva } from "./reservas-view";
 
 // ---------------------------------------------------------------------------
@@ -80,6 +81,8 @@ export default function MisReservasView({ reservas }: Props) {
           title="Mis reservas"
           subtitle="Consulta tus reservas vigentes, completa los pagos pendientes y revisa el estado de tus pases de acceso."
         />
+
+        <SectionDivider className="mt-6" />
 
         {pendientes.length > 0 ? (
           <p
