@@ -1090,7 +1090,11 @@ input {
   transition: transform 300ms ease, box-shadow 300ms ease;
 }
 
-.omega-ring::before {
+/* Halo difuminado SOLO cuando la tarjeta tiene `.omega-ring-inner`: el inner
+   opaco tapa el centro y deja el resplandor únicamente en el borde. Sin inner
+   (cards del panel admin) el halo se vería sobre toda la tarjeta, así que no
+   se aplica; esas cards usan el aro enmascarado de `::after`. */
+.omega-ring:has(.omega-ring-inner)::before {
   content: '';
   position: absolute;
   inset: -1px;
