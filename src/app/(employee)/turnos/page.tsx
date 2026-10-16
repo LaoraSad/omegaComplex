@@ -5,6 +5,7 @@ import { CircleSlash, MapPin, ScanLine } from "lucide-react";
 import { formatClock } from "@/features/access/access-dates";
 import { findEmployeeByUserId, listEmployeeShifts } from "@/features/access/access.repository";
 import { getSession } from "@/shared/auth/session";
+import OmegaCard from "@/components/ui/OmegaCard";
 
 export const metadata: Metadata = { title: "Mis zonas" };
 export const dynamic = "force-dynamic";
@@ -51,12 +52,15 @@ export default async function TurnosPage() {
   return (
     <div className="space-y-5">
       <header className="space-y-1">
+        <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#e3bd74]">
+          Punto de control
+        </p>
         <h1 className="text-2xl font-extrabold tracking-tight text-white">Mis zonas</h1>
         <p className="text-sm text-white/55">Dónde debes validar y a qué hora abre cada una.</p>
       </header>
 
       {zonas.length === 0 ? (
-        <section className="rounded-2xl border border-amber-400/30 bg-amber-500/10 p-5">
+        <OmegaCard innerClassName="border border-amber-400/30 p-5">
           <p className="flex items-center gap-2 text-sm font-bold text-white">
             <CircleSlash className="h-4 w-4 text-amber-300" />
             No tienes zonas asignadas
@@ -65,7 +69,7 @@ export default async function TurnosPage() {
             Pide al administrador que te asigne al menos una instalación. Sin zonas no puedes validar
             ningún QR.
           </p>
-        </section>
+        </OmegaCard>
       ) : (
         <>
           {zonas.map((zona) => {
@@ -74,10 +78,10 @@ export default async function TurnosPage() {
             const franjasFuturas = franjasHoy.filter((s) => s.endsAt > now).length;
 
             return (
-              <section
+              <OmegaCard
                 key={zona.serviceId}
                 aria-label={zona.serviceName}
-                className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]"
+                innerClassName="overflow-hidden"
               >
                 {/* Cabecera: el nombre de la zona es lo primero que se lee. */}
                 <div className="flex items-start justify-between gap-3 border-b border-white/10 bg-white/[0.04] px-4 py-3">
@@ -182,21 +186,21 @@ export default async function TurnosPage() {
                     </ul>
                   </div>
                 ) : null}
-              </section>
+              </OmegaCard>
             );
           })}
 
-          <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <OmegaCard innerClassName="p-4">
             <p className="flex items-start gap-2 text-xs leading-relaxed text-white/45">
               <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               Si alguien entra con un QR de otra zona, llévalo a esa zona: el ingreso no se
               bloquea, solo se le indica dónde debe estar.
             </p>
-          </section>
+          </OmegaCard>
 
           <Link
             href="/validar"
-            className="flex items-center justify-center gap-2 rounded-2xl bg-[#7a1f3d] p-4 text-sm font-bold text-white transition-colors hover:bg-[#631730]"
+            className="flex items-center justify-center gap-2 rounded-2xl bg-[#7a1f3d] p-4 text-sm font-bold text-white transition-colors hover:bg-[#8f2547]"
           >
             <ScanLine className="h-4 w-4" />
             Ir a validar un QR

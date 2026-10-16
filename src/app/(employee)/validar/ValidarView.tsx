@@ -302,6 +302,9 @@ export default function ValidarView() {
   return (
     <div className="space-y-5">
       <section className="space-y-1">
+        <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#e3bd74]">
+          Punto de control
+        </p>
         <h1 className="text-2xl font-extrabold tracking-tight text-white">Validar QR</h1>
         <p className="text-sm text-white/60">
           Escanea el código del cliente y revisa la ficha antes de darle acceso.
@@ -596,8 +599,12 @@ function Card({
   tone?: keyof typeof TONES;
   children: React.ReactNode;
 }) {
-  return <div className={`rounded-2xl border p-4 ${TONES[tone]}`}>{children}</div>;
+  return (
+    <div className="omega-ring">
+      <div className={`omega-ring-inner border p-4 ${TONES[tone]}`}>{children}</div>
+    </div>
+  );
 }
 
 const primaryBtn =
-  "inline-flex items-center justify-center gap-2 rounded-xl bg-[#7a1f3d] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#631730] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex items-center justify-center gap-2 rounded-xl bg-[#7a1f3d] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#8f2547] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60";
