@@ -6,7 +6,7 @@ export default function AdminLoading() {
       </div>
       <div className="akpi-grid" aria-hidden="true">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="akpi-card space-y-3">
+          <div key={i} className="akpi-card omega-ring space-y-3">
             <div className="askeleton h-4 w-28" />
             <div className="askeleton h-8 w-24" />
             <div className="askeleton h-3 w-full" />

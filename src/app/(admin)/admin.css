@@ -2955,7 +2955,6 @@ li[id^="servicio-"]:target {
 .ainst-card2,
 .atable-wrap {
   border: 1px solid rgb(142 35 71 / 14%);
-  border-top: 3px solid var(--admin-gold);
   border-radius: 1.1rem;
   background: linear-gradient(180deg, var(--admin-surface) 0%, var(--admin-surface) 100%);
   color: #fff;
@@ -3329,126 +3328,19 @@ a.atimeline-link:hover { background: rgb(142 35 71 / 5%); }
   color: rgb(245 241 236 / 76%);
 }
 
-/* ---------- Aro dorado de luz en movimiento (tarjetas y paneles) ----------
-   Mismo lenguaje que .omega-ring del inicio, en dorado para que cada tarjeta
-   se distinga del fondo oscuro. Sin cambiar el marcado: anillo con máscara
-   + halo difuminado detrás. */
 
-@property --admin-ring-angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-
-.acard,
-.opdash-panel,
-.opdash-empty-state,
-.opdash-metric,
-.opdash-service-feature,
-.opdash-service-tile,
-.akpi-card,
-.ainst-feature,
-.ainst-card2,
-.atable-wrap,
-.opdash-attention,
-.opdash-clear-state,
-.adrawer,
-.amodal {
+/* ---------- Ambiente del Inicio en el panel ----------
+   Resplandor central + burbujas doradas detrás de la estructura. El shell se
+   eleva para que el contenido quede por encima del fondo decorativo. */
+.admin-shell {
   position: relative;
-  isolation: isolate;
-}
-
-.acard::before,
-.opdash-panel::before,
-.opdash-empty-state::before,
-.opdash-metric::before,
-.opdash-service-feature::before,
-.opdash-service-tile::before,
-.akpi-card::before,
-.ainst-feature::before,
-.ainst-card2::before,
-.atable-wrap::before,
-.opdash-attention::before,
-.opdash-clear-state::before {
-  content: "";
-  position: absolute;
-  inset: -1.5px;
-  border-radius: inherit;
-  padding: 1.5px;
-  background: conic-gradient(
-    from var(--admin-ring-angle, 0deg),
-    transparent 0deg,
-    var(--admin-gold-bright) 48deg,
-    var(--admin-gold) 118deg,
-    transparent 178deg,
-    transparent 232deg,
-    var(--admin-gold-deep) 298deg,
-    transparent 360deg
-  );
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  pointer-events: none;
-  animation: admin-ring-spin 6s linear infinite;
   z-index: 1;
 }
 
-.acard::after,
-.opdash-panel::after,
-.opdash-metric::after,
-.opdash-attention::after,
-.atable-wrap::after {
-  content: "";
-  position: absolute;
-  inset: -1.5px;
-  border-radius: inherit;
-  padding: 1.5px;
-  background: conic-gradient(
-    from var(--admin-ring-angle, 0deg),
-    transparent 0deg,
-    var(--admin-gold) 48deg,
-    var(--admin-gold-deep) 118deg,
-    transparent 178deg,
-    transparent 232deg,
-    var(--admin-gold-bright) 298deg,
-    transparent 360deg
-  );
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  filter: blur(12px);
-  opacity: 0.6;
-  pointer-events: none;
-  animation: admin-ring-spin 6s linear infinite;
+.admin-ambient {
+  position: fixed;
+  inset: 0;
   z-index: 0;
-}
-
-@keyframes admin-ring-spin {
-  to {
-    --admin-ring-angle: 360deg;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .acard::before,
-  .opdash-panel::before,
-  .opdash-empty-state::before,
-  .opdash-metric::before,
-  .opdash-service-feature::before,
-  .opdash-service-tile::before,
-  .akpi-card::before,
-  .ainst-feature::before,
-  .ainst-card2::before,
-  .atable-wrap::before,
-  .opdash-attention::before,
-  .opdash-clear-state::before,
-  .acard::after,
-  .opdash-panel::after,
-  .opdash-metric::after,
-  .opdash-attention::after,
-  .atable-wrap::after {
-    animation: none;
-  }
+  overflow: hidden;
+  pointer-events: none;
 }

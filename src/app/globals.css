@@ -1086,16 +1086,6 @@ input {
   border-radius: 18px;
   padding: 1.5px;
   isolation: isolate;
-  background: conic-gradient(
-    from var(--omega-ring-angle, 0deg),
-    transparent 0deg,
-    rgb(227 189 116 / 85%) 55deg,
-    rgb(122 31 61 / 90%) 120deg,
-    transparent 175deg,
-    transparent 235deg,
-    rgb(227 189 116 / 75%) 295deg,
-    transparent 360deg
-  );
   animation: omega-ring-spin 5.5s linear infinite;
   transition: transform 300ms ease, box-shadow 300ms ease;
 }
@@ -1118,6 +1108,34 @@ input {
   filter: blur(12px);
   opacity: 0.6;
   z-index: -1;
+  animation: inherit;
+}
+
+/* Aro fino dibujado DENTRO del borde. Al ir sobre el `padding` (y no fuera de
+   la caja) funciona igual con o sin `.omega-ring-inner`, y no lo recorta un
+   `overflow: hidden` del propio contenedor. */
+.omega-ring::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--omega-ring-angle, 0deg),
+    transparent 0deg,
+    rgb(227 189 116 / 85%) 55deg,
+    rgb(122 31 61 / 90%) 120deg,
+    transparent 175deg,
+    transparent 235deg,
+    rgb(227 189 116 / 75%) 295deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
   animation: inherit;
 }
 

@@ -55,7 +55,7 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <section aria-label="Cliente y servicio" className="acard acard-pad space-y-5">
+        <section aria-label="Cliente y servicio" className="acard omega-ring acard-pad space-y-5">
           <div>
             <h2 className="acard-title">Cliente</h2>
             <dl className="mt-2 space-y-1.5 text-sm">
@@ -110,7 +110,7 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
           </div>
         </section>
 
-        <section aria-label="Pagos" className="acard acard-pad">
+        <section aria-label="Pagos" className="acard omega-ring acard-pad">
           <h2 className="acard-title">Pagos · COP con tarjeta</h2>
           <p className="acard-sub">Intentos registrados para esta reserva.</p>
           {r.payments.length > 0 ? (
@@ -134,7 +134,7 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
         </section>
       </div>
 
-      <section aria-label="QR y accesos" className="acard acard-pad">
+      <section aria-label="QR y accesos" className="acard omega-ring acard-pad">
         <div className="acard-head">
           <div>
             <h2 className="acard-title">Códigos QR y accesos</h2>

@@ -27,7 +27,7 @@ export default async function EmpleadosPage({ searchParams }: EmpleadosPageProps
         actions={<EmployeeCreateSection groups={groups} />}
       />
 
-      <form method="GET" action="/admin/empleados" className="acard acard-pad" role="search">
+      <form method="GET" action="/admin/empleados" className="acard omega-ring acard-pad" role="search">
         <div className="afilters">
           <div className="afield afield-grow">
             <label className="alabel" htmlFor="e-q">Buscar empleado</label>
@@ -51,7 +51,7 @@ export default async function EmpleadosPage({ searchParams }: EmpleadosPageProps
       {employees.length > 0 ? (
         <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {employees.map((e) => (
-            <li key={e.id} className="acard acard-pad flex flex-col gap-3">
+            <li key={e.id} className="acard omega-ring acard-pad flex flex-col gap-3">
               <div className="flex items-center gap-3">
                 <span
                   aria-hidden="true"
@@ -114,7 +114,7 @@ export default async function EmpleadosPage({ searchParams }: EmpleadosPageProps
           ))}
         </ul>
       ) : (
-        <div className="acard">
+        <div className="acard omega-ring">
           <EmptyState
             icon={UserRoundSearch}
             title={q ? "Sin resultados para esta búsqueda" : "No hay empleados registrados"}

@@ -8,6 +8,7 @@ import { CalendarDays, ExternalLink, Menu, Search, X } from "lucide-react";
 import { ADMIN_NAV } from "./admin-nav";
 import { formatTodayLong, initials } from "./format";
 import { LogoutButton } from "./LogoutButton";
+import AmbientBubbles from "@/components/AmbientBubbles";
 
 export interface AdminUser {
   firstName: string;
@@ -46,6 +47,12 @@ export function AdminShell({ user, children }: AdminShellProps) {
       <a href="#admin-content" className="admin-skip">
         Saltar al contenido
       </a>
+
+      {/* Ambiente del Inicio: resplandor + burbujas. Decorativo, sin interacción. */}
+      <div aria-hidden="true" className="admin-ambient">
+        <div className="omega-cta-glow" />
+        <AmbientBubbles variant="mixed" />
+      </div>
 
       {navOpen ? (
         <div

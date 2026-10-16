@@ -52,7 +52,7 @@ export default async function ServiciosPage() {
       <ServiceForm mode="create" categorias={opciones} />
 
       {services.length === 0 ? (
-        <div className="acard">
+        <div className="acard omega-ring">
           <EmptyState
             icon={Building2}
             title="No hay servicios configurados"

@@ -121,7 +121,7 @@ export function CategoriesClient({ initialCategories }: { initialCategories: Cat
 
   return (
     <div className="space-y-6">
-      <section className="acard acard-pad">
+      <section className="acard omega-ring acard-pad">
         <div className="acard-head">
           <div>
             <h2 className="acard-title">Nueva categoría</h2>
@@ -147,7 +147,7 @@ export function CategoriesClient({ initialCategories }: { initialCategories: Cat
       {error ? <p role="alert" className="aalert aalert-error">{error}</p> : null}
       {success ? <p role="status" className="aalert aalert-info">{success}</p> : null}
 
-      <section className="acard acard-pad">
+      <section className="acard omega-ring acard-pad">
         <div className="acard-head">
           <div>
             <h2 className="acard-title">Categorías registradas</h2>
@@ -155,7 +155,7 @@ export function CategoriesClient({ initialCategories }: { initialCategories: Cat
           </div>
           <span className="akpi-label">{categories.length} en total</span>
         </div>
-        <div className="atable-wrap">
+        <div className="atable-wrap omega-ring">
           <div className="atable-scroll">
             <table className="atable">
             <thead>

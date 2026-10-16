@@ -137,7 +137,7 @@ export function ServiceForm({
   const labelCls = "block text-xs font-semibold text-white/65";
 
   return (
-    <form onSubmit={handleSubmit} className="acard acard-pad space-y-4">
+    <form onSubmit={handleSubmit} className="acard omega-ring acard-pad space-y-4">
       <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">
         {mode === "create" ? "Nuevo servicio" : "Editar servicio"}
       </h3>
