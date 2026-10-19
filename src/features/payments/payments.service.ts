@@ -1,14 +1,15 @@
-// Lógica de cobro con Stripe: checkout, confirmación y rechazo.
-//
+// -----------------------------------------------------------------------------
+// src/features/payments/payments.service.ts
+// Lógica de cobro con Stripe: checkout, confirmación, rechazo y envío de QR.
 // Regla de oro (SCRUM sección 13): la reserva NO se considera pagada porque el
 // navegador volvió a la app, sino cuando el webhook oficial de Stripe confirma
-// el pago. Este módulo orquesta ese ciclo:
-//
-//   reserva pending_payment ’ checkout ’ webhook ’ pago succeeded
-//     ’ hold consumed + cupos a booked + QR emitidos (persona x zona).
-//
-// Todo es idempotente: los pasos condicionales (updateMany por estado, QR por
-// conteo) hacen que reprocesar un evento sea un no-op seguro.
+// el pago.
+// Ciclo: reserva pending_payment → checkout → webhook → pago succeeded
+//        → hold consumido + cupos a booked + QR emitidos (persona x zona).
+// Todo es idempotente: los pasos condicionales hacen que reprocesar un evento
+// sea un no-op seguro.
+// -----------------------------------------------------------------------------
+
 import type Stripe from "stripe";
 
 import { emitirQrDeReserva, type QrEmitido } from "@/features/reservations/qr";
@@ -33,10 +34,18 @@ import {
 import type { CreatePaymentInput } from "./payments.schemas";
 import type { StripeCheckoutSessionResult } from "./payments.types";
 
-/** Cliente mínimo de Stripe que usa este módulo (inyectable en pruebas). */
+// -----------------------------------------------------------------------------
+// StripeCheckoutClient (tipo)
+// Subconjunto del cliente de Stripe que usa este módulo (solo checkout).
+// Se inyecta en pruebas para no llamar a la API real de Stripe.
+// -----------------------------------------------------------------------------
 export type StripeCheckoutClient = Pick<Stripe, "checkout">;
 
-/** Hora 24 h en America/Bogota, para el texto del checkout. */
+// -----------------------------------------------------------------------------
+// horaBogota(d) / fechaBogota(d)
+// Formateadores de fecha y hora en zona Bogotá (es-CO) para mostrar en el
+// checkout de Stripe y en correos.
+// -----------------------------------------------------------------------------
 function horaBogota(d: Date): string {
   return new Intl.DateTimeFormat("es-CO", {
     timeZone: "America/Bogota",
@@ -55,30 +64,24 @@ function fechaBogota(d: Date): string {
   }).format(d);
 }
 
-/**
- * Arma las líneas del checkout: una por zona.
- *
- /**
- * Convierte pesos a la unidad mínima que espera la API de Stripe.
- *
- * Se asume que COP usa 2 decimales en la API (100.000 COP -> 10.000.000).
- * Si la cuenta de Stripe tratara COP como moneda cero-decimal, este ×100
- * cobraría 100 veces el precio real.
- *
- * P0-2 (v2.0): NO cambiar este multiplicador sin pago de prueba en modo test
- * que confirme que el checkout muestra lo mismo que la app. Esa verificación
- * le toca al responsable de Stripe. Los tests congelan el comportamiento actual.
- */
+// -----------------------------------------------------------------------------
+// aCentimos(cop)
+// Convierte pesos colombianos a centavos (unidad mínima de Stripe).
+// Se asume COP con 2 decimales: 100.000 COP → 10.000.000 centavos.
+// No cambiar este multiplicador sin un pago de prueba en modo test.
+// -----------------------------------------------------------------------------
 export function aCentimos(cop: number): number {
   return Math.round(cop * 100);
 }
 
-/**
- * El reparto NO es proporcional a las horas: es proporcional a las personas que
- * entran por cada puerta. Ir solo a la cancha no puede costar lo mismo que ir
- * con tres amigos a la piscina, aunque ambas franjas duren una hora. La última
- * línea absorbe el redondeo para que la suma cuadre con el total de la reserva.
- */
+// -----------------------------------------------------------------------------
+// lineItemsDeReserva(reserva)
+// Arma las líneas de items del checkout de Stripe, una por zona (bloque).
+//   - Si hay una sola zona: un item con el total completo.
+//   - Si hay varias zonas: el monto se reparte proporcional a las personas
+//     que entran por cada puerta (no por horas). La última línea absorbe
+//     el redondeo para que la suma cuadre con el total.
+// -----------------------------------------------------------------------------
 function lineItemsDeReserva(
   reserva: {
     totalCop: number;
@@ -138,6 +141,20 @@ function lineItemsDeReserva(
   });
 }
 
+// -----------------------------------------------------------------------------
+// createCheckoutSession(input, stripeClient)
+// Crea una Checkout Session de Stripe para una reserva. Flujo:
+//   1. Busca la reserva por ID con todos sus bloques e invitados.
+//   2. Valida que la reserva exista y esté en pending_payment.
+//   3. Valida que el monto enviado coincida con el total de la reserva
+//      (el cliente no puede manipular el precio).
+//   4. Valida que exista un hold activo y vigente (no expirado).
+//   5. Crea la sesión de Stripe Checkout (modo payment, moneda COP,
+//      line items por zona, URLs de éxito y cancelación).
+//   6. Crea el Payment en BD (status: pending) idempotente por stripeSessionId
+//      (upsert: si el cliente reintenta, no duplica el cobro).
+//   7. Devuelve sessionId, checkoutUrl y paymentId.
+// -----------------------------------------------------------------------------
 export async function createCheckoutSession(
   input: CreatePaymentInput,
   stripeClient: StripeCheckoutClient = getStripe(),
@@ -152,10 +169,6 @@ export async function createCheckoutSession(
       startsAt: true,
       endsAt: true,
       service: { select: { name: true } },
-      // Una reserva puede abarcar varias zonas. El checkout de Stripe tiene que
-      // mostrarlas todas: antes solo aparecía `service.name`, que es el primer
-      // bloque, y el cliente pagaba sin ver que también estaba reservando la
-      // segunda zona.
       blocks: {
         orderBy: { startsAt: "asc" },
         select: {
@@ -163,8 +176,6 @@ export async function createCheckoutSession(
           endsAt: true,
           personas: true,
           service: { select: { name: true, category: { select: { name: true } } } },
-          // Los nombres de quienes entran por esa puerta: es lo que se imprime
-          // en la línea del cobro.
           guests: { select: { guest: { select: { fullName: true } } } },
         },
       },
@@ -221,23 +232,41 @@ export async function createCheckoutSession(
   return { sessionId: session.id, checkoutUrl: session.url, paymentId: payment.id };
 }
 
+// -----------------------------------------------------------------------------
+// ConfirmacionPago (tipo)
+// Resultado de liquidar un pago:
+//   - transitioned: true → el pago pasó a succeeded y se emitieron QR.
+//   - transitioned: false → no hubo cambio (ya estaba procesado).
+// -----------------------------------------------------------------------------
 export type ConfirmacionPago =
   | { transitioned: true; emitidos: QrEmitido[] }
   | { transitioned: false; emitidos: [] };
 
-/** El cobro entró pero el hold de 10 min ya expiró: no hay qué liquidar. */
+// -----------------------------------------------------------------------------
+// PAGO_TARDIO_CODE
+// Código usado cuando el pago llega después de que expiró el hold de 10 min.
+// No se liquida ni se emiten QR; requiere revisión manual.
+// -----------------------------------------------------------------------------
 export const PAGO_TARDIO_CODE = "PAGO_TARDIO_REQUIERE_REVISION";
 
-/**
- * Liquida un pago confirmado por Stripe: reserva a confirmed, hold consumido,
- * cupos a booked y QR emitidos. Los tokens crudos se devuelven UNA vez para
- * enviarlos por correo (solo se guardan los hashes).
- *
- * P0-3: si el hold expiró antes de que llegara la confirmación (webhook lento
- * o pantalla de espera tardía), NO se liquida ni se emiten QRs. El dinero sí
- * puede estar cobrado en Stripe, así que el caso se registra para revisión
- * manual: reembolsar o revivir la reserva lo decide el negocio, fuera de la app.
- */
+// -----------------------------------------------------------------------------
+// confirmarPagoExitoso(input)
+// Liquida un pago confirmado por Stripe. Flujo:
+//   1. Busca el payment por ID. Si no existe, 404.
+//   2. Si el pago ya no está pending, devuelve transitioned: false (idempotencia).
+//   3. Verifica que la reserva siga en pending_payment y que el hold esté vigente.
+//   4. Si el hold expiró (pago tardío), lanza 409 PAGO_TARDIO_CODE y registra
+//      para revisión manual (reembolso o revivir fuera de la app).
+//   5. Llama a settlePayment(): payment → succeeded, reserva → confirmed
+//      (condicional por estado, idempotente).
+//   6. Vuelve a verificar que la reserva quede confirmed (cierra carrera si el
+//      hold expiró entre la verificación y la liquidación).
+//   7. Llama a consumirHoldYTrasladarCupos(): hold → consumed, heldCount → bookedCount.
+//   8. Emite los QRs (emitirQrDeReserva): un QR por persona y zona.
+//   9. Envía el correo con los QR (entregarQrPorCorreo).
+//      El correo se envía desde aquí y no solo del webhook, porque la reserva
+//      puede liquidarse por más de una vía.
+// -----------------------------------------------------------------------------
 export async function confirmarPagoExitoso(input: {
   paymentId: string;
   stripePaymentIntentId: string;
@@ -283,8 +312,7 @@ export async function confirmarPagoExitoso(input: {
   });
   if (!transitioned) return { transitioned: false, emitidos: [] };
 
-  // Cierra la carrera: el hold pudo expirar entre la verificación y la
-  // liquidación. Si la reserva no quedó confirmed, no se emiten QRs.
+  // Cierra la carrera: el hold pudo expirar entre la verificación y la liquidación.
   const confirmada = await db.reservation.findUnique({
     where: { id: payment.reservationId },
     select: { status: true },
@@ -306,29 +334,24 @@ export async function confirmarPagoExitoso(input: {
 
   const emision = await emitirQrDeReserva(payment.reservationId);
   if (!emision.ok) {
-    // El pago ya quedó liquidado; esto exige revisión manual y reintento del
-    // webhook (la emisión es idempotente, el reproceso es seguro).
+    // El pago ya quedó liquidado; exige revisión manual y reintento del webhook.
     throw new HttpError(500, "QR_SIN_EMITIR", emision.message);
   }
 
-  // El correo se envía desde acá y no desde el webhook a propósito: la reserva
-  // se puede liquidar por más de una vía (webhook de Stripe o recuperación
-  // desde la pantalla de espera) y los QR son la única entrega de los códigos.
-  // Si el envío viviera solo en el webhook, un pago recuperado a mano confirmó
-  // la reserva sin mandarle nada al cliente.
-  //
-  // Los tokens crudos se consumed acá: en la base solo quedan los hashes.
+  // Los tokens crudos se consumen aquí: en la base solo quedan los hashes.
   await entregarQrPorCorreo(payment.reservationId, emision.emitidos);
 
   return { transitioned: true, emitidos: emision.emitidos };
 }
 
-/**
- * Manda los QR por correo, por n8n si está configurado y por Resend si no.
- *
- * Nunca lanza: el pago ya está liquidado y perderlo por un correo que no salió
- * sería peor que no enviarlo. Queda registrado para revisión manual.
- */
+// -----------------------------------------------------------------------------
+// entregarQrPorCorreo(reservationId, emitidos)
+// Envía los QR por correo al titular de la reserva.
+//   - Intenta n8n primero (envía PDF adjunto).
+//   - Si n8n no está configurado o falla, usa Resend directo.
+//   - Nunca lanza: el pago ya está liquidado. Los errores se registran para
+//     revisión manual.
+// -----------------------------------------------------------------------------
 async function entregarQrPorCorreo(
   reservationId: string,
   emitidos: QrEmitido[],
@@ -357,8 +380,6 @@ async function entregarQrPorCorreo(
         nombre: contacto.nombre,
         fecha,
         codigos: emitidos,
-        // El documento iba solo por n8n (PDF). Por Resend también
-        // tiene que viajar para que el PDF lleve al titular.
         documento: contacto.documento,
       });
     }
@@ -367,10 +388,11 @@ async function entregarQrPorCorreo(
   }
 }
 
-/**
- * Genera el PDF y se lo pasa a n8n, que es quien lo manda. Devuelve si la
- * entrega quedó hecha, para que el llamador sepa si aplicar el plan B.
- */
+// -----------------------------------------------------------------------------
+// enviarPdfPorN8n(input)
+// Genera el PDF de los QR y se lo envía a n8n para que lo entregue por correo.
+// Devuelve true si n8n lo aceptó, false para aplicar plan B (Resend).
+// -----------------------------------------------------------------------------
 async function enviarPdfPorN8n(input: {
   email: string;
   nombre: string;
@@ -399,8 +421,7 @@ async function enviarPdfPorN8n(input: {
       nombre: q.nombre,
       servicio: q.servicio,
       zona: q.zona,
-      // El token crudo viaja en el evento porque es lo que hay que dibujar en
-      // el QR del PDF; se genera aquí y no se guarda en la base.
+      // El token crudo viaja en el evento porque es lo que hay que dibujar en el QR del PDF.
       token: q.token,
       // Respaldo transcribible para cuando la cámara de la puerta falla.
       codigoCorto: q.codigoCorto,
@@ -413,11 +434,13 @@ async function enviarPdfPorN8n(input: {
 return entregado;
 }
 
-/** Marca el pago como fallido, devuelve los cupos retenidos y avisa al cliente.
- *
- * El aviso nunca tumba el rechazo. Si el correo falla (o no hay
- * contacto), queda en el log para revisión manual, igual que el QR.
- */
+// -----------------------------------------------------------------------------
+// rechazarPago(input)
+// Marca el pago como fallido, libera los cupos retenidos y notifica al cliente.
+//   - rejectPayment(): payment → failed, reserva → payment_rejected (condicional).
+//   - liberarCuposDeReserva(): devuelve heldCount al inventario.
+//   - notificarPagoRechazado(): envía correo al cliente.
+// -----------------------------------------------------------------------------
 export async function rechazarPago(input: { paymentId: string; reason?: string | null }) {
   const payment = await rejectPayment({ paymentId: input.paymentId, reason: input.reason });
   await liberarCuposDeReserva(payment.reservationId);
@@ -425,8 +448,11 @@ export async function rechazarPago(input: { paymentId: string; reason?: string |
   return payment;
 }
 
-/** Aviso de pago rechazado por Resend directo (sin n8n: no existe workflow
- * para este evento y crearlo le toca a su responsable). Nunca lanza. */
+// -----------------------------------------------------------------------------
+// notificarPagoRechazado(reservationId, motivo)
+// Envía correo de pago rechazado por Resend directo (no hay workflow en n8n
+// para este evento). Nunca lanza.
+// -----------------------------------------------------------------------------
 async function notificarPagoRechazado(reservationId: string, motivo?: string | null): Promise<void> {
   try {
     const contacto = await obtenerContactoAviso(reservationId);
@@ -448,17 +474,20 @@ async function notificarPagoRechazado(reservationId: string, motivo?: string | n
   }
 }
 
+// -----------------------------------------------------------------------------
+// appUrl()
+// Devuelve la URL pública de la app (NEXT_PUBLIC_APP_URL).
+// -----------------------------------------------------------------------------
 export function appUrl(): string {
   return env.NEXT_PUBLIC_APP_URL;
 }
 
-/**
- * Consulta una Checkout Session ya abierta.
- *
- * La usa /pagando/[id] para no abrir una sesión nueva cada vez que el cliente
- * recarga o hace clic otra vez. Si la sesión ya se completó o expiró, Stripe lo
- * dice y el flujo sigue por la creación de una nueva.
- */
+// -----------------------------------------------------------------------------
+// getCheckoutSession(sessionId, stripeClient)
+// Consulta una Checkout Session ya abierta en Stripe.
+// Se usa en la página /pagando/[id] para no crear una sesión nueva cada vez
+// que el cliente recarga. Si Stripe no la conoce, devuelve null.
+// -----------------------------------------------------------------------------
 export async function getCheckoutSession(
   sessionId: string,
   stripeClient: StripeCheckoutClient = getStripe(),
@@ -467,8 +496,6 @@ export async function getCheckoutSession(
     const sesion = await stripeClient.checkout.sessions.retrieve(sessionId);
     return { status: sesion.status ?? "unknown", url: sesion.url ?? null };
   } catch {
-    // Una sesión que Stripe ya no conoce vale lo mismo que no tener ninguna:
-    // se avisa con null y quien llama abre una nueva.
     return null;
   }
 }
