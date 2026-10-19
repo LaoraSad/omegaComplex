@@ -1,25 +1,23 @@
-// Cliente Prisma único (singleton para dev/HMR).
+// -----------------------------------------------------------------------------
+// src/shared/lib/db.ts
+// Cliente Prisma único (singleton) para acceso a la base de datos PostgreSQL.
+// Evita crear múltiples instancias de PrismaClient durante el hot-reload (HMR)
+// en desarrollo, lo que agotaría el pool de conexiones.
+// -----------------------------------------------------------------------------
+
 import { PrismaClient } from "@prisma/client";
 
-/**
- * Ajusta la URL de la base para el pooler de Supabase.
- *
- * Por qué hace falta en producción y no solo en desarrollo:
- *
- * El pooler de Supabase tiene un tope de conexiones simultáneas por proyecto.
- * Prisma, sin `connection_limit`, abre `núcleos × 2 + 1` conexiones. Dentro de
- * un contenedor ese número sale del host, no del contenedor, y termina
- * abriendo más conexiones de las que el pooler acepta. Cuando se pasa de la
- * cuota, Prisma lanza y el endpoint responde 500 "Error interno" de forma
- * intermitente: unas reservas entran y otras no, sin patrón aparente.
- *
- * En desarrollo se deja en 1 porque `next dev` levanta varios procesos a la
- * vez y cada uno abriría su propio juego de conexiones.
- *
- * `pgbouncer=true` solo hace falta en modo transaccional (puerto 6543): ahí el
- * pooler no admite sentencias preparadas. En modo sesión (5432) no se pone,
- * porque ahí sí las admite y Prisma las aprovecha.
- */
+// -----------------------------------------------------------------------------
+// datasourceUrl()
+// Ajusta la URL de la base de datos cuando se usa el pooler de Supabase.
+// Propósito: evitar agotar el límite de conexiones simultáneas del pooler.
+//   - En desarrollo (next dev), Next levanta varios procesos; cada uno abriría
+//     su propio pool, por lo que se usa connection_limit=1.
+//   - En producción se usa connection_limit=5.
+//   - Si el puerto es 6543 (modo transaccional de pgbouncer), se añade
+//     pgbouncer=true porque ese modo no admite sentencias preparadas.
+//   - Si la URL no es de Supabase o no se puede parsear, se devuelve tal cual.
+// -----------------------------------------------------------------------------
 function datasourceUrl(): string | undefined {
   const value = process.env.DATABASE_URL;
   if (!value) return value;
@@ -28,8 +26,8 @@ function datasourceUrl(): string | undefined {
   try {
     url = new URL(value);
   } catch {
-    // Una URL que no se puede parsear se devuelve tal cual: que la reporte
-    // Prisma con su propio mensaje, que es más claro que uno nuestro.
+    // Si la URL no se puede parsear, se devuelve tal cual para que Prisma
+    // reporte su propio mensaje de error (más claro).
     return value;
   }
 
@@ -50,10 +48,22 @@ function datasourceUrl(): string | undefined {
   return url.toString();
 }
 
+// -----------------------------------------------------------------------------
+// globalForPrisma
+// Referencia global para almacenar la instancia de PrismaClient en desarrollo.
+// Esto evita que cada recarga de HMR cree una nueva conexión a la base.
+// -----------------------------------------------------------------------------
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
+// -----------------------------------------------------------------------------
+// db (exportación principal)
+// Instancia única de PrismaClient.
+//   - En desarrollo: se reusa desde globalThis.prisma si ya existe.
+//   - En producción: se crea una nueva instancia por contenedor (no hay HMR).
+//   - Se le pasa la URL ajustada por datasourceUrl().
+// -----------------------------------------------------------------------------
 export const db =
   globalForPrisma.prisma ??
   new PrismaClient({

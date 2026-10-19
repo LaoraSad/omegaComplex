@@ -1,9 +1,21 @@
+// -----------------------------------------------------------------------------
+// src/app/layout.tsx
+// Layout raíz de la aplicación Next.js (App Router).
+// Se envuelve en todas las páginas. Define el HTML, body, fuentes, barra de
+// progreso y notificaciones globales.
+// -----------------------------------------------------------------------------
+
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import NextTopLoader from "nextjs-toploader";
 import { Toaster } from "sonner";
 import "./globals.css";
 
+// -----------------------------------------------------------------------------
+// Fuentes locales
+// Se cargan fuentes propias para evitar dependencias externas y mejorar el
+// rendimiento (no hay peticiones a Google Fonts).
+// -----------------------------------------------------------------------------
 const recoleta = localFont({
   src: [
     { path: "./fonts/recoleta/Recoleta-Regular.woff2", weight: "400", style: "normal" },
@@ -22,6 +34,10 @@ const cooperBlack = localFont({
   display: "swap",
 });
 
+// -----------------------------------------------------------------------------
+// Metadata
+// Título y descripción de la página para SEO y pestañas del navegador.
+// -----------------------------------------------------------------------------
 export const metadata: Metadata = {
   title: {
     default: "Omega Complex | Complejo Deportivo",
@@ -30,22 +46,29 @@ export const metadata: Metadata = {
   description: "Centro deportivo y recreativo de alto nivel.",
 };
 
+// -----------------------------------------------------------------------------
+// RootLayout
+// Componente Server Component que renderiza el esqueleto de todas las páginas.
+//   - <html> con lang="es" y clases de fuentes.
+//   - data-scroll-behavior="smooth": evita que el scroll suave interfiera con
+//     las transiciones de ruta de Next.js.
+//   - NextTopLoader: barra fina de progreso en cada navegación (útil en páginas
+//     pesadas como reportes o accesos).
+//   - {children}: el contenido de la página actual.
+//   - Toaster: notificaciones toast (sonner) en la parte superior centrada.
+// -----------------------------------------------------------------------------
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-<html
-        lang="es"
-        className={`h-full antialiased ${recoleta.variable} ${cooperBlack.variable}`}
-        // Sin este atributo, el scroll suave de la app se aplica también a las
-        // transiciones de ruta de Next y la navegación se siente lenta.
-        data-scroll-behavior="smooth"
-      >
+    <html
+      lang="es"
+      className={`h-full antialiased ${recoleta.variable} ${cooperBlack.variable}`}
+      data-scroll-behavior="smooth"
+    >
       <body className={`min-h-full flex flex-col ${recoleta.className}`}>
-        {/* Barra fina de progreso en cada navegación: con páginas pesadas
-          (reportes, accesos) el skeleton no basta y la app se siente colgada. */}
         <NextTopLoader color="#7A1F3D" showSpinner={false} shadow="0 0 10px #7A1F3D,0 0 5px #7A1F3D" />
         {children}
         <Toaster position="top-center" richColors closeButton />

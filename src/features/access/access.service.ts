@@ -1,4 +1,10 @@
-// Orquesta validación de QR (sección 16) y concesión de acceso (sección 17); sin acceso automático.
+// -----------------------------------------------------------------------------
+// src/features/access/access.service.ts
+// Orquesta la validación de QR (sección 16 del SCRUM) y la concesión de acceso
+// (sección 17). El acceso nunca es automático: el empleado consulta la ficha y
+// confirma con un segundo paso.
+// -----------------------------------------------------------------------------
+
 import { formatClock, formatInTimeZone } from "./access-dates";
 import {
   findEmployeeByUserId,
@@ -17,26 +23,41 @@ import type {
   ZoneInfo,
 } from "./access.types";
 
-// ---------------------------------------------------------------------------
-// Reglas de validacion del QR (SCRUM seccion 16) y del ingreso (seccion 17).
-//
-// El acceso nunca es automatico: aqui solo se consulta. El empleado ve la ficha
-// y confirma con un segundo paso (seccion 19).
-// ---------------------------------------------------------------------------
-
-/** Zona del empleado: solo valida instalaciones que tiene asignadas. */
+// -----------------------------------------------------------------------------
+// getEmployeeAccessContext(userId)
+// Obtiene el contexto de acceso de un empleado: sus zonas asignadas y si está
+// activo. Usado por el empleado para saber qué instalaciones puede validar.
+// -----------------------------------------------------------------------------
 export async function getEmployeeAccessContext(userId: string) {
   return findEmployeeByUserId(userId);
 }
 
+// -----------------------------------------------------------------------------
+// denied(code, message)
+// Crea una respuesta de acceso denegado con código y motivo.
+// -----------------------------------------------------------------------------
 function denied(code: DenialCode, message: string): AccessLookup {
   return { outcome: "denied", denial: { code, message } };
 }
 
-/**
- * Valida un QR escaneado y devuelve la ficha de la reserva.
- * Todas las reglas se evaluan en el servidor: el cliente no decide nada.
- */
+// -----------------------------------------------------------------------------
+// lookupAccess(rawToken, employee)
+// Valida un QR escaneado y devuelve la ficha de la reserva. Todas las reglas se
+// evalúan en el servidor; el cliente no decide nada.
+// Reglas validadas (orden):
+//   1. Empleado activo y su usuario activo.
+//   2. El QR debe existir (buscado por tokenHash).
+//   3. La reserva debe estar confirmada.
+//   4. El QR no debe haber sido usado antes (uso único).
+//   5. El QR no debe estar expirado.
+//   6. No debe existir un acceso previo registrado para este QR.
+//   7. La fecha del QR debe ser hoy (zona Bogotá).
+//   8. La hora actual debe estar dentro de la franja reservada.
+//      - Si aún no empieza: denegado (cliente debe esperar).
+//      - Si ya terminó: se marca el QR como expirado y se deniega.
+//   9. Si el QR no pertenece a la zona del empleado, no se deniega: se indica
+//      que el empleado debe acompañar al cliente a la zona correcta.
+// -----------------------------------------------------------------------------
 export async function lookupAccess(rawToken: string, employee: EmployeeForAccess): Promise<AccessLookup> {
   if (!employee.isActive || !employee.userIsActive) {
     return denied("empleado_inactivo", "Tu usuario esta desactivado. Avisa al administrador.");
@@ -59,19 +80,16 @@ export async function lookupAccess(rawToken: string, employee: EmployeeForAccess
     endsAt: qr.endsAt,
     customerName: `${qr.customerFirstName} ${qr.customerLastName}`.trim(),
     customerDocument: qr.customerDocument,
-    // Quien trae el QR. Puede no ser quien hizo la reserva: si unscritieron tres
-    // amigos, cada uno lleva su propio QR y el empleado debe ver a esa persona.
+    // Quien trae el QR. Puede no ser quien hizo la reserva.
     personName: qr.guestName,
     personDocument: qr.guestDocument,
     personIsTitular: qr.guestIsTitular,
-    // Un QR sin bloque es de una reserva de una sola zona: se usa el servicio de la
-    // reserva. Con bloque, manda el bloque (piscina != baloncesto).
+    // Zona: con bloque usa el servicio del bloque; sin bloque usa el de la reserva.
     zone: qr.serviceId
       ? { serviceId: qr.serviceId, serviceName: qr.serviceName, categoryName: qr.categoryName }
       : { serviceId: "", serviceName: "Zona no definida", categoryName: "Sin zona" },
   };
 
-  // 2. La reserva debe existir (si hay QrToken, la FK la garantiza).
   // 3. La reserva debe estar confirmada.
   if (qr.reservationStatus !== "confirmed") {
     return {
@@ -84,7 +102,7 @@ export async function lookupAccess(rawToken: string, employee: EmployeeForAccess
     };
   }
 
-  // 4. El QR no debe haberse usado antes (uso unico, seccion 18).
+  // 4. Uso único: el QR no debe haberse usado antes.
   if (qr.qrStatus === "used" || qr.qrUsedAt) {
     return {
       outcome: "denied",
@@ -117,7 +135,7 @@ export async function lookupAccess(rawToken: string, employee: EmployeeForAccess
     };
   }
 
-  // 7. Debe corresponder a la fecha actual.
+  // 7. Debe corresponder a la fecha actual (Bogotá).
   const now = new Date();
   if (!isSameBogotaDay(now, qr.startsAt)) {
     return {
@@ -130,9 +148,7 @@ export async function lookupAccess(rawToken: string, employee: EmployeeForAccess
     };
   }
 
-  // 8. La hora actual debe estar dentro de la franja (seccion 17).
-  //    Respuesta 30: si llega antes, debe esperar. Seccion 17: despues del
-  //    fin no puede ingresar.
+  // 8. La hora actual debe estar dentro de la franja.
   if (now < qr.startsAt) {
     return {
       outcome: "denied",
@@ -144,8 +160,7 @@ export async function lookupAccess(rawToken: string, employee: EmployeeForAccess
     };
   }
   if (now > qr.endsAt) {
-    // La franja ya no sirve: se marca el QR como expirado para que el panel de
-    // reservas lo muestre como tal y no como "activo y sin usar".
+    // La franja terminó: se marca el QR como expirado para que el panel lo refleje.
     await marcarQrExpirado(qr.qrTokenId);
     return {
       outcome: "denied",
@@ -157,8 +172,8 @@ export async function lookupAccess(rawToken: string, employee: EmployeeForAccess
     };
   }
 
-  // La reserva es valida. Si no esta en la zona del empleado no se deniega:
-  // la respuesta 37 indica que el empleado lo acompania a la zona correcta.
+  // 9. Zona del empleado: si el QR no es de una zona asignada al empleado,
+  //    no se deniega; se avisa para que acompañe al cliente a la zona correcta.
   const reservationZone: ZoneInfo = summary.zone;
   const employeeZones: ZoneInfo[] = employee.zones.map((z) => ({
     serviceId: z.serviceId,
@@ -174,10 +189,12 @@ export async function lookupAccess(rawToken: string, employee: EmployeeForAccess
   };
 }
 
-/**
- * Confirma el ingreso. Solo el empleado lo dispara: la validacion se repite
- * dentro de la transaccion para no confiar en la consulta anterior.
- */
+// -----------------------------------------------------------------------------
+// confirmAccess(input)
+// Confirma el ingreso. Solo el empleado lo dispara. Repite la validación dentro
+// de la transacción (lookupAccess) para no confiar en la consulta anterior y
+// evitar condiciones de carrera entre empleados.
+// -----------------------------------------------------------------------------
 export async function confirmAccess(input: {
   rawToken: string;
   employee: EmployeeForAccess;
@@ -211,7 +228,7 @@ export async function confirmAccess(input: {
   });
 
   if (!granted.ok) {
-    // Otro empleado consumio el QR entre la consulta y la confirmacion.
+    // Otro empleado consumió el QR entre la consulta y la confirmación.
     return {
       ok: false,
       code: "qr_ya_utilizado",
@@ -231,7 +248,13 @@ export async function confirmAccess(input: {
   };
 }
 
-/** Registra un intento denegado, para que el administrador lo consulte en Accesos. */
+// -----------------------------------------------------------------------------
+// recordDenial(input)
+// Registra un intento denegado en la tabla Access para auditoría del administrador.
+//   - P2-6: si ya hubo una denegación reciente (5 min) del mismo QR por el
+//     mismo empleado y mismo motivo, se omite para no llenar la tabla de filas
+//     idénticas.
+// -----------------------------------------------------------------------------
 export async function recordDenial(input: {
   rawToken: string;
   employee: EmployeeForAccess;
@@ -239,8 +262,6 @@ export async function recordDenial(input: {
 }): Promise<void> {
   const qr = await findQrByTokenHash(input.rawToken);
   if (!qr) return;
-  // P2-6: sin este freno, reintentar el mismo QR llenaba Accesos de filas
-  // idénticas. El primer rechazo queda; los siguientes (5 min) se omiten.
   if (await huboDenegacionReciente({ qrTokenId: qr.qrTokenId, employeeId: input.employee.id, reason: input.reason })) {
     return;
   }
@@ -252,17 +273,14 @@ export async function recordDenial(input: {
   });
 }
 
-/**
- * El empleado decide que esta persona no entra, aunque el QR sea valido: no
- * reconoce a quien lo presenta, la zona esta cerrada o hay una restriccion que el
- * sistema no conoce.
- *
- * P2-5 (33-E): esto invalida el QR manualmente y consume un QR válido, así que
- * exige doble confirmación en la UI (ficha → motivo → "Confirmar denegación")
- * más bandera `confirmacion` en la API, y queda auditado con
- * `invalidacionManual: true` (quién, cuándo y por qué) para distinguirlo de un
- * denied del sistema, que nunca consume el QR.
- */
+// -----------------------------------------------------------------------------
+// denyAccess(input)
+// El empleado deniega manualmente el acceso aunque el QR sea válido.
+//   - Consume el QR válido (consumeQr: true) y lo marca como invalidación
+//     manual (invalidacionManual: true) para auditoría.
+//   - Exige doble confirmación en la UI (ficha → motivo → confirmar).
+//   - Queda registrado quién, cuándo y por qué denegó.
+// -----------------------------------------------------------------------------
 export async function denyAccess(input: {
   rawToken: string;
   employee: EmployeeForAccess;
@@ -301,9 +319,9 @@ export async function denyAccess(input: {
   return { ok: true, denial: { code: "denegado_por_empleado", message: motivo } };
 }
 
-// ---------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // Utilidades de fecha en America/Bogota (COT = UTC-5 fijo).
-// ---------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 
 function isSameBogotaDay(a: Date, b: Date): boolean {
   const key = (d: Date) => formatInTimeZone(d, "yyyy-MM-dd");
@@ -312,18 +330,12 @@ function isSameBogotaDay(a: Date, b: Date): boolean {
 
 function labelReservationStatus(status: string): string {
   switch (status) {
-    case "pending_payment":
-      return "pendiente de pago";
-    case "payment_processing":
-      return "procesando el pago";
-    case "payment_rejected":
-      return "rechazada";
-    case "expired":
-      return "expirada";
-    case "used":
-      return "utilizada";
-    default:
-      return status;
+    case "pending_payment": return "pendiente de pago";
+    case "payment_processing": return "procesando el pago";
+    case "payment_rejected": return "rechazada";
+    case "expired": return "expirada";
+    case "used": return "utilizada";
+    default: return status;
   }
 }
 
