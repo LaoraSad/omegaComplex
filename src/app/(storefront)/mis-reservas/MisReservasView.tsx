@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Clock,
   CreditCard,
+  Download,
   History,
   Loader2,
   QrCode,
@@ -17,6 +18,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { etiquetaEstado, fecha, hora, type MisReserva } from "./reservas-view";
+import QrReservaModal from "./QrReservaModal";
 
 // ---------------------------------------------------------------------------
 // Panel del cliente.
@@ -192,6 +194,8 @@ function Tarjeta({
   pagando: boolean;
   onPagar: () => void;
 }) {
+  const [qrModalAbierto, setQrModalAbierto] = useState(false);
+  const cerrarQrModal = useCallback(() => setQrModalAbierto(false), []);
   const estado = etiquetaEstado(r.estado);
   const IconoEstado =
     r.estado === "confirmed"
@@ -255,6 +259,14 @@ function Tarjeta({
           <p className="mt-1 text-[0.7rem] text-emerald-100/70">
             {r.qrReferencia} · {r.qrUsados} ya usado(s)
           </p>
+          <button
+            type="button"
+            onClick={() => setQrModalAbierto(true)}
+            className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200/25 px-4 py-2 text-xs font-bold text-emerald-100 transition-colors hover:bg-emerald-100/10"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Ver / descargar QR
+          </button>
         </div>
       ) : r.estado === "used" ? (
         <p className="rounded-xl bg-white/[0.04] py-2 text-center text-xs font-medium text-white/50">
@@ -270,6 +282,14 @@ function Tarjeta({
         <p className="text-center text-[0.68rem] leading-relaxed text-white/35">
           El QR se genera al confirmar el pago.
         </p>
+      ) : null}
+
+      {qrModalAbierto ? (
+        <QrReservaModal
+          reservationId={r.id}
+          serviceName={r.nombreServicio}
+          onClose={cerrarQrModal}
+        />
       ) : null}
     </article>
   );
