@@ -6,7 +6,7 @@ services:
     image: omega-complex:latest
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${PUERTO_APP:-3000}:3000"
     env_file:
       - .env
     environment:
