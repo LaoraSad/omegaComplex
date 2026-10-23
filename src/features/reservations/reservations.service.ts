@@ -1,29 +1,33 @@
-// Lógica de reserva: bloqueos temporales, confirmación, liberación, solape y ventana.
+// -----------------------------------------------------------------------------
+// src/features/reservations/reservations.service.ts
+// Lógica de negocio de reservas: creación con bloqueo temporal, liberación de
+// holds vencidos, control de solape, capacidad y validaciones de horario.
+// -----------------------------------------------------------------------------
+
 import type { Prisma } from "@prisma/client";
 
 import { db } from "@/shared/lib/db";
 import { esDiaDeMantenimiento, ultimoDiaReservable } from "@/features/schedules/colombia-holidays";
 import type { CreateReservationInput } from "./reservations.schemas";
 
-// ---------------------------------------------------------------------------
-// Creación de la reserva con bloqueo temporal.
-//
-// Reglas del SCRUM que se respetan aquí:
-//   - La anticipación máxima es de 3 meses.
-//   - El cobro es por hora y todos los servicios cobran igual (precio * horas).
-//   - Al iniciar el pago se bloquea la franja 10 minutos.
-//   - El control de cupos se resuelve en la base de datos, no en JavaScript.
-//
-// Lo que NO hace este archivo (le toca al equipo): cobrar por Stripe, generar
-// los QR y enviarlos por correo. Aquí la reserva queda en pending_payment con su
-// bloqueo; el pago la mueve a confirmed y ahí se emiten los QR.
-// ---------------------------------------------------------------------------
-
+// -----------------------------------------------------------------------------
+// Constantes y configuración
+// HOLD_MINUTES: tiempo en minutos que una franja permanece bloqueada mientras
+// el cliente paga (10 minutos por requisito del negocio).
+// MAX_INTENTOS: reintentos de transacción cuando hay conflicto de escritura
+// (deadlock) por el último cupo.
+// BOGOTA: zona horaria usada para todas las fechas del negocio.
+// -----------------------------------------------------------------------------
 export const HOLD_MINUTES = 10;
 /** Reintentos cuando varias reservas chocan por el lock de la misma franja. */
 const MAX_INTENTOS = 3;
 const BOGOTA = "America/Bogota";
 
+// -----------------------------------------------------------------------------
+// dateKeyBogota(date)
+// Devuelve la fecha en formato AAAA-MM-DD según la zona horaria de Bogotá.
+// Se usa para agrupar operaciones por día calendario en COT.
+// -----------------------------------------------------------------------------
 function dateKeyBogota(date: Date): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: BOGOTA,
@@ -33,6 +37,11 @@ function dateKeyBogota(date: Date): string {
   }).format(date);
 }
 
+// -----------------------------------------------------------------------------
+// dayOfWeekBogota(dateKey)
+// Devuelve el día de la semana (0=domingo ... 6=sábado) de una fecha clave
+// en Bogotá, igual que la columna dayOfWeek de ServiceSchedule.
+// -----------------------------------------------------------------------------
 function dayOfWeekBogota(dateKey: string): number {
   const weekday = new Intl.DateTimeFormat("en-US", {
     timeZone: BOGOTA,
@@ -41,6 +50,11 @@ function dayOfWeekBogota(dateKey: string): number {
   return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(weekday);
 }
 
+// -----------------------------------------------------------------------------
+// minutesInBogota(date)
+// Devuelve los minutos transcurridos desde la medianoche en Bogotá
+// (ej. 08:30 → 510). Se usa para comparar horarios de franjas.
+// -----------------------------------------------------------------------------
 function minutesInBogota(date: Date): number {
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: BOGOTA,
@@ -53,12 +67,21 @@ function minutesInBogota(date: Date): number {
   return hour * 60 + minute;
 }
 
+// -----------------------------------------------------------------------------
+// parseScheduleMinutes(value)
+// Parsea una hora "HH:MM" a minutos. Devuelve null si el formato es inválido.
+// -----------------------------------------------------------------------------
 function parseScheduleMinutes(value: string): number | null {
   if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)) return null;
   const [hour, minute] = value.split(":").map(Number);
   return hour * 60 + minute;
 }
 
+// -----------------------------------------------------------------------------
+// CreateResult (tipo)
+// Resultado de crear una reserva. Puede ser éxito (con datos de la reserva)
+// o fallo (con código de error y mensaje).
+// -----------------------------------------------------------------------------
 export type CreateResult =
   | {
       ok: true;
@@ -74,6 +97,10 @@ export type CreateResult =
     }
   | { ok: false; code: CrearError; message: string };
 
+// -----------------------------------------------------------------------------
+// CrearError (tipo)
+// Todos los códigos de error posibles al crear una reserva.
+// -----------------------------------------------------------------------------
 export type CrearError =
   | "servicio_no_existe"
   | "franja_no_existe"
@@ -92,13 +119,19 @@ export type CrearError =
   | "mantenimiento"
   | "servicio_inactivo";
 
-/** Anteposición máxima: hoy Bogotá + 3 meses calendario (una sola definición). */
+// -----------------------------------------------------------------------------
+// fechaLimiteReserva(now)
+// Devuelve la fecha límite para reservar (hoy + 3 meses calendario en Bogotá).
+// -----------------------------------------------------------------------------
 function fechaLimiteReserva(now: Date): string {
   return ultimoDiaReservable(dateKeyBogota(now));
 }
 
-/** El SCRUM no permite reservar fechas anteriores. Se compara por día calendario
- *  en America/Bogota: hoy nunca es pasado, aunque ya hayan pasado las 00:00. */
+// -----------------------------------------------------------------------------
+// isPastDate(date, now)
+// Verifica si una fecha (AAAA-MM-DD) es anterior a hoy en Bogotá.
+// Hoy nunca se considera pasado aunque ya hayan pasado las 00:00.
+// -----------------------------------------------------------------------------
 export function isPastDate(date: string, now: Date): boolean {
   const hoy = new Intl.DateTimeFormat("en-CA", {
     timeZone: BOGOTA,
@@ -109,52 +142,34 @@ export function isPastDate(date: string, now: Date): boolean {
   return date < hoy;
 }
 
-/**
- * Cliente mínimo para hablar con reservas, holds y franjas. Acepta tanto el
- * cliente suelto como el de una transacción en curso, para que estas dos
- * funciones se puedan usar dentro y fuera de una.
- */
+// -----------------------------------------------------------------------------
+// ClienteReserva (tipo)
+// Subconjunto del cliente de Prisma usado dentro y fuera de transacciones.
+// Permite usar la misma función tanto con db como con tx (TransactionClient).
+// -----------------------------------------------------------------------------
 type ClienteReserva = Pick<
   Prisma.TransactionClient,
   "reservation" | "reservationBlock" | "reservationHold" | "$executeRaw"
 >;
 
-/**
- * Devuelve al inventario los cupos de las reservas cuyo bloqueo de 10 minutos
- * venció sin pago.
- *
- * Sin esta pasada, abandonar el checkout quema cupos para siempre: `heldCount`
- * solo baja cuando un pago se convierte en reserva, y ese camino todavía no
- * existe (es del equipo de Stripe). El cliente ve "franja completa" sin que
- * nadie haya pagado nunca.
- *
- * Se marca la reserva como `expired` y el hold como `released` (estados que ya
- * existían en el enum y que la interfaz de admin ya sabe mostrar). El `update`
- * condicionado por estado hace que la operación sea idempotente: si dos
- * peticiones intentan expirar la misma reserva, solo una devuelve cupos.
- */
-/**
- * Libera los holds vencidos y devuelve sus cupos al inventario.
- *
- * P2-4: `limite` acota el trabajo por llamada (50 por defecto). Las lecturas
- * de disponibilidad y la escritura llaman con el default para no frenar cada
- * apertura de calendario con un barrido total; el cron pasa `null` (sin
- * límite) porque ese sí es su trabajo. La operación es idempotente, así que
- * lo que no alcance una pasada lo toma la siguiente.
- *
- * `alExpirar` avisa por cada reserva que ESTA llamada expiró (solo
- * la gana quien marcó el update condicional, así no hay doble aviso). Las
- * lecturas no lo pasan: el aviso sale únicamente del barrido del cron, no en
- * mitad de la consulta del calendario de otro cliente.
- */
+// -----------------------------------------------------------------------------
+// liberarHoldsVencidos(now, cliente, limite, alExpirar)
+// Libera los holds (bloqueos temporales) que vencieron sin pago y devuelve
+// sus cupos al inventario de ServiceSlot.
+//   - Busca reservas en pending_payment con holds activos expirados.
+//   - Marca la reserva como "expired" y el hold como "released".
+//   - Resta los cupos retenidos (heldCount) de cada ServiceSlot.
+//   - Es idempotente: el updateMany condicionado por status asegura que solo
+//     una petición libera los cupos de cada reserva.
+//   - `limite` acota cuántas reservas procesa por llamada (50 por defecto).
+//     El cron pasa null para procesar todas.
+// -----------------------------------------------------------------------------
 export async function liberarHoldsVencidos(
   now: Date = new Date(),
   cliente: ClienteReserva = db,
   limite: number | null = 50,
   alExpirar?: (reservationId: string) => void | Promise<void>,
 ): Promise<number> {
-  // Los cupos se devuelven con la cantidad de la tabla puente, no con la del
-  // hold: así una reserva de varias franjas devuelve exactamente lo que tomó.
   const vencidas = await cliente.reservation.findMany({
     where: {
       status: "pending_payment",
@@ -190,36 +205,30 @@ export async function liberarHoldsVencidos(
   return liberadas;
 }
 
-/**
- * Un cliente no puede tener dos reservas que se solapen, aunque sean de
- * instalaciones o categorías distintas (SCRUM sección 11).
- *
- * Solo se consideran las que siguen vivas: pending_payment, payment_processing
- * y confirmed. Una reserva rechazada, expirada o ya usada no bloquea el horario,
- * y una `pending_payment` con el bloqueo vencido tampoco (ya fue liberada por
- * `liberarHoldsVencidos`).
- *
- * Esta comprobación DEBE ejecutarse con el cliente de la transacción y después
- * de tomar el lock del cliente: si corriera por fuera, dos peticiones
- * simultáneas del mismo usuario pasarían las dos y dejarían reservas solapadas.
- */
+// -----------------------------------------------------------------------------
+// chocarConOtraReserva(cliente, customerRowId, startsAt, endsAt)
+// Verifica si el cliente ya tiene una reserva viva que se solape con el
+// horario solicitado. Solo se consideran reservas pending_payment,
+// payment_processing y confirmed.
+//   - Se consulta ReservationBlock (no Reservation) porque una reserva puede
+//     abarcar varias zonas y su ventana global rechazaría horarios libres.
+//   - Solape real: empieza antes de que termine el otro y termina después de
+//     que empiece. Un borde compartido (10-11 y 11-12) NO choca.
+//   - DEBE ejecutarse dentro de una transacción y DESPUÉS de tomar el lock
+//     del cliente, para evitar condiciones de carrera.
+// -----------------------------------------------------------------------------
 async function chocarConOtraReserva(
   cliente: ClienteReserva,
   customerRowId: string,
   startsAt: Date,
   endsAt: Date,
 ): Promise<{ startsAt: Date; endsAt: Date; serviceName: string } | null> {
-  // Se consulta ReservationBlock y no Reservation: una reserva puede abarcar
-  // varias zonas, así que su ventana global es la unión de todas y rechazaría
-  // horarios que en realidad están libres. El bloque es el tramo real.
   const choque = await cliente.reservationBlock.findFirst({
     where: {
       reservation: {
         customerId: customerRowId,
         status: { in: ["pending_payment", "payment_processing", "confirmed"] },
       },
-      // Solape real: empieza antes de que termine el otro y termina despues de
-      // que empiece. Un borde compartido (10-11 y 11-12) no choca.
       startsAt: { lt: endsAt },
       endsAt: { gt: startsAt },
     },
@@ -232,6 +241,36 @@ async function chocarConOtraReserva(
     : null;
 }
 
+// -----------------------------------------------------------------------------
+// createReservationWithHold(customerId, input, now)
+// Función principal para crear una reserva con bloqueo temporal. Flujo:
+//   1. Valida que los acompañantes coincidan con personas - 1.
+//   2. Valida que no haya franjas repetidas en el carrito.
+//   3. Para cada bloque: valida fecha no pasada, no día de mantenimiento,
+//      y no exceder 3 meses de anticipación.
+//   4. Consulta los ServiceSlot solicitados con su servicio y categoría.
+//   5. Verifica que cada franja pertenezca al servicio correcto.
+//   6. Valida cierres de instalaciones (ServiceClosure) y horarios
+//      (ServiceSchedule: openTime/closeTime).
+//   7. Ordena bloques por hora y valida que no se pisen entre sí.
+//   8. Valida que cada franja dure exactamente 1 hora.
+//   9. Valida capacidad disponible (capacity - bookedCount - heldCount).
+//   10. Resuelve quiénes van a cada zona (asistentes por bloque).
+//   11. Dentro de una transacción de Prisma:
+//        a. Libera holds vencidos (inventario limpio).
+//        b. Toma el cupo con UPDATE condicional:
+//           capacity >= bookedCount + heldCount + personas.
+//           Si dos clientes compiten por el último cupo, solo uno gana.
+//        c. Toma lock FOR UPDATE en la fila del Customer (serializa reservas
+//           del mismo cliente para evitar solapes).
+//        d. Verifica solape con otras reservas del cliente.
+//        e. Crea Reservation (status: pending_payment), ReservationBlock,
+//           ReservationSlot, ReservationGuest, ReservationHold (10 min).
+//   12. Crea el grupo de invitados (titular + acompañantes) y los asigna a
+//       cada bloque/zona.
+//   13. Devuelve resultado con reservationId, holdId, expiraEn, totalCop,
+//       zonas y cuposRestantes.
+// -----------------------------------------------------------------------------
 export async function createReservationWithHold(
   customerId: string,
   input: CreateReservationInput,
@@ -249,8 +288,8 @@ export async function createReservationWithHold(
     };
   }
 
-  // Sin bloques repetidos: el mismo slot dos veces en un carrito es un error de
-  // la interfaz, no dos cupos distintos.
+  // Sin bloques repetidos: el mismo slot dos veces en un carrito es un error
+  // de la interfaz, no dos cupos distintos.
   const ids = input.bloques.map((b) => b.slotId);
   if (new Set(ids).size !== ids.length) {
     return {
@@ -265,8 +304,7 @@ export async function createReservationWithHold(
       return { ok: false, code: "franja_pasada", message: "No se puede reservar en una fecha pasada." };
     }
     // P1-3: el día de mantenimiento (lunes, o martes si el lunes es festivo)
-    // cierra el complejo igual que si no hubiera horario: la escritura lo
-    // defiende, no solo la lectura del calendario.
+    // cierra el complejo. La escritura lo defiende, no solo la lectura.
     if (esDiaDeMantenimiento(b.fecha)) {
       return { ok: false, code: "mantenimiento", message: "Ese día el complejo está en mantenimiento técnico." };
     }
@@ -299,8 +337,6 @@ export async function createReservationWithHold(
   }
 
   const slotPorId = new Map(slots.map((s) => [s.id, s]));
-  // Se conserva el bloque pedido junto a su franja: `personas` y `asistentes`
-  // son datos del cliente, no de la base.
   const ordenados: {
     slot: (typeof slots)[number];
     error: false | "franja_otro_servicio";
@@ -345,7 +381,6 @@ export async function createReservationWithHold(
     const slot = slotPorId.get(bloque.slotId);
     if (!slot) continue;
 
-    // Desactivada por el admin: ni con franja generada se vende.
     if (!slot.service.isActive) {
       return {
         ok: false,
@@ -389,9 +424,7 @@ export async function createReservationWithHold(
     return { ok: false, code: "franja_pasada", message: "Una de las franjas ya empezó o ya pasó." };
   }
 
-  // El SCRUM fija franjas de una hora. Se valida contra la base y no se confía en
-  // la pantalla: si alguien configurara un horario que generara franjas de otra
-  // duración, la reserva se rechaza en vez de cobrar mal.
+  // El SCRUM fija franjas de una hora. Se valida contra la base.
   const duracionMs = 60 * 60 * 1000;
   const duracionIncorrecta = ordenados.find(
     (b) => Math.abs(b.slot.endsAt.getTime() - b.slot.startsAt.getTime() - duracionMs) > 1000,
@@ -404,8 +437,7 @@ export async function createReservationWithHold(
     };
   }
 
-  // Dos bloques del mismo carrito no pueden pisarse: es la misma persona en dos
-  // sitios a la vez. El borde compartido (08-09 y 09-10) sí se permite.
+  // Dos bloques del mismo carrito no pueden pisarse. Borde compartido sí se permite.
   for (let i = 1; i < ordenados.length; i++) {
     const anterior = ordenados[i - 1].slot;
     const actual = ordenados[i].slot;
@@ -423,24 +455,7 @@ export async function createReservationWithHold(
 
   const todosLosIndices = Array.from({ length: personas }, (_, i: number) => i);
 
-  // Cada bloque necesita tantas personas como las que entran por su puerta.
-  for (const b of ordenados) {
-    const libres = b.slot.capacity - b.slot.bookedCount - b.slot.heldCount;
-    if (b.personas > libres) {
-      return {
-        ok: false,
-        code: "sin_cupos",
-        message:
-          libres <= 0
-            ? `${b.slot.service.name} está completa en esa franja.`
-            : `En ${b.slot.service.name} solo quedan ${libres} cupo(s) para esa franja.`,
-      };
-    }
-  }
-
-  // Resolver QUIÉN va a cada zona. El grupo completo es `personas` (titular en
-  // el índice 0); cada bloque declara a quiénes recibe por su puerta. Con esto
-  // una persona puede pasar solo por una zona y entrar en grupo a otra.
+  // Cada bloque necesita tantas personas como entran por su puerta.
   const asistentesPorBloque = new Map<string, number[]>();
   for (const b of ordenados) {
     const indices = b.asistentes ?? todosLosIndices;
@@ -469,9 +484,6 @@ export async function createReservationWithHold(
     asistentesPorBloque.set(b.slot.id, [...indices].sort((a, c) => a - c));
   }
 
-  // Los cupos vencidos se recuperan DENTRO de la transacción (ver abajo): así
-  // la limpieza, el lock, el chequeo de solape y la creación son atómicos y el
-  // choque no ve holds que ya expiraron pero aún no se liberaron (P2-2).
   const expiresAt = new Date(now.getTime() + HOLD_MINUTES * 60 * 1000);
 
   const totalCop = ordenados.reduce((suma, b) => {
@@ -482,28 +494,24 @@ export async function createReservationWithHold(
     return suma + b.slot.service.price * horas * b.personas;
   }, 0);
 
-  // El cobro es por hora y **por zona**: cada persona paga solo la franja a la
-  // que asiste. Ir solo a la cancha no cuesta lo mismo que ir con tres amigos.
-
+  // El cobro es por hora y por zona: cada persona paga solo la franja a la que asiste.
   const unaSolaZona = ordenados.length === 1;
   const primero = ordenados[0].slot;
   const ultimo = ordenados[ordenados.length - 1].slot;
 
-  // El cupeo se toma con un UPDATE condicional evaluado por PostgreSQL en el
-  // momento de escribir: compara columnas contra columnas, cosa que Prisma no
-  // puede hacer con un where. Así, si dos clientes toman el último cupo a la vez,
-  // solo uno obtiene affectedRows = 1 (sección 23 y 26 del SCRUM).
+  // El cupo se toma con UPDATE condicional evaluado por PostgreSQL. Compara
+  // columnas contra columnas (capacity >= bookedCount + heldCount + personas).
+  // Así, si dos clientes toman el último cupo a la vez, solo uno obtiene
+  // affectedRows = 1.
   for (let intento = 1; intento <= MAX_INTENTOS; intento++) {
     try {
       return await db.$transaction(
         async (tx) => {
-          // Primero se liberan los holds vencidos, con el cliente de la
-          // transacción: lo que sigue (cupos, lock, solape, creación) ve el
-          // inventario ya limpio y nada se cuela en la carrera.
+          // Libera holds vencidos dentro de la transacción: el inventario está
+          // limpio antes de seguir.
           await liberarHoldsVencidos(now, tx);
 
-          // Todos o nada: si un solo bloque pierde su cupo, la transacción
-          // entera se revierte y no queda ninguna franja retenida a medias.
+          // Todos o nada: si un solo bloque pierde su cupo, la transacción se revierte.
           for (const b of ordenados) {
             const tomados = await tx.$executeRaw`
               UPDATE "ServiceSlot"
@@ -529,15 +537,10 @@ export async function createReservationWithHold(
             throw new Error("La sesión no corresponde a un cliente registrado.");
           }
 
-          // Serializar las reservas de este cliente. El lock se toma ANTES de
-          // mirar si se solapa: así la segunda petición que llega en paralelo
-          // espera a que la primera confirme y sí la ve, en vez de pasar las dos.
+          // Lock del cliente para serializar reservas y evitar solapes en peticiones paralelas.
           await tx.$queryRaw`SELECT "id" FROM "Customer" WHERE "id" = ${customer.id}::uuid FOR UPDATE`;
 
-          // Ya con el lock tomado, el chequeo de solape es fiable. Se compara
-          // bloque a bloque y no contra la ventana global de la reserva: un
-          // carrito de piscina 08-09 y baloncesto 10-11 no puede pisarse con un
-          // baloncesto de 09-10, aunque su ventana global (08-11) lo sugiera.
+          // Chequeo de solape ya con el lock tomado.
           for (const { slot } of ordenados) {
             const choque = await chocarConOtraReserva(tx, customer.id, slot.startsAt, slot.endsAt);
             if (choque) {
@@ -552,10 +555,6 @@ export async function createReservationWithHold(
           const reserva = await tx.reservation.create({
             data: {
               customerId: customer.id,
-              // serviceId y la ventana global se siguen llenando porque otras
-              // partes (listados, correos, reportes) los leen. La fuente de
-              // verdad de las zonas son los bloques: con una sola zona, serviceId
-              // y la ventana coinciden exactamente con el bloque.
               serviceId: primero.serviceId,
               categoryNameSnapshot: unaSolaZona
                 ? primero.service.category.name
@@ -582,10 +581,7 @@ export async function createReservationWithHold(
             select: { id: true },
           });
 
-          // El grupo se crea aparte y EN ORDEN, porque el índice de persona es
-          // lo que usa el cliente para decir quién va a cada zona: 0 es el
-          // titular, 1 el primer acompañante, y así. Por eso no se anida en el
-          // create de la reserva: ahí no se podrían leer los ids generados.
+          // El grupo se crea aparte y en orden: el índice 0 es el titular.
           const grupo = [
             {
               fullName: `${customer.user.firstName} ${customer.user.lastName}`.trim(),
@@ -607,7 +603,7 @@ export async function createReservationWithHold(
             guestIds.push(creado.id);
           }
 
-          // Quién entra por cada puerta.
+          // Quién entra por cada puerta (zona).
           const bloques = await tx.reservationBlock.findMany({
             where: { reservationId: reserva.id },
             select: { id: true, startsAt: true },
@@ -628,8 +624,7 @@ export async function createReservationWithHold(
             select: { id: true },
           });
 
-          // Cupos que quedan en la zona más ajustada: es el número que decide si el
-          // carrito sigue entrando por el lado estrecho.
+          // Cupos que quedan en la zona más ajustada.
           const masAjustada = ordenados.reduce((peor, b) =>
             b.slot.capacity - b.slot.bookedCount - b.slot.heldCount <
             peor.slot.capacity - peor.slot.bookedCount - peor.slot.heldCount
@@ -656,11 +651,9 @@ export async function createReservationWithHold(
         { maxWait: 10_000, timeout: 15_000 },
       );
     } catch (error) {
-      // El cliente ya tiene algo en ese horario: es una regla, no un fallo.
       if (error instanceof ChoqueHorario) {
         return { ok: false, code: "horario_chocante", message: error.message };
       }
-      // Cupo tomado por otro mientras esperábamos: no es un fallo, es la regla.
       if (error instanceof CupoAgotado) {
         return {
           ok: false,
@@ -668,8 +661,6 @@ export async function createReservationWithHold(
           message: `Otro cliente tomó los cupos de ${error.message.replace("Sin cupo en ", "")} justo ahora. Elige otra franja.`,
         };
       }
-      // Varias reservas contending por la misma fila se bloquean entre sí.
-      // Se reintenta: en el último intento se devuelve un 409 legible.
       if (intento < MAX_INTENTOS && esConflictoTransitorio(error)) {
         await new Promise((r) => setTimeout(r, 120 * intento));
         continue;
@@ -692,7 +683,7 @@ export async function createReservationWithHold(
   };
 }
 
-/** Señal interna: el UPDATE condicional no találó cupo. */
+/** Señal interna: el UPDATE condicional no encontró cupo. */
 class CupoAgotado extends Error {
   constructor(servicio: string) {
     super(`Sin cupo en ${servicio}`);
@@ -718,9 +709,7 @@ function esConflictoTransitorio(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   const mensaje = `${error.name} ${error.message}`.toLowerCase();
   return (
-    // P2034: fallo por conflicto de escritura o deadlock.
     error.message.includes("P2034") ||
-    // P2028: la transacción se abortó por timeout.
     mensaje.includes("p2028") ||
     mensaje.includes("deadlock") ||
     mensaje.includes("could not serialize") ||

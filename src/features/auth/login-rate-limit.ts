@@ -1,43 +1,50 @@
-// Limitación de intentos de login por correo e IP.
+// -----------------------------------------------------------------------------
+// src/features/auth/login-rate-limit.ts
+// Limitación de intentos de login para proteger contra fuerza bruta.
+// Los contadores viven en la base de datos (tabla LoginAttempt), por lo que
+// sobreviven a reinicios y se comparten entre instancias del servidor.
+// -----------------------------------------------------------------------------
+
 import { db } from "@/shared/lib/db";
 import { HttpError } from "@/shared/http/errors";
 
-/**
- * Límite de intentos de inicio de sesión.
- *
- * Sin esto, `login` acepta ilimitados intentos por segundo: un atacante con un
- * diccionario de contraseñas puede probar miles de combinaciones contra una
- * cuenta conocida sin que nada lo detenga. El contador vive en la base y no en
- * memoria, así que sobrevive a un reinicio del servidor y es compartido entre
- * instancias.
- */
+// -----------------------------------------------------------------------------
+// Constantes de límites
+// MAX_INTENTOS_POR_VENTANA: máximo de fallos por correo en la ventana.
+// VENTANA_INTENTOS_MS: duración de la ventana (15 minutos).
+// MAX_CUENTAS_POR_IP: máximo de cuentas distintas que una IP puede atacar.
+// -----------------------------------------------------------------------------
 export const MAX_INTENTOS_POR_VENTANA = 10;
 export const VENTANA_INTENTOS_MS = 15 * 60 * 1000; // 15 minutos
 
-/** Máximo de cuentas distintas que una misma IP puede atacar en la ventana. */
 export const MAX_CUENTAS_POR_IP = 30;
 
-/**
- * Registra el intento. Se escribe tanto el acierto como el fallo a propósito:
- * el contador que corta la fuerza bruta es el de fallos, pero guardar también
- * los aciertos mantiene la ventana deslizando de forma uniforme.
- */
+// -----------------------------------------------------------------------------
+// registrarIntento(email, ip, success)
+// Registra un intento de login (exitoso o fallido) en la tabla LoginAttempt.
+// Se guarda tanto aciertos como fallos para mantener la ventana deslizante.
+// Si falla la escritura en BD, no interrumpe el login (defensa secundaria).
+// -----------------------------------------------------------------------------
 export async function registrarIntento(email: string, ip: string | null, success: boolean) {
   try {
     await db.loginAttempt.create({
       data: { email: email.toLowerCase(), ip, success },
     });
   } catch {
-    // Que falle el registro no debe tumbar el login: el límite es una defensa
-    // secundaria, no la condición para poder autenticarse.
+    // Que falle el registro no debe tumbar el login.
   }
 }
 
-/**
- * Corta el intento si se superó cualquiera de los dos límites. Se llama ANTES
- * de comparar la contraseña: si se comprobara después, el atacante podría
- * seguir gastando CPU en bcrypt.
- */
+// -----------------------------------------------------------------------------
+// verificarLimiteIntentos(email, ip)
+// Se llama ANTES de comparar la contraseña.
+//   1. Calcula el inicio de la ventana (ahora - 15 min).
+//   2. Cuenta fallos por correo en la ventana.
+//   3. Cuenta fallos por IP en la ventana.
+//   4. Si fallosPorCorreo >= 10 → lanza 429 (bloqueo por correo).
+//   5. Si fallosPorIp >= 30 → lanza 429 (bloqueo por IP).
+// Así se detiene el ataque antes de gastar CPU en bcrypt.
+// -----------------------------------------------------------------------------
 export async function verificarLimiteIntentos(email: string, ip: string | null): Promise<void> {
   const desde = new Date(Date.now() - VENTANA_INTENTOS_MS);
 
@@ -68,17 +75,21 @@ export async function verificarLimiteIntentos(email: string, ip: string | null):
   }
 }
 
-/** Limpia registros antiguos. La ventana ya los ignora; esto solo evita que crezcan sin control. */
+// -----------------------------------------------------------------------------
+// purgarIntentosAntiguos()
+// Elimina intentos de login más antiguos que 4 ventanas (1 hora).
+// Evita que la tabla crezca sin control. La ventana activa ya ignora los antiguos.
+// -----------------------------------------------------------------------------
 export async function purgarIntentosAntiguos() {
   const limite = new Date(Date.now() - VENTANA_INTENTOS_MS * 4);
   await db.loginAttempt.deleteMany({ where: { createdAt: { lt: limite } } });
 }
 
-/**
- * Lee la IP de origen. Detrás de un proxy o de un servicio de hosting la
- * cabecera real es `x-forwarded-for`, y trae una cadena de IPs de la más
- * externa a la más interna: la del atacante es la primera.
- */
+// -----------------------------------------------------------------------------
+// ipDesdeHeaders(headers)
+// Lee la IP real del cliente desde cabeceras x-forwarded-for o x-real-ip.
+// x-forwarded-for puede contener una cadena de IPs; la primera es la del origen.
+// -----------------------------------------------------------------------------
 export function ipDesdeHeaders(headers: Headers): string | null {
   const reenviada = headers.get("x-forwarded-for");
   if (reenviada) {
