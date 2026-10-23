@@ -121,7 +121,7 @@ export function CategoriesClient({ initialCategories }: { initialCategories: Cat
 
   return (
     <div className="space-y-6">
-      <section className="acard omega-ring acard-pad">
+      <section className="acard acard-pad">
         <div className="acard-head">
           <div>
             <h2 className="acard-title">Nueva categoría</h2>
@@ -147,7 +147,7 @@ export function CategoriesClient({ initialCategories }: { initialCategories: Cat
       {error ? <p role="alert" className="aalert aalert-error">{error}</p> : null}
       {success ? <p role="status" className="aalert aalert-info">{success}</p> : null}
 
-      <section className="acard omega-ring acard-pad">
+      <section className="acard acard-pad">
         <div className="acard-head">
           <div>
             <h2 className="acard-title">Categorías registradas</h2>
@@ -155,9 +155,8 @@ export function CategoriesClient({ initialCategories }: { initialCategories: Cat
           </div>
           <span className="akpi-label">{categories.length} en total</span>
         </div>
-        <div className="atable-wrap omega-ring">
-          <div className="atable-scroll">
-            <table className="atable">
+        <div className="atable-wrap">
+          <table className="atable">
             <thead>
               <tr><th scope="col">Nombre</th><th scope="col">Slug</th><th scope="col">Servicios</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr>
             </thead>
@@ -200,8 +199,7 @@ export function CategoriesClient({ initialCategories }: { initialCategories: Cat
               ))}
               {categories.length === 0 ? <tr><td colSpan={5} className="py-8 text-center text-sm text-[#b8aca6]">Aún no hay categorías registradas.</td></tr> : null}
             </tbody>
-            </table>
-          </div>
+          </table>
         </div>
       </section>
 

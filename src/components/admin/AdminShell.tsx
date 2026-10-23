@@ -8,7 +8,6 @@ import { CalendarDays, ExternalLink, Menu, Search, X } from "lucide-react";
 import { ADMIN_NAV } from "./admin-nav";
 import { formatTodayLong, initials } from "./format";
 import { LogoutButton } from "./LogoutButton";
-import AmbientBubbles from "@/components/AmbientBubbles";
 
 export interface AdminUser {
   firstName: string;
@@ -21,19 +20,18 @@ interface AdminShellProps {
   children: React.ReactNode;
 }
 
-const ADMIN_NAV_REGEX = ADMIN_NAV.map((section) => ({
-  title: section.title,
-  items: section.items.map((item) => ({ ...item, regex: new RegExp(item.match) })),
-}));
+function isActive(pathname: string, match: string): boolean {
+  return new RegExp(match).test(pathname);
+}
 
 /** Estructura admin: sidebar fija + topbar + contenido. Drawer en mobile. */
 export function AdminShell({ user, children }: AdminShellProps) {
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
-  const activeSection = ADMIN_NAV_REGEX.find((section) =>
-    section.items.some((item) => item.regex.test(pathname)),
+  const activeSection = ADMIN_NAV.find((section) =>
+    section.items.some((item) => isActive(pathname, item.match)),
   );
-  const activeItem = activeSection?.items.find((item) => item.regex.test(pathname));
+  const activeItem = activeSection?.items.find((item) => isActive(pathname, item.match));
 
   useEffect(() => {
     document.body.style.overflow = navOpen ? "hidden" : "";
@@ -47,12 +45,6 @@ export function AdminShell({ user, children }: AdminShellProps) {
       <a href="#admin-content" className="admin-skip">
         Saltar al contenido
       </a>
-
-      {/* Ambiente del Inicio: resplandor + burbujas. Decorativo, sin interacción. */}
-      <div aria-hidden="true" className="admin-ambient">
-        <div className="omega-cta-glow" />
-        <AmbientBubbles variant="mixed" />
-      </div>
 
       {navOpen ? (
         <div
@@ -86,13 +78,13 @@ export function AdminShell({ user, children }: AdminShellProps) {
         </div>
 
         <nav className="admin-sidebar-nav">
-          {ADMIN_NAV_REGEX.map((section) => (
+          {ADMIN_NAV.map((section) => (
             <div key={section.title} className="admin-nav-section">
               <p className="admin-nav-title">{section.title}</p>
               <div className="space-y-0.5">
                 {section.items.map((item) => {
                   const Icon = item.icon;
-                  const current = item.regex.test(pathname);
+                  const current = isActive(pathname, item.match);
                   return (
                     <Link
                       key={item.href}
@@ -136,7 +128,7 @@ export function AdminShell({ user, children }: AdminShellProps) {
           </div>
           <Link href="/" className="admin-site-link">
             <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.9} />
-            <span>Ver sitio web</span>
+            <span>Ver sitio público</span>
           </Link>
         </div>
       </aside>

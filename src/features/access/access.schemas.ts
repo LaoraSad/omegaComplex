@@ -1,4 +1,3 @@
-// Validaciones Zod de token/código de acceso.
 import { z } from "zod";
 
 // Entradas del módulo de acceso (control de ingreso por QR).

@@ -1,4 +1,3 @@
-// Generación del PDF con códigos QR.
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 

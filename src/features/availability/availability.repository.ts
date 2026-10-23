@@ -1,10 +1,3 @@
-// -----------------------------------------------------------------------------
-// src/features/availability/availability.repository.ts
-// Disponibilidad real de servicios: cruza ServiceSchedule (horario semanal),
-// ServiceClosure (cierres manuales) y ServiceSlot (cupos por franja).
-// Incluye reglas de festivos y mantenimiento de Colombia (America/Bogota).
-// -----------------------------------------------------------------------------
-
 import { randomUUID } from "node:crypto";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { liberarHoldsVencidos } from "@/features/reservations/reservations.service";
@@ -17,31 +10,32 @@ import {
 import { db } from "@/shared/lib/db";
 import type { DayAvailability, SlotAvailability, SlotStatus } from "./availability.types";
 
-// -----------------------------------------------------------------------------
-// Constantes
-// BOGOTA: zona horaria Colombia.
-// SLOT_DURATION_MS: duración de cada franja (1 hora = 3.600.000 ms).
-// SLOT_WRITE_BATCH_SIZE: tamaño de lote para escritura masiva de slots.
-// -----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Disponibilidad real: se cruzan ServiceSchedule (horario semanal),
+// ServiceClosure (cierres manuales) y ServiceSlot (cupos por franja). Nada de
+// franjas fijas como antes.
+//
+// Encima de eso hay dos reglas que no viven en ServiceSchedule:
+//   - Festivos de Colombia: el día festivo SE ABRE y desplaza el mantenimiento.
+//   - Mantenimiento: lunes por defecto, martes si el lunes es festivo.
+
+/**
+ * ¿Este día está cerrado por mantenimiento?
+ *
+ * OJO con la dirección de la regla: el festivo NO cierra el complejo, lo que
+ * hace es **desplazar el mantenimiento**. Si el lunes es festivo, ese lunes abre
+ * con horario normal y el mantenimiento se corre al martes.
+ */
+export function cerradoPorMantenimiento(date: string): boolean {
+  return esDiaDeMantenimiento(date);
+}
+// ---------------------------------------------------------------------------
+
 const BOGOTA = "America/Bogota";
 const SLOT_DURATION_MS = 60 * 60 * 1000;
 const SLOT_WRITE_BATCH_SIZE = 500;
 
-// -----------------------------------------------------------------------------
-// cerradoPorMantenimiento(date)
-// Indica si una fecha está cerrada por mantenimiento.
-// Regla: festivo NO cierra el complejo, desplaza el mantenimiento.
-// Si el lunes es festivo, ese lunes abre y el mantenimiento se corre al martes.
-// -----------------------------------------------------------------------------
-export function cerradoPorMantenimiento(date: string): boolean {
-  return esDiaDeMantenimiento(date);
-}
-
-// -----------------------------------------------------------------------------
-// bogotaDayBounds(date)
-// Devuelve el rango [start, end) de un día en zona horaria Bogotá.
-// start = inicio del día (00:00 Bogotá), end = inicio del día siguiente.
-// -----------------------------------------------------------------------------
+/** Rango [start, end) del dia pedido en America/Bogota. */
 export function bogotaDayBounds(date: string): { start: Date; end: Date } {
   const [y, m, d] = date.split("-").map(Number);
   if (!y || !m || !d) throw new Error("Fecha inválida, se espera AAAA-MM-DD.");
@@ -51,23 +45,17 @@ export function bogotaDayBounds(date: string): { start: Date; end: Date } {
   };
 }
 
-// -----------------------------------------------------------------------------
-// bogotaDayOfWeek(date)
-// Devuelve el día de la semana (0=domingo ... 6=sábado) de una fecha en Bogotá.
-// -----------------------------------------------------------------------------
+/** Dia de la semana 0=domingo .. 6=sabado, igual que ServiceSchedule. */
 export function bogotaDayOfWeek(date: string): number {
   const { start } = bogotaDayBounds(date);
   const corto = new Intl.DateTimeFormat("en-US", { timeZone: BOGOTA, weekday: "short" })
     .format(start)
     .slice(0, 3);
   if (corto === "Sun") return 0;
+  // Lun..Sab son 1..6 (indexOf daría 0..5 y pisaría al domingo).
   return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(corto) + 1;
 }
 
-// -----------------------------------------------------------------------------
-// toBogotaDateKey(date)
-// Devuelve AAAA-MM-DD de una fecha en zona Bogotá.
-// -----------------------------------------------------------------------------
 export function toBogotaDateKey(date: Date): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: BOGOTA,
@@ -77,10 +65,6 @@ export function toBogotaDateKey(date: Date): string {
   }).format(date);
 }
 
-// -----------------------------------------------------------------------------
-// buildSlotsForSchedule(baseDate, schedule, capacity)
-// Genera franjas de 1 hora para un día dado el horario de apertura y cierre.
-// -----------------------------------------------------------------------------
 export function buildSlotsForSchedule(
   baseDate: Date,
   schedule: { openTime: string; closeTime: string },
@@ -136,20 +120,15 @@ function dateOnlyValue(date: Date): number {
   return Date.parse(`${date.toISOString().slice(0, 10)}T00:00:00.000Z`);
 }
 
-// -----------------------------------------------------------------------------
-// generateServiceSlotsForRange(serviceId, rangeDays, client)
-// Genera los ServiceSlot para un servicio en un rango de días (por defecto,
-// toda la ventana reservable: hoy + 3 meses).
-//   - Salta días de mantenimiento y cierres (ServiceClosure).
-//   - Escribe en lotes con $executeRaw y ON CONFLICT para no duplicar slots.
-//   - Devuelve cuántos slots se insertaron/actualizaron.
-// -----------------------------------------------------------------------------
 export async function generateServiceSlotsForRange(
   serviceId: string,
   rangeDays?: number,
   client: PrismaClient = db,
 ): Promise<number> {
   const firstDate = toBogotaDateKey(new Date());
+  // P2-3: por defecto se cubre toda la ventana reservable (hoy + 3 meses),
+  // no 90 días fijos. Con 90 fijos quedaba un hueco donde el backend permitía
+  // reservar pero no había franjas generadas.
   const dias = rangeDays ?? diasVentanaReserva(firstDate);
   if (!Number.isInteger(dias) || dias < 1) {
     throw new Error("rangeDays debe ser un entero mayor que cero.");
@@ -182,8 +161,10 @@ export async function generateServiceSlotsForRange(
   for (let offset = 0; offset < dias; offset++) {
     const dateKey = addBogotaDays(firstDate, offset);
 
-    // Festivo y mantenimiento no generan franjas.
-    if (cerradoPorMantenimiento(dateKey)) continue;
+// Festivo y mantenimiento no generan franjas. Ojo: el festivo por sí solo NO
+  // cierra el complejo; lo que se cierra es el día de mantenimiento, que es el
+  // que se corre cuando el lunes es festivo.
+  if (cerradoPorMantenimiento(dateKey)) continue;
 
     const dateValue = Date.parse(`${dateKey}T00:00:00.000Z`);
     if (closures.some((closure) =>
@@ -200,7 +181,7 @@ export async function generateServiceSlotsForRange(
   let upserted = 0;
   for (let offset = 0; offset < slots.length; offset += SLOT_WRITE_BATCH_SIZE) {
     const batch = slots.slice(offset, offset + SLOT_WRITE_BATCH_SIZE);
-    const values = Prisma.join(batch.map((slot) => Prisma.sql`(`
+    const values = Prisma.join(batch.map((slot) => Prisma.sql`(
       ${randomUUID()}::uuid,
       ${serviceId}::uuid,
       ${slot.startsAt},
@@ -221,19 +202,11 @@ export async function generateServiceSlotsForRange(
   return upserted;
 }
 
-// -----------------------------------------------------------------------------
-// getDayAvailability(serviceId, date)
-// Devuelve la disponibilidad de una instalación en una fecha concreta.
-// Flujo:
-//   1. Libera holds vencidos (para que cupos abandonados vuelvan al inventario).
-//   2. Obtiene el servicio y el cierre para esa fecha.
-//   3. Si el servicio no existe o no está activo → cerrado.
-//   4. Si hay cierre de admin → cerrado con motivo.
-//   5. Si es día de mantenimiento → cerrado.
-//   6. Si no hay horario semanal para ese día → cerrado.
-//   7. Consulta los ServiceSlot del día y calcula free = capacity - bookedCount - heldCount.
-//   8. Clasifica cada slot: past (ya empezó), full (sin cupos), available.
-// -----------------------------------------------------------------------------
+/**
+ * Disponibilidad de una instalacion en una fecha.
+ * Cierra el dia si el complejo no atiende (regla de mantenimiento), si hay un
+ * bloqueo vigente, o si la franja ya paso.
+ */
 export async function getDayAvailability(
   serviceId: string,
   date: string,
@@ -241,6 +214,8 @@ export async function getDayAvailability(
   const { start, end } = bogotaDayBounds(date);
   const now = new Date();
 
+  // Antes de contar nada: si alguien abandonó el checkout, sus cupos ya no están
+  // retenidos. Sin esto el cliente ve "completo" por bloqueos ya vencidos.
   await liberarHoldsVencidos(now);
 
   const [service, closure] = await Promise.all([
@@ -280,20 +255,28 @@ export async function getDayAvailability(
     hayDisponibilidad: false,
     motivo,
     reason,
-    festivo: null,
+    festivo: festivo ? nombreFestivo(date) : null,
     slots: [],
   });
 
+  // Desactivada por el admin: cierra la venta nueva sin tocar reservas vivas.
   if (!service.isActive) {
     return cerrado("servicio_inactivo", "Esta instalación no está disponible actualmente.");
   }
 
+  // Cierre puntual del admin (imprevisto). Gana sobre todo lo demás: si alguien
+  // cerró la instalación a mano, ese es el motivo que hay que explicar.
   if (closure) {
     return cerrado("cierre_admin", closure.reason ?? "Bloqueada por el administrador");
   }
 
+  // Festivo nacional: el complejo ABRE. Lo que hace el festivo es correr el
+  // mantenimiento de esa semana al martes, no cerrar el día. Antes se cerraba y
+  // quedaba la incoherencia de un lunes festivo que ni abría ni figuraba con
+  // franjas generadas.
   const festivo = esFestivo(date);
 
+  // Mantenimiento: lunes, o martes cuando el lunes fue festivo.
   if (cerradoPorMantenimiento(date)) {
     return cerrado("mantenimiento", "Jornada de mantenimiento técnico");
   }
@@ -340,6 +323,9 @@ export async function getDayAvailability(
 
   const hayDisponibilidad = disponibles.some((s) => s.status === "available");
 
+  // El día está abierto aunque ya no queden franjas: son dos cosas distintas y
+  // confundirlas hacía que el modal dijera "no hay franjas para ese día" a las
+  // 6 de la tarde en un martes que sí atendía.
   if (slots.length === 0) {
     return { ...base, open: true, hayDisponibilidad: false, motivo: "sin_franjas", reason: "No hay franjas generadas para este día", festivo: festivo ? nombreFestivo(date) : null, openTime: schedule.openTime, closeTime: schedule.closeTime, slots: [] };
   }
@@ -361,11 +347,7 @@ export async function getDayAvailability(
   };
 }
 
-// -----------------------------------------------------------------------------
-// getSlotsInRange(serviceId, from, to)
-// Devuelve las franjas disponibles de un servicio en un rango de fechas.
-// Aplica los mismos filtros de mantenimiento, cierres y horario que getDayAvailability.
-// -----------------------------------------------------------------------------
+/** Franjas generadas para una instalacion en un rango de fechas. */
 export async function getSlotsInRange(
   serviceId: string,
   from: string,
@@ -375,6 +357,7 @@ export async function getSlotsInRange(
   const end = bogotaDayBounds(to).end;
   const now = new Date();
 
+  // Igual que en el detalle del dia: primero se liberan los holds vencidos.
   await liberarHoldsVencidos(now);
 
   const [service, closures, slots] = await Promise.all([
@@ -412,6 +395,8 @@ export async function getSlotsInRange(
       dateValue >= dateOnlyValue(closure.dateFrom) && dateValue <= dateOnlyValue(closure.dateTo),
     )) return false;
 
+    // El día de mantenimiento anula el horario semanal. Los festivos no: el
+    // festivo abre el complejo y solo mueve el mantenimiento.
     if (cerradoPorMantenimiento(dateKey)) return false;
 
     const dayOfWeek = bogotaDayOfWeek(dateKey);
@@ -433,24 +418,20 @@ export async function getSlotsInRange(
   });
 }
 
-// -----------------------------------------------------------------------------
-// estadoDeSlot(startsAt, free, now)
-// Clasifica el estado de una franja:
-//   - "past": ya empezó (startsAt <= now).
-//   - "full": sin cupos libres.
-//   - "available": disponible para reservar.
-// -----------------------------------------------------------------------------
+/**
+ * Estado de una franja frente al reloj.
+ *
+ * P2-1: pasado = ya empezó (`startsAt <= now`), no ya terminó. La escritura
+ * exige `startsAt > now` (§12 franjas ya iniciadas), así que una franja
+ * iniciada se mostraba disponible y luego fallaba al reservar.
+ */
 export function estadoDeSlot(startsAt: Date, free: number, now: Date): SlotStatus {
   if (startsAt <= now) return "past";
   if (free === 0) return "full";
   return "available";
 }
 
-// -----------------------------------------------------------------------------
-// toDateOnly(d)
-// Devuelve una fecha con hora 05:00 UTC (medianoche Bogotá) para comparar
-// con columnas @db.Date de ServiceClosure.
-// -----------------------------------------------------------------------------
+/** Date-only para comparar con las columnas @db.Date de ServiceClosure. */
 function toDateOnly(d: Date): Date {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: BOGOTA,

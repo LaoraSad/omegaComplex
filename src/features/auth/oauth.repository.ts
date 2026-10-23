@@ -1,4 +1,3 @@
-// Persistencia de cuentas OAuth vinculadas a usuarios.
 import { randomBytes } from "node:crypto";
 
 import bcrypt from "bcryptjs";

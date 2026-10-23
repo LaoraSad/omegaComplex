@@ -12,7 +12,7 @@ import {
   formatNumber,
   fullName,
 } from "@/components/admin/format";
-import { servicePhoto } from "@/features/catalog/service-images";
+import { servicePhoto } from "@/components/admin/service-image";
 import {
   bogotaDayRange,
   getServiceDetail,
@@ -42,23 +42,22 @@ const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
 export default async function ServicioDetailPage({ params }: ServiceDetailPageProps) {
   const { id } = await params;
+  const service = await getServiceDetail(id);
+  if (!service) notFound();
+
+  const categorias = await listCategories(true);
+  const photo = service.imagen ?? servicePhoto(service.slug);
+  const byDay = new Map(service.serviceSchedules.map((sc) => [sc.dayOfWeek, sc]));
 
   const { start: todayStart, end: todayEnd } = bogotaDayRange();
-  const [service, categorias, reservations, accesses, todaySlots] = await Promise.all([
-    getServiceDetail(id),
-    listCategories(true),
-    listReservations({ serviceId: id, pageSize: 5 }),
-    listAccesses({ serviceId: id, pageSize: 5 }),
+  const [reservations, accesses, todaySlots] = await Promise.all([
+    listReservations({ serviceId: service.id, pageSize: 5 }),
+    listAccesses({ serviceId: service.id, pageSize: 5 }),
     db.serviceSlot.findMany({
-      where: { serviceId: id, startsAt: { gte: todayStart, lt: todayEnd } },
+      where: { serviceId: service.id, startsAt: { gte: todayStart, lt: todayEnd } },
       select: { capacity: true, bookedCount: true, heldCount: true },
     }),
   ]);
-
-  if (!service) notFound();
-
-  const photo = service.imagen ?? servicePhoto(service.slug);
-  const byDay = new Map(service.serviceSchedules.map((sc) => [sc.dayOfWeek, sc]));
 
   const used = todaySlots.reduce((sum, s) => sum + s.bookedCount + s.heldCount, 0);
   const total = todaySlots.reduce((sum, s) => sum + s.capacity, 0);
@@ -108,7 +107,7 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
       />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
-        <section aria-label="Fotografía y capacidad" className="acard omega-ring overflow-hidden xl:col-span-3">
+        <section aria-label="Fotografía y capacidad" className="acard overflow-hidden xl:col-span-3">
           <div className="relative aspect-[16/9] w-full bg-[#1a1519]">
             {photo ? (
               <Image
@@ -171,7 +170,7 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
           </div>
         </section>
 
-        <section aria-label="Reservas del servicio" className="acard omega-ring acard-pad xl:col-span-2">
+        <section aria-label="Reservas del servicio" className="acard acard-pad xl:col-span-2">
           <div className="acard-head">
             <div>
               <h2 className="acard-title">Reservas recientes</h2>
@@ -209,7 +208,7 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
         </section>
       </div>
 
-      <section aria-label="Accesos del servicio" className="acard omega-ring acard-pad">
+      <section aria-label="Accesos del servicio" className="acard acard-pad">
         <div className="acard-head">
           <div>
             <h2 className="acard-title">Accesos recientes</h2>

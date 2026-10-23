@@ -1,4 +1,3 @@
-// Persistencia de control de acceso: empleado por usuario, lookup de QR por hash/código, otorga acceso y métricas.
 import { createHash } from "node:crypto";
 
 import { db } from "@/shared/lib/db";

@@ -28,7 +28,7 @@ export function PendingEmailBanner({ email }: { email: string }) {
   return (
     <div
       role="status"
-      className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3.5 py-2.5 text-xs text-amber-100"
+      className="rounded-xl bg-amber-50 border border-amber-200 px-3.5 py-2.5 text-xs text-amber-900 flex flex-wrap items-center gap-2"
     >
       <TriangleAlert className="w-3.5 h-3.5 shrink-0" />
       <span className="font-bold">Tu correo está pendiente de verificación.</span>
@@ -46,8 +46,8 @@ export function PendingEmailBanner({ email }: { email: string }) {
       >
         {loading ? "Enviando…" : "Reenviar código"}
       </button>
-      {message ? <span className="w-full font-semibold text-emerald-300">{message}</span> : null}
-      {error ? <span role="alert" className="w-full font-bold text-rose-300">{error}</span> : null}
+      {message ? <span className="w-full font-semibold text-green-700">{message}</span> : null}
+      {error ? <span role="alert" className="w-full font-bold text-red-700">{error}</span> : null}
     </div>
   );
 }

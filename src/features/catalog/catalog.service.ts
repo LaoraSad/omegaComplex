@@ -1,5 +1,3 @@
-// Servicio de catálogo: orquesta CRUD de categorías, normaliza errores de unicidad
-// (P2002 -> Conflicto) y valida slug/nombre. Expone servicios activos.
 import { Prisma } from "@prisma/client";
 import { ConflictError, NotFoundError } from "@/shared/http/errors";
 import {

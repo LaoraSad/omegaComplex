@@ -1,83 +1,38 @@
-# -----------------------------------------------------------------------------
-# docker-compose.yml — Despliegue de Omega Complex con un solo comando:
-#   docker compose up -d --build
-#
-# Servicios:
-#   1. migrate: aplica migraciones de Prisma y ejecuta el seed ANTES de que
-#      arranque la app. Si falla, `web` no arranca (preferible que caiga el
-#      contenedor a levantar una app sin tablas).
-#      Se construye sobre la etapa `migrator` del Dockerfile (tiene CLI de
-#      Prisma, SIN next build).
-#   2. web: la aplicación Next.js en modo standalone. Depende de que `migrate`
-#      termine con éxito.
-#   3. db (comentado): PostgreSQL local opcional si no se usa Supabase.
-# -----------------------------------------------------------------------------
-
 services:
-  # ---------------------------------------------------------------------------
-  # Servicio migrate: corre `prisma migrate deploy` + `prisma db seed`.
-  # ---------------------------------------------------------------------------
-  migrate:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: migrator
-    command: >
-      sh -c "npx prisma migrate deploy && npx prisma db seed"
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-    restart: "no"  # Solo corre una vez; si falla, se revisa el log.
-
-  # ---------------------------------------------------------------------------
-  # Servicio web: aplicación Next.js.
-  # ---------------------------------------------------------------------------
   web:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
-        - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
     image: omega-complex:latest
-    container_name: omega-web
     restart: unless-stopped
-    depends_on:
-      migrate:
-        # Si el seed falla, la web ni se intenta arrancar.
-        condition: service_completed_successfully
     ports:
-      # Puerto expuesto en el servidor. Por defecto 3000.
-      - "${PUERTO_APP:-3000}:3000"
+      - "3000:3000"
     env_file:
       - .env
     environment:
       NODE_ENV: production
       PORT: 3000
       HOSTNAME: 0.0.0.0
-      DATABASE_URL: ${DATABASE_URL}
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
-    # Healthcheck: usa 127.0.0.1 (IPv4) y no "localhost" porque dentro del
-    # contenedor localhost resuelve a ::1 (IPv6) y Next solo escucha en IPv4.
+    # Healthcheck real: Next responde 200 en / cuando está sano.
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000/"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 30s
+      start_period: 20s
+    # En producción la BD suele estar afuera (Supabase). Si algún día se quiere
+    # levantar Postgres en el mismo compose, descomentar el servicio y el depends_on.
+    # depends_on:
+    #   db:
+    #     condition: service_healthy
 
-  # ---------------------------------------------------------------------------
-  # Servicio db (comentado): PostgreSQL local si se quiere en el mismo VPS.
-  # Por defecto se usa una DATABASE_URL externa (Supabase).
-  # ---------------------------------------------------------------------------
   # db:
   #   image: postgres:16-alpine
   #   restart: unless-stopped
   #   environment:
   #     POSTGRES_USER: omega
-  #     POSTGRES_PASSWORD: cambia-esta-clave
-  #     POSTGRES_DB: omega_complex
+  #     POSTGRES_PASSWORD: omega
+  #     POSTGRES_DB: omega
   #   volumes:
   #     - pgdata:/var/lib/postgresql/data
   #   healthcheck:

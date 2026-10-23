@@ -1,4 +1,3 @@
-// Integración con n8n para correo y eventos.
 import { createHmac } from "node:crypto";
 
 import { logger } from "@/shared/lib/logger";

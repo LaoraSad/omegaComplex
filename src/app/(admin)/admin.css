@@ -438,17 +438,17 @@
   align-items: center;
   gap: 0.55rem;
   width: min(100%, 22rem);
-  border: 1px solid rgb(23 18 21 / 15%);
+  border: 1px solid transparent;
   border-radius: 10px;
-  background: #fff;
+  background: var(--admin-surface-soft);
   padding: 0 0.8rem;
-  color: rgb(23 18 21 / 50%);
+  color: var(--admin-faint);
   transition: border-color 140ms ease, background-color 140ms ease;
 }
 
 .admin-topbar-search:focus-within {
-  border-color: rgb(23 18 21 / 30%);
-  background: #fff;
+  border-color: var(--admin-border);
+  background: var(--admin-surface);
 }
 
 .admin-topbar-search input {
@@ -456,13 +456,13 @@
   height: 2.5rem;
   border: none;
   background: transparent;
-  color: #171215;
+  color: var(--admin-text);
   font-size: 0.84rem;
   outline: none;
 }
 
 .admin-topbar-search input::placeholder {
-  color: rgb(23 18 21 / 45%);
+  color: var(--admin-faint);
 }
 
 /* ---------- Tarjetas y secciones ---------- */
@@ -1198,10 +1198,8 @@ a.atimeline-link:hover {
 
 .ainput:focus,
 .aselect:focus {
-  /* Ver la regla equivalente más abajo: el foco va en dorado para que el
-     formulario no se vea en dos colores. */
-  border-color: var(--admin-gold);
-  box-shadow: 0 0 0 3px rgb(227 189 116 / 18%);
+  border-color: var(--admin-primary);
+  box-shadow: 0 0 0 3px rgb(122 31 61 / 10%);
   outline: none;
 }
 
@@ -1221,25 +1219,10 @@ a.atimeline-link:hover {
 /* ---------- Tablas ---------- */
 
 .atable-wrap {
+  overflow-x: auto;
   border: 1px solid var(--admin-border);
   border-radius: var(--admin-radius);
   background: var(--admin-surface);
-  /* La tarjeta NO desplaza: lleva el borde y el aro dorado (::before/::after),
-     que son `position:absolute` y por eso quedarían fijos mientras la tabla se
-     mueve. Quien desplaza es `.atable-scroll` (hijo). `max-width:100%` evita
-     que la tabla estire el layout y empuje el resto del panel. */
-  max-width: 100%;
-}
-
-.atable-scroll {
-  /* En móvil este contenedor se desplaza en horizontal en vez de dejar que las
-     columnas se aplasten hasta ilegibles. `border-radius:inherit` recorta las
-     esquinas cuadradas de la tabla al radio de la tarjeta. */
-  overflow-x: auto;
-  max-width: 100%;
-  border-radius: inherit;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-x: contain;
 }
 
 .atable {
@@ -1247,10 +1230,6 @@ a.atimeline-link:hover {
   border-collapse: separate;
   border-spacing: 0;
   font-size: 0.84rem;
-  /* Ancho mínimo: por debajo de ~640px las columnas se vuelven ilegibles y el
-     texto se parte en varias líneas, que es lo que se veía en el celular.
-     Con este mínimo, la tabla se desplaza y se lee bien. */
-  min-width: 640px;
 }
 
 .atable thead th {
@@ -1272,16 +1251,6 @@ a.atimeline-link:hover {
   border-bottom: 1px solid var(--admin-border-soft);
   padding: 0.9rem;
   vertical-align: middle;
-}
-
-/* Las celdas no deben partir el texto en varias líneas: "Carlos Pérez" en dos
-   renglones con guiones sueltos se lee peor que una columna un poco más
-   ancha. */
-.atable td,
-.atable th {
-  overflow-wrap: normal;
-  word-break: normal;
-  hyphens: none;
 }
 
 .atable tbody tr:last-child td {
@@ -1714,17 +1683,35 @@ a.atimeline-link:hover {
 }
 
 .opdash-metric {
+  --opdash-accent: var(--admin-primary);
+  --opdash-tint: var(--admin-primary-soft);
   display: flex;
   min-width: 0;
   min-height: 10.5rem;
   flex-direction: column;
   border: 1px solid var(--admin-border);
+  border-top: 3px solid var(--opdash-accent);
   border-radius: 12px;
   padding: 1rem 1.05rem 0.9rem;
   background: var(--admin-surface);
   color: inherit;
   text-decoration: none;
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.opdash-metric[data-tone="blue"] {
+  --opdash-accent: #347b95;
+  --opdash-tint: #e8f3f5;
+}
+
+.opdash-metric[data-tone="aqua"] {
+  --opdash-accent: #227c78;
+  --opdash-tint: #e5f2ee;
+}
+
+.opdash-metric[data-tone="gold"] {
+  --opdash-accent: #a67a32;
+  --opdash-tint: var(--admin-surface);
 }
 
 .opdash-metric:nth-child(2) { animation-delay: 70ms; }
@@ -1749,10 +1736,10 @@ a.atimeline-link:hover {
   width: 2.5rem;
   height: 2.5rem;
   place-items: center;
-  border: 1px solid color-mix(in srgb, var(--admin-gold) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--opdash-accent) 16%, transparent);
   border-radius: 9px;
-  background: var(--admin-surface-soft);
-  color: var(--admin-gold);
+  background: var(--opdash-tint);
+  color: var(--opdash-accent);
 }
 
 .opdash-metric-link {
@@ -1762,7 +1749,7 @@ a.atimeline-link:hover {
 
 .opdash-metric:hover .opdash-metric-link {
   transform: translate(2px, -2px);
-  color: var(--admin-gold);
+  color: var(--opdash-accent);
 }
 
 .opdash-metric-label {
@@ -2541,9 +2528,7 @@ li[id^="servicio-"]:target {
 /* ---------- Focus y accesibilidad ---------- */
 
 .admin-scope :focus-visible {
-  /* Mismo criterio que el foco de los campos: el acento del panel es dorado y
-     el vino se reserva para superficies, no para contornos. */
-  outline: 2px solid var(--admin-gold);
+  outline: 2px solid var(--admin-primary);
   outline-offset: 2px;
 }
 
@@ -2955,6 +2940,7 @@ li[id^="servicio-"]:target {
 .ainst-card2,
 .atable-wrap {
   border: 1px solid rgb(142 35 71 / 14%);
+  border-top: 3px solid var(--admin-gold);
   border-radius: 1.1rem;
   background: linear-gradient(180deg, var(--admin-surface) 0%, var(--admin-surface) 100%);
   color: #fff;
@@ -2973,6 +2959,7 @@ li[id^="servicio-"]:target {
 
 .opdash-metric {
   min-height: 10.5rem;
+  border-top: 3px solid var(--opdash-accent, var(--admin-gold));
 }
 
 .opdash-metric-label { color: var(--admin-muted); }
@@ -2996,6 +2983,7 @@ li[id^="servicio-"]:target {
 
 .atable-wrap {
   overflow: hidden;
+  overflow-x: auto;
   padding: 0;
 }
 
@@ -3152,11 +3140,8 @@ li[id^="servicio-"]:target {
 
 .ainput:focus,
 .aselect:focus {
-  /* Dorado y no vino: la tarjeta que rodea al campo ya lleva el aro dorado, y
-     con el borde vino el formulario se veía en dos colores (rojo y dorado)
-     al enfocar. Un solo acento. */
-  border-color: var(--admin-gold);
-  box-shadow: 0 0 0 3px rgb(227 189 116 / 18%);
+  border-color: #b3295a;
+  box-shadow: 0 0 0 3px rgb(142 35 71 / 22%);
   outline: none;
   background: var(--admin-surface);
 }
@@ -3328,19 +3313,126 @@ a.atimeline-link:hover { background: rgb(142 35 71 / 5%); }
   color: rgb(245 241 236 / 76%);
 }
 
+/* ---------- Aro dorado de luz en movimiento (tarjetas y paneles) ----------
+   Mismo lenguaje que .omega-ring del inicio, en dorado para que cada tarjeta
+   se distinga del fondo oscuro. Sin cambiar el marcado: anillo con máscara
+   + halo difuminado detrás. */
 
-/* ---------- Ambiente del Inicio en el panel ----------
-   Resplandor central + burbujas doradas detrás de la estructura. El shell se
-   eleva para que el contenido quede por encima del fondo decorativo. */
-.admin-shell {
+@property --admin-ring-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.acard,
+.opdash-panel,
+.opdash-empty-state,
+.opdash-metric,
+.opdash-service-feature,
+.opdash-service-tile,
+.akpi-card,
+.ainst-feature,
+.ainst-card2,
+.atable-wrap,
+.opdash-attention,
+.opdash-clear-state,
+.adrawer,
+.amodal {
   position: relative;
+  isolation: isolate;
+}
+
+.acard::before,
+.opdash-panel::before,
+.opdash-empty-state::before,
+.opdash-metric::before,
+.opdash-service-feature::before,
+.opdash-service-tile::before,
+.akpi-card::before,
+.ainst-feature::before,
+.ainst-card2::before,
+.atable-wrap::before,
+.opdash-attention::before,
+.opdash-clear-state::before {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--admin-ring-angle, 0deg),
+    transparent 0deg,
+    var(--admin-gold-bright) 48deg,
+    var(--admin-gold) 118deg,
+    transparent 178deg,
+    transparent 232deg,
+    var(--admin-gold-deep) 298deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: admin-ring-spin 6s linear infinite;
   z-index: 1;
 }
 
-.admin-ambient {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
+.acard::after,
+.opdash-panel::after,
+.opdash-metric::after,
+.opdash-attention::after,
+.atable-wrap::after {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--admin-ring-angle, 0deg),
+    transparent 0deg,
+    var(--admin-gold) 48deg,
+    var(--admin-gold-deep) 118deg,
+    transparent 178deg,
+    transparent 232deg,
+    var(--admin-gold-bright) 298deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  filter: blur(12px);
+  opacity: 0.6;
   pointer-events: none;
+  animation: admin-ring-spin 6s linear infinite;
+  z-index: 0;
+}
+
+@keyframes admin-ring-spin {
+  to {
+    --admin-ring-angle: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acard::before,
+  .opdash-panel::before,
+  .opdash-empty-state::before,
+  .opdash-metric::before,
+  .opdash-service-feature::before,
+  .opdash-service-tile::before,
+  .akpi-card::before,
+  .ainst-feature::before,
+  .ainst-card2::before,
+  .atable-wrap::before,
+  .opdash-attention::before,
+  .opdash-clear-state::before,
+  .acard::after,
+  .opdash-panel::after,
+  .opdash-metric::after,
+  .opdash-attention::after,
+  .atable-wrap::after {
+    animation: none;
+  }
 }

@@ -1,4 +1,3 @@
-// Persistencia de reservas: holds, bloques por zona, invitados, solapes y ventana de reserva.
 import type { Prisma } from "@prisma/client";
 
 import { db } from "@/shared/lib/db";
@@ -59,40 +58,6 @@ export async function getCustomerReservation(
     include: reservationInclude,
   });
   return row;
-}
-
-/** Datos mínimos para mostrar o descargar los QR de una reserva propia. */
-export async function getCustomerReservationQrs(userId: string, reservationId: string) {
-  return db.reservation.findFirst({
-    where: { id: reservationId, customer: { userId } },
-    select: {
-      status: true,
-      startsAt: true,
-      endsAt: true,
-      customer: {
-        select: {
-          user: { select: { firstName: true, lastName: true } },
-        },
-      },
-      qrTokens: {
-        orderBy: { createdAt: "asc" },
-        select: {
-          id: true,
-          seqNo: true,
-          status: true,
-          shortCode: true,
-          guest: { select: { fullName: true } },
-          block: {
-            select: {
-              service: {
-                select: { name: true, category: { select: { name: true } } },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
 }
 
 /** Reservas cuyo QR sigue vigente: las que el cliente puede presentar. */

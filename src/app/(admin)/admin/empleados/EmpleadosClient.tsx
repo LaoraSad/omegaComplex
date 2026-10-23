@@ -141,7 +141,7 @@ export function CreateEmployeeForm({ groups }: { groups: ZoneGroup[] }) {
   }
 
   return (
-    <section aria-label="Nuevo empleado" className="acard omega-ring acard-pad space-y-4">
+    <section aria-label="Nuevo empleado" className="acard acard-pad space-y-4">
       <div className="acard-head">
         <div>
           <h2 className="acard-title">Nuevo empleado</h2>
@@ -283,7 +283,7 @@ export function EmployeeProfileForm({
   }
 
   return (
-    <section aria-label="Datos del empleado" className="acard omega-ring acard-pad space-y-4">
+    <section aria-label="Datos del empleado" className="acard acard-pad space-y-4">
       <h2 className="acard-title">Datos</h2>
       <form action={handleSubmit} className="afilters">
         <div className="afield">
@@ -400,7 +400,7 @@ export function EmployeeZoneEditor({
   }
 
   return (
-    <section aria-label="Zonas del empleado" className="acard omega-ring acard-pad space-y-4">
+    <section aria-label="Zonas del empleado" className="acard acard-pad space-y-4">
       <div className="acard-head">
         <div>
           <h2 className="acard-title">Zonas asignadas</h2>
@@ -448,7 +448,7 @@ export function EmployeePasswordForm({ employeeId }: { employeeId: string }) {
   }
 
   return (
-    <section aria-label="Credenciales" className="acard omega-ring acard-pad space-y-4">
+    <section aria-label="Credenciales" className="acard acard-pad space-y-4">
       <div className="acard-head">
         <div>
           <h2 className="acard-title">Contraseña</h2>

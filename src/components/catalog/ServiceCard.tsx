@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { CatalogServiceRecord } from '@/features/catalog/catalog.types';
 import { Users, ArrowRight, CalendarPlus, Compass } from 'lucide-react';
-import { servicePhoto } from '@/features/catalog/service-images';
+import { servicePhoto } from '@/components/admin/service-image';
 import PanningImage from '@/components/tour/PanningImage';
 
 interface ServiceCardProps {

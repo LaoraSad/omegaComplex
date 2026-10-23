@@ -1,4 +1,3 @@
-// Callback de Google: crea/vincula cuenta.
 import { cookies } from "next/headers";
 
 import {
@@ -15,7 +14,6 @@ import {
   homeFor,
   startSession,
 } from "@/features/auth/oauth.helpers";
-import { appUrl } from "@/shared/lib/app-url";
 import { logger } from "@/shared/lib/logger";
 import { enviarEvento } from "@/shared/integrations/n8n";
 
@@ -35,10 +33,8 @@ import { enviarEvento } from "@/shared/integrations/n8n";
 
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
-  // Las redirecciones se arman con el dominio público, no con `request.url`:
-  // dentro del contenedor ese host es `0.0.0.0:3000` y el navegador lo rechaza.
   const back = (reason: string) =>
-    Response.redirect(appUrl(`/login?error=${reason}`), 302);
+    Response.redirect(new URL(`/login?error=${reason}`, request.url), 302);
 
   if (!googleConfigured()) return back("oauth_no_configurado");
 
@@ -79,10 +75,10 @@ export async function GET(request: Request): Promise<Response> {
       email: existing.email,
     });
     if (!puerta.abrirSesion) {
-      return Response.redirect(appUrl(puerta.destino), 302);
+      return Response.redirect(new URL(puerta.destino, request.url), 302);
     }
     await startSession(existing.id, existing.role);
-    return Response.redirect(appUrl(homeFor(existing.role)), 302);
+    return Response.redirect(new URL(homeFor(existing.role), request.url), 302);
   }
 
   // 2. El correo ya existe de un registro manual: se vincula a esa misma cuenta
@@ -106,10 +102,10 @@ export async function GET(request: Request): Promise<Response> {
     email: user.email,
   });
   if (!puerta.abrirSesion) {
-    return Response.redirect(appUrl(puerta.destino), 302);
+    return Response.redirect(new URL(puerta.destino, request.url), 302);
   }
   await startSession(user.id, user.role);
-  return Response.redirect(appUrl(homeFor(user.role)), 302);
+  return Response.redirect(new URL(homeFor(user.role), request.url), 302);
 }
 
 /**

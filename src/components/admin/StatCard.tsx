@@ -12,7 +12,8 @@ interface StatCardProps {
 export function StatCard({ label, value, context, icon: Icon, accent }: StatCardProps) {
   return (
     <div
-      className="acard omega-ring acard-pad"
+      className="acard acard-pad"
+      style={accent ? { borderColor: "rgba(122, 31, 61, 0.5)", background: "rgba(122, 31, 61, 0.12)" } : undefined}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">

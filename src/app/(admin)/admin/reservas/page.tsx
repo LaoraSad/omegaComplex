@@ -90,7 +90,7 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
         }
       />
 
-      <form method="GET" action="/admin/reservas" className="acard omega-ring acard-pad" role="search">
+      <form method="GET" action="/admin/reservas" className="acard acard-pad" role="search">
         <div className="afilters">
           <div className="afield afield-grow">
             <label className="alabel" htmlFor="f-q">Buscar</label>
@@ -153,9 +153,8 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
 
       {result.rows.length > 0 ? (
         <div>
-          <div className="atable-wrap omega-ring">
-            <div className="atable-scroll">
-              <table className="atable">
+          <div className="atable-wrap">
+            <table className="atable">
               <thead>
                 <tr>
                   <th scope="col">Cliente</th>
@@ -212,8 +211,7 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
                   );
                 })}
               </tbody>
-              </table>
-            </div>
+            </table>
           </div>
           <Suspense>
             <Pagination
@@ -226,7 +224,7 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
           </Suspense>
         </div>
       ) : (
-        <div className="acard omega-ring">
+        <div className="acard">
           <EmptyState
             icon={CalendarX2}
             title={hasFilters ? "Sin resultados para estos filtros" : "No hay reservas para este período"}

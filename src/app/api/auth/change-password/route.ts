@@ -1,4 +1,3 @@
-// Cambio de contraseña con contraseña actual y revocación de sesiones.
 import { NextResponse } from "next/server";
 import { changePassword } from "@/features/auth/auth.service";
 import { changePasswordSchema } from "@/features/auth/auth.schemas";

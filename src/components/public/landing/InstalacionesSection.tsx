@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { ArrowRight, ArrowUpRight, Users } from 'lucide-react';
 import AmbientBubbles from '@/components/AmbientBubbles';
 import type { CatalogServiceRecord } from '@/features/catalog/catalog.types';
-import { servicePhoto } from '@/features/catalog/service-images';
+import { servicePhoto } from '@/components/admin/service-image';
 
 interface Props {
   services: CatalogServiceRecord[];

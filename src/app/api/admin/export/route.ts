@@ -1,4 +1,3 @@
-// Exportación a CSV de reservas, accesos, clientes (solo admin).
 import { NextRequest, NextResponse } from "next/server";
 
 import {

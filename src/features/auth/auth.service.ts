@@ -1,11 +1,3 @@
-// -----------------------------------------------------------------------------
-// src/features/auth/auth.service.ts
-// Lógica de negocio de autenticación: registro, login, cambio de contraseña,
-// actualización de perfil y verificación de correo.
-// Orquesta repositorios, bcrypt, JWT (sesión), rate limiting, envío de correos
-// (vía n8n) y eventos.
-// -----------------------------------------------------------------------------
-
 import bcrypt from "bcryptjs";
 
 import { createSession } from "@/shared/auth/session";
@@ -35,11 +27,6 @@ import {
 
 import type { ChangePasswordInput, LoginInput, RegisterInput, UpdateProfileInput } from "./auth.schemas";
 
-// -----------------------------------------------------------------------------
-// toAuthUser(user)
-// Mapea un objeto de usuario de la BD (con relación role) al formato AuthUser
-// que se devuelve al cliente tras login o register.
-// -----------------------------------------------------------------------------
 function toAuthUser(user: {
   id: string;
   email: string;
@@ -58,22 +45,6 @@ function toAuthUser(user: {
   };
 }
 
-// -----------------------------------------------------------------------------
-// register(input)
-// Registra un nuevo usuario (cliente). Flujo:
-//   1. Verifica que no exista ya un usuario con ese email (findUserByEmail).
-//   2. Verifica que no exista un Customer con ese documento (findCustomerByDocument).
-//   3. Busca el rol "user" en BD. Si no existe, lanza 500 (falta ejecutar el seed).
-//   4. Valida la fecha de nacimiento.
-//   5. Hashea la contraseña con bcrypt (12 rondas).
-//   6. Crea el User y el Customer dentro de una transacción de Prisma
-//      (createUserWithCustomer). El usuario nace con emailVerified = false.
-//   7. Intenta enviar código de verificación por correo (issueVerificationCode).
-//      Si falla, no detiene el registro; solo se registra en logs.
-//   8. Envía evento "usuario.registrado" a n8n para que gestione el correo.
-//   9. Devuelve los datos del usuario (sin el token; el token se genera en el route handler).
-//   - Si hay condición de carrera en unique (error P2002 de Prisma), lanza ConflictError.
-// -----------------------------------------------------------------------------
 export async function register(input: RegisterInput) {
   const existingUser = await findUserByEmail(input.email);
 
@@ -126,8 +97,9 @@ export async function register(input: RegisterInput) {
       logger.error("email.verificacion_fallida", { userId: user.id, error });
     }
 
-    // Se avisa a n8n con el mismo evento que usa el alta con Google, para que
-    // haya un solo camino en el workflow. La cuenta nace SIN verificar.
+    // Se le avisa a n8n con el mismo evento que usa el alta con Google, para
+    // que haya un solo camino en el workflow en vez de dos ramas. Aquí el
+    // código de verificación es obligatorio: la cuenta nace sin verificar.
     await enviarEvento("usuario.registrado", {
       canal: "manual",
       email: user.email,
@@ -136,16 +108,7 @@ export async function register(input: RegisterInput) {
       requiereCodigo: true,
     });
 
-    return {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phone: user.phone,
-      role: user.role.name,
-      emailVerified: user.emailVerified,
-      verificationEmailSent,
-    };
+    return { email: user.email, verificationEmailSent };
   } catch (error) {
     // Condición de carrera en unique (email/document).
     if (
@@ -160,23 +123,6 @@ export async function register(input: RegisterInput) {
   }
 }
 
-// -----------------------------------------------------------------------------
-// login(input, ip)
-// Autentica un usuario. Flujo:
-//   1. Rate limiting ANTES de tocar la contraseña (verificarLimiteIntentos).
-//      Esto evita que un atacante gaste CPU en bcrypt si ya está bloqueado.
-//   2. Busca el usuario por email (findUserByEmail).
-//   3. Si no existe, registra intento fallido y lanza 401.
-//   4. Si el usuario está inactivo, registra intento fallido y lanza 401.
-//   5. Compara la contraseña con bcrypt.compare.
-//   6. Si la contraseña es inválida, registra intento fallido y lanza 401.
-//   7. Puerta de verificación: si emailVerified es false, lanza 403 EMAIL_NOT_VERIFIED.
-//      Se revisa DESPUÉS de validar la contraseña para no revelar qué correos
-//      están registrados (evita enumeración de cuentas).
-//   8. Registra intento exitoso.
-//   9. Crea la sesión JWT (createSession) que guarda la cookie HttpOnly.
-//   10. Devuelve los datos del usuario.
-// -----------------------------------------------------------------------------
 export async function login(input: LoginInput, ip: string | null = null) {
     // El límite va ANTES de tocar la contraseña: comprobarlo después dejaría al
     // atacante sigue gastando CPU en bcrypt aunque ya esté bloqueado.
@@ -225,15 +171,10 @@ export async function login(input: LoginInput, ip: string | null = null) {
     return toAuthUser(user);
   }
 
-// -----------------------------------------------------------------------------
-// changePassword(userId, input)
-// Cambia la contraseña de un usuario autenticado. Requiere la contraseña actual.
-//   1. Obtiene credenciales del usuario (findUserCredentialsById).
-//   2. Compara la contraseña actual con bcrypt.compare.
-//   3. Hashea la nueva contraseña y la guarda (updateUserPassword).
-//      - updateUserPassword incrementa tokenVersion, lo que revoca todas las
-//        sesiones activas previas (P1-5).
-// -----------------------------------------------------------------------------
+/**
+ * Cambio de contraseña con sesión iniciada. Exige la contraseña actual para
+ * que alguien con acceso momentáneo al dispositivo no pueda fijar una nueva.
+ */
 export async function changePassword(userId: string, input: ChangePasswordInput) {
   const credentials = await findUserCredentialsById(userId);
   if (!credentials || !credentials.isActive) {
@@ -248,10 +189,6 @@ export async function changePassword(userId: string, input: ChangePasswordInput)
   await updateUserPassword(userId, await bcrypt.hash(input.newPassword, 12));
 }
 
-// -----------------------------------------------------------------------------
-// UpdateProfileResult (tipo)
-// Resultado de la actualización de perfil.
-// -----------------------------------------------------------------------------
 export type UpdateProfileResult = {
   phoneUpdated: boolean;
   emailChanged: boolean;
@@ -259,18 +196,14 @@ export type UpdateProfileResult = {
   verificationEmailSent?: boolean;
 };
 
-// -----------------------------------------------------------------------------
-// updateProfile(userId, input)
-// Edita teléfono y correo del perfil.
-//   - Teléfono: actualización directa (updateUserPhone).
-//   - Correo:
-//       a. Normaliza el email.
-//       b. Si es diferente al actual, verifica que no lo use otro usuario.
-//       c. Actualiza el email, pone emailVerified = false e incrementa
-//          tokenVersion (revoca sesiones, igual que cambio de clave).
-//       d. Envía código de verificación al nuevo correo.
-//   - document y birthDate NO se pueden editar aquí (rechazado por Zod strict en la ruta).
-// -----------------------------------------------------------------------------
+/**
+ * Edición de teléfono y correo del perfil.
+ * - Teléfono: actualización directa.
+ * - Correo: colisión con mensaje genérico, reseteo a `emailVerified=false`,
+ *   `tokenVersion++` (revoca sesiones, igual que cambio de clave) y emisión
+ *   de código nuevo al correo nuevo. `document`/`birthDate` nunca llegan aquí
+ *   porque `updateProfileSchema.strict()` los rechaza en la ruta.
+ */
 export async function updateProfile(userId: string, input: UpdateProfileInput): Promise<UpdateProfileResult> {
   const current = await findUserEmailById(userId);
   if (!current || !current.isActive) {

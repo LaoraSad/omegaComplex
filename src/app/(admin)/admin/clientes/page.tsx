@@ -32,7 +32,7 @@ export default async function ClientesPage({ searchParams }: ClientesPageProps) 
         }
       />
 
-      <form method="GET" action="/admin/clientes" className="acard omega-ring acard-pad" role="search">
+      <form method="GET" action="/admin/clientes" className="acard acard-pad" role="search">
         <div className="afilters">
           <div className="afield afield-grow">
             <label className="alabel" htmlFor="c-q">Buscar cliente</label>
@@ -62,9 +62,8 @@ export default async function ClientesPage({ searchParams }: ClientesPageProps) 
 
       {rows.length > 0 ? (
         <div>
-          <div className="atable-wrap omega-ring">
-            <div className="atable-scroll">
-              <table className="atable">
+          <div className="atable-wrap">
+            <table className="atable">
               <thead>
                 <tr>
                   <th scope="col">Cliente</th>
@@ -99,8 +98,7 @@ export default async function ClientesPage({ searchParams }: ClientesPageProps) 
                   </tr>
                 ))}
               </tbody>
-              </table>
-            </div>
+            </table>
           </div>
           <Suspense>
             <p className="apagination-info pt-4">
@@ -109,7 +107,7 @@ export default async function ClientesPage({ searchParams }: ClientesPageProps) 
           </Suspense>
         </div>
       ) : (
-        <div className="acard omega-ring">
+        <div className="acard">
           <EmptyState
             icon={ContactRound}
             title={q ? "Sin resultados para esta búsqueda" : "No hay clientes registrados"}

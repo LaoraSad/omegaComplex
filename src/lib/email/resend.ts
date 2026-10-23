@@ -1,4 +1,3 @@
-// Envío de correo transaccional (Resend) y plantillas.
 import "server-only";
 
 import { readFile } from "node:fs/promises";
@@ -143,23 +142,7 @@ async function send(
         }
       : {}),
   });
-  if (error) {
-    // El error de remitente de Resend es el más silencioso de todos: con el
-    // dominio de pruebas (`onboarding@resend.dev`) solo se puede enviar al
-    // correo del dueño de la cuenta, y a los demás destinatarios Resend
-    // responde 403 sin dejar rastro en la interfaz. Por eso se repite aquí con
-    // una pista concreta de qué corregir.
-    const mensaje = error.message;
-    const soloPropio = /only send testing emails/i.test(mensaje);
-    throw new Error(
-      soloPropio
-        ? "Resend rechazó el envío: el remitente es una dirección de pruebas " +
-          `(${getFromEmail()}) y solo permite enviar al correo del titular de la cuenta. ` +
-          "Hay que verificar un dominio en resend.com/domains y poner en RESEND_FROM_EMAIL " +
-          "solo la direccion, sin nombre ni parentesis: 'notificaciones@tudominio.com'."
-        : `Resend rechazó el correo: ${mensaje}`,
-    );
-  }
+  if (error) throw new Error(`Resend rechazó el correo: ${error.message}`);
 }
 
 export async function sendVerificationEmail(to: string, code: string): Promise<void> {

@@ -5,7 +5,6 @@ const jar = vi.hoisted(() => ({
   set: vi.fn(),
   delete: vi.fn(),
 }));
-const headersMock = vi.hoisted(() => ({ get: vi.fn() }));
 const dbMock = vi.hoisted(() => ({ user: { findUnique: vi.fn() } }));
 
 vi.mock("next/headers", () => ({
@@ -15,7 +14,6 @@ vi.mock("next/headers", () => ({
     set: jar.set,
     delete: jar.delete,
   }),
-  headers: async () => headersMock,
 }));
 vi.mock("@/shared/lib/db", () => ({ db: dbMock }));
 
@@ -28,7 +26,6 @@ describe("sesiones con tokenVersion (P1-5)", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     jar.value = undefined;
-    headersMock.get.mockReturnValue(null);
   });
 
   it("el token lleva la versión vigente al crearse", async () => {
