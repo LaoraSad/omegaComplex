@@ -60,6 +60,40 @@ export async function getCustomerReservation(
   return row;
 }
 
+/** Datos mínimos para mostrar o descargar los QR de una reserva propia. */
+export async function getCustomerReservationQrs(userId: string, reservationId: string) {
+  return db.reservation.findFirst({
+    where: { id: reservationId, customer: { userId } },
+    select: {
+      status: true,
+      startsAt: true,
+      endsAt: true,
+      customer: {
+        select: {
+          user: { select: { firstName: true, lastName: true } },
+        },
+      },
+      qrTokens: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          seqNo: true,
+          status: true,
+          shortCode: true,
+          guest: { select: { fullName: true } },
+          block: {
+            select: {
+              service: {
+                select: { name: true, category: { select: { name: true } } },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
 /** Reservas cuyo QR sigue vigente: las que el cliente puede presentar. */
 export async function countUpcomingReservations(userId: string): Promise<number> {
   return db.reservation.count({
