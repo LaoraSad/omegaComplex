@@ -39,7 +39,7 @@ export default async function HorariosPage() {
         </p>
       </section>
 
-      <section aria-label="Horario semanal" className="acard omega-ring acard-pad">
+      <section aria-label="Horario semanal" className="acard acard-pad">
         <div className="acard-head">
           <div>
             <h2 className="acard-title">Horario semanal por instalación</h2>
@@ -47,9 +47,8 @@ export default async function HorariosPage() {
           </div>
         </div>
         {services.some((s) => s.serviceSchedules.length > 0) ? (
-          <div className="atable-wrap omega-ring" style={{ border: "none" }}>
-            <div className="atable-scroll">
-              <table className="atable">
+          <div className="atable-wrap" style={{ border: "none" }}>
+            <table className="atable">
               <thead>
                 <tr>
                   <th scope="col">Instalación</th>
@@ -86,7 +85,6 @@ export default async function HorariosPage() {
                 })}
               </tbody>
             </table>
-            </div>
           </div>
         ) : (
           <EmptyState
@@ -97,7 +95,7 @@ export default async function HorariosPage() {
       </section>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <section aria-label="Configurar horario semanal" className="acard omega-ring acard-pad">
+        <section aria-label="Configurar horario semanal" className="acard acard-pad">
           <div className="acard-head">
             <div>
               <h2 className="acard-title">Definir horario semanal</h2>
@@ -132,7 +130,7 @@ export default async function HorariosPage() {
           ))}
         </section>
 
-        <section aria-label="Bloqueos vigentes" className="acard omega-ring acard-pad">
+        <section aria-label="Bloqueos vigentes" className="acard acard-pad">
           <div className="acard-head">
             <div>
               <h2 className="acard-title">Bloqueos vigentes y futuros</h2>
@@ -181,7 +179,7 @@ export default async function HorariosPage() {
           ) : null}
         </section>
 
-        <section aria-label="Registrar bloqueo" className="acard omega-ring acard-pad">
+        <section aria-label="Registrar bloqueo" className="acard acard-pad">
           <BlockFormHeader />
           <p className="acard-sub" style={{ marginBottom: "1rem" }}>
             Bloquear una instalación es una acción importante: verifica instalación, fechas y motivo

@@ -340,19 +340,13 @@ export function CarritoProvider({
   const quitar = useCallback((clave: string) => {
     setError('');
     setBloques((prev) => prev.filter((b) => b.clave !== clave));
-    // Si al quitar esta franja el carrito queda vacío, hay que cerrar el modal.
-    // `carritoAbierto` es un estado aparte que no se limpia solo: si quedara en
-    // true, al agregar la primera franja de nuevo el modal "Tu carrito"
-    // reaparecería sin que el cliente lo pida (bug del flujo de reservas).
-    if (bloques.length <= 1) setCarritoAbierto(false);
-  }, [bloques.length]);
+  }, []);
 
   const vaciar = useCallback(() => {
     setError('');
     setBloques([]);
     setPersonasState(1);
     setAcompanantes([]);
-    setCarritoAbierto(false);
     guardar(null);
   }, []);
 
@@ -425,12 +419,7 @@ export function CarritoProvider({
     [bloques],
   );
 
-  const abrirCarrito = useCallback(() => {
-    // Sin bloques no hay nada que mostrar: abrir el modal vacío (o dejar el flag
-    // en true con el carrito a 0) haría que reaparezca solo al agregar una franja.
-    if (bloques.length === 0) return;
-    setCarritoAbierto(true);
-  }, [bloques.length]);
+  const abrirCarrito = useCallback(() => setCarritoAbierto(true), []);
   const cerrarCarrito = useCallback(() => {
     // Al cerrar se limpia el aviso: si no, al volver a abrir seguía mostrando
     // el rechazo anterior aunque el cliente ya hubiera cambiado de horario o

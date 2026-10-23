@@ -1,4 +1,3 @@
-// Validaciones Zod de payload de reserva.
 import { z } from "zod";
 
 // ---------------------------------------------------------------------------

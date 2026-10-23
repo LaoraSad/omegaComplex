@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import BenefitsBar from "@/components/public/landing/BenefitsBar";
 import { CarritoProvider } from "@/components/storefront/CarritoReserva";
 import { BarraCarrito } from "@/components/storefront/BarraCarrito";
 import { getSession } from "@/shared/auth/session";
@@ -37,9 +36,6 @@ export default async function StorefrontLayout({
       <div className="storefront-shell flex min-h-screen flex-col bg-[#F5F5F5] text-[#1F1F1F] antialiased font-sans">
         <Navbar initialUser={user} />
         <main className="flex-1 pt-20">{children}</main>
-        {/* Barra de beneficios del Inicio: refuerza la identidad en toda el área
-            del cliente, no solo en la landing. */}
-        <BenefitsBar />
         <Footer />
         <BarraCarrito />
       </div>

@@ -1,4 +1,3 @@
-// Tipos del control de acceso: denegación, resumen de reserva, otorgamiento.
 // ---------------------------------------------------------------------------
 // Control de acceso (SCRUM secciones 15 a 19).
 // El empleado escanea un QR, el sistema lo valida y el empleado confirma

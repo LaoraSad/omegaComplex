@@ -1,9 +1,3 @@
-// -----------------------------------------------------------------------------
-// src/app/api/payments/webhook/route.ts
-// Endpoint POST /api/payments/webhook
-// Webhook de Stripe: fuente de verdad del pago. Verifica firma e idempotencia.
-// -----------------------------------------------------------------------------
-
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
@@ -19,39 +13,20 @@ import { confirmarPagoExitoso, PAGO_TARDIO_CODE, rechazarPago } from "@/features
 import { logger } from "@/shared/lib/logger";
 import { HttpError } from "@/shared/http/errors";
 
-// -----------------------------------------------------------------------------
-// Webhook de Stripe (SCRUM sección 13).
+// ---------------------------------------------------------------------------
+// Webhook de Stripe (SCRUM seccion 13).
 //
-// La confirmación NO se basa en que el navegador vuelva a la app: se procesa el
+// La confirmacion NO se basa en que el navegador vuelva a la app: se procesa el
 // evento oficial de Stripe, verificando la firma con STRIPE_WEBHOOK_SECRET.
 // StripeEvent.eventId hace de idempotencia: si el mismo evento llega dos veces,
 // se responde 200 y no se procesa de nuevo.
-// -----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 
 /** Stripe manda el cuerpo crudo: hay que leerlo como texto para verificar la firma. */
 async function readRawBody(req: Request): Promise<string> {
   return await req.text();
 }
 
-// -----------------------------------------------------------------------------
-// POST /api/payments/webhook
-// Flujo:
-//   1. Lee el header stripe-signature. Si falta, devuelve 400.
-//   2. Lee el cuerpo crudo (req.text()) porque Stripe lo envía sin parsear.
-//   3. Verifica la firma con getStripe().webhooks.constructEvent(). Si falla,
-//      devuelve 400 BAD_SIGNATURE.
-//   4. Registra el evento en la tabla StripeEvent (recordStripeEvent).
-//      - Si el evento ya existe (applied = false), es un duplicado:
-//        * Si es checkout.session.completed y el pago sigue pending, se
-//          reintenta la liquidación (el intento anterior pudo caer a mitad).
-//        * Si no, se responde 200 sin reprocesar.
-//   5. Según el tipo de evento:
-//        - checkout.session.completed: llama a handleCheckoutCompleted().
-//        - checkout.session.expired: si el pago sigue pending, lo rechaza.
-//        - payment_intent.payment_failed: si el pago sigue pending, lo rechaza.
-//        - otros: se ignoran pero se registran.
-//   6. Siempre responde 200 a Stripe para que no reintente el envío.
-// -----------------------------------------------------------------------------
 export const POST = handler(async (req) => {
   const signature = req.headers.get("stripe-signature");
   if (!signature) {
@@ -92,7 +67,8 @@ export const POST = handler(async (req) => {
   if (!applied) {
     // Evento repetido: normalmente se acusa recibo sin reprocesar. Pero si el
     // intento anterior se cayó a mitad de la liquidación (P1-1), el pago sigue
-    // `pending` y hay que terminar el trabajo en vez de ignorarlo.
+    // `pending` y hay que terminar el trabajo en vez de ignorarlo; si no, la
+    // reserva quedaría cobrada y sin confirmar para siempre.
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       const payment = await getPaymentBySessionId(session.id);
@@ -133,28 +109,18 @@ export const POST = handler(async (req) => {
       break;
     }
     default:
-      // Evento registrado e ignorado: se podrá agregar el manejo sin migrar.
+      // Evento registrado e ignorado: se podra agregar el manejo sin migrar.
       break;
   }
 
   return NextResponse.json(ok({ received: true }));
 });
 
-// -----------------------------------------------------------------------------
-// handleCheckoutCompleted(session)
-// Procesa el evento checkout.session.completed de Stripe.
-//   1. Busca el payment por stripeSessionId.
-//   2. Si no existe o ya no está pending, devuelve 0 QR emitidos.
-//   3. Obtiene el payment_intent_id de la sesión.
-//   4. Llama a confirmarPagoExitoso() que:
-//        - Marca el payment como succeeded.
-//        - Pasa la reserva a confirmed.
-//        - Consume el hold y traslada cupos a booked.
-//        - Emite los QR (uno por persona y zona).
-//        - Envía el correo con los QR.
-//   5. Si el pago es tardío (hold expirado), captura PAGO_TARDIO_CODE, registra
-//      en logs y responde 200 para que Stripe no reintente.
-// -----------------------------------------------------------------------------
+/**
+ * El pago quedo confirmado: se liquida el Payment, la reserva pasa a
+ * confirmed, los cupos retenidos pasan a confirmados y se emiten los QR
+ * (persona x zona). Todo idempotente: reprocesar es un no-op seguro.
+ */
 async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session,
 ): Promise<{ qrEmitidos: number }> {
@@ -172,8 +138,8 @@ async function handleCheckoutCompleted(
     });
 
     // El correo con los QR lo manda confirmarPagoExitoso(), no esta ruta: la
-    // reserva se puede liquidar también desde la pantalla de espera, y si el
-    // envío viviera solo acá ese camino confirmaría sin mandarle nada al cliente.
+    // reserva se puede liquidar tambien desde la pantalla de espera, y si el
+    // envío viviera acá ese camino confirmaría sin mandarle nada al cliente.
     return { qrEmitidos: confirmacion.emitidos.length };
   } catch (error) {
     // Pago tardío: el dinero entró pero el hold expiró. Reintentarlo no sirve

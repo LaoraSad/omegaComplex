@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   Clock,
   CreditCard,
-  Download,
   History,
   Loader2,
   QrCode,
@@ -17,12 +16,7 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
-import DarkSection from "@/components/ui/DarkSection";
-import OmegaCard from "@/components/ui/OmegaCard";
-import SectionHeading from "@/components/ui/SectionHeading";
-import SectionDivider from "@/components/SectionDivider";
 import { etiquetaEstado, fecha, hora, type MisReserva } from "./reservas-view";
-import QrReservaModal from "./QrReservaModal";
 
 // ---------------------------------------------------------------------------
 // Panel del cliente.
@@ -76,15 +70,20 @@ export default function MisReservasView({ reservas }: Props) {
   const visibles = pestana === "futuras" ? futuras : historial;
 
   return (
-    <DarkSection className="min-h-screen">
+    <div className="mega-dark-section relative min-h-screen overflow-hidden bg-[#0e0b0d] text-white">
       <main className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <SectionHeading
-          kicker="Panel del cliente"
-          title="Mis reservas"
-          subtitle="Consulta tus reservas vigentes, completa los pagos pendientes y revisa el estado de tus pases de acceso."
-        />
-
-        <SectionDivider className="mt-6" />
+        <header className="space-y-2">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#e3bd74]">
+            Panel del cliente
+          </p>
+          <h1 className="text-3xl font-black uppercase tracking-tight sm:text-4xl">
+            Mis reservas
+          </h1>
+          <p className="max-w-2xl text-sm text-white/60 sm:text-base">
+            Consulta tus reservas vigentes, completa los pagos pendientes y revisa el estado de tus
+            pases de acceso.
+          </p>
+        </header>
 
         {pendientes.length > 0 ? (
           <p
@@ -134,7 +133,7 @@ export default function MisReservasView({ reservas }: Props) {
             ))}
           </div>
         ) : (
-          <OmegaCard className="mx-auto mt-10 max-w-md" innerClassName="space-y-4 p-8 text-center">
+          <div className="mx-auto mt-10 max-w-md space-y-4 rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center">
             <Calendar className="mx-auto h-10 w-10 text-white/30" />
             <h2 className="text-lg font-bold text-white">
               {pestana === "futuras" ? "No tienes reservas próximas" : "Tu historial está vacío"}
@@ -149,10 +148,10 @@ export default function MisReservasView({ reservas }: Props) {
               Explorar servicios
               <ArrowRight className="h-4 w-4" />
             </Link>
-          </OmegaCard>
+          </div>
         )}
       </main>
-    </DarkSection>
+    </div>
   );
 }
 
@@ -193,8 +192,6 @@ function Tarjeta({
   pagando: boolean;
   onPagar: () => void;
 }) {
-  const [qrModalAbierto, setQrModalAbierto] = useState(false);
-  const cerrarQrModal = useCallback(() => setQrModalAbierto(false), []);
   const estado = etiquetaEstado(r.estado);
   const IconoEstado =
     r.estado === "confirmed"
@@ -206,7 +203,7 @@ function Tarjeta({
           : null;
 
   return (
-    <OmegaCard className="h-full" innerClassName="flex h-full flex-col gap-4 p-5">
+    <article className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-[#141013] p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[0.6rem] font-bold uppercase tracking-wider text-white/40">
@@ -258,14 +255,6 @@ function Tarjeta({
           <p className="mt-1 text-[0.7rem] text-emerald-100/70">
             {r.qrReferencia} · {r.qrUsados} ya usado(s)
           </p>
-          <button
-            type="button"
-            onClick={() => setQrModalAbierto(true)}
-            className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200/25 px-4 py-2 text-xs font-bold text-emerald-100 transition-colors hover:bg-emerald-100/10"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Ver / descargar QR
-          </button>
         </div>
       ) : r.estado === "used" ? (
         <p className="rounded-xl bg-white/[0.04] py-2 text-center text-xs font-medium text-white/50">
@@ -282,15 +271,7 @@ function Tarjeta({
           El QR se genera al confirmar el pago.
         </p>
       ) : null}
-
-      {qrModalAbierto ? (
-        <QrReservaModal
-          reservationId={r.id}
-          serviceName={r.nombreServicio}
-          onClose={cerrarQrModal}
-        />
-      ) : null}
-    </OmegaCard>
+    </article>
   );
 }
 

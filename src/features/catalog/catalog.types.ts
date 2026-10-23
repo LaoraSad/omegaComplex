@@ -1,5 +1,3 @@
-// Tipos derivados de Prisma para categorías con conteo de servicios y servicios
-// de catálogo con su categoría y horarios.
 import type { Prisma } from "@prisma/client";
 
 export type CategoryRecord = Prisma.CategoryGetPayload<{

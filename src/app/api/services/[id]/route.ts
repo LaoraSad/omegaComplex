@@ -1,4 +1,3 @@
-// Obtiene y actualiza un servicio.
 import { NextRequest, NextResponse } from "next/server";
 import { getCatalogService } from "@/features/catalog";
 import { updateService } from "@/features/admin/admin.repository";

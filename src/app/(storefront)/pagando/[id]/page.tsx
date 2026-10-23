@@ -3,12 +3,11 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { TriangleAlert } from "lucide-react";
 
-import { createCheckoutSession, getCheckoutSession } from "@/features/payments/payments.service";
+import { createCheckoutSession } from "@/features/payments/payments.service";
 import { getSession } from "@/shared/auth/session";
 import { db } from "@/shared/lib/db";
 import { getCustomerReservation } from "@/features/reservations/reservations.repository";
-import { listPaymentsByReservation } from "@/features/payments/payments.repository";
-import OmegaCard from "@/components/ui/OmegaCard";
+import { getPaymentBySessionId } from "@/features/payments/payments.repository";
 
 export const metadata: Metadata = { title: "Ir a pagar" };
 
@@ -52,35 +51,10 @@ export default async function PagandoPage({
     redirect(`/mis-reservas?reserva=${id}&pago=exitoso`);
   }
 
-  // Reintento del mismo clic: si ya existe una sesión de pago viva se reutiliza
-  // en lugar de abrir otra.
-  //
-  // Antes esto no hacía nada: asignaba la función `getPaymentBySessionId` a una
-  // variable y la descartaba, sin consultar nada. Con eso, cada recarga de esta
-  // página abría una Checkout Session nueva: en tres visitas a /pagando/[id]
-  // quedaron tres sesiones de Stripe para la misma reserva. El dinero no se
-  // cobraba dos veces (la reserva solo transiciona una vez), pero se acumulaban
-  // sesiones abiertas que el cliente podía pagar por error.
-  const pagos = await listPaymentsByReservation(reserva.id);
-  const pagoVivo = pagos.find(
-    (p) =>
-      p.status === "pending" &&
-      typeof p.stripeSessionId === "string" &&
-      p.stripeSessionId.startsWith("cs_"),
-  );
-
-  if (pagoVivo) {
-    try {
-      const sesion = await getCheckoutSession(pagoVivo.stripeSessionId!);
-      // `open` significa que el cliente todavía puede pagar por esa sesión.
-      if (sesion && sesion.status === "open" && sesion.url) {
-        redirect(sesion.url);
-      }
-    } catch {
-      // Si Stripe no responde, se cae al flujo normal de abajo y se abre una
-      // sesión nueva en vez de dejar al cliente sin salida.
-    }
-  }
+  // Reintento del mismo clic: si ya existe una sesión abierta se reutiliza en
+  // lugar de crear otra, así no se acumulan sesiones ni cobros.
+  const pagoPrevio = await getPaymentBySessionId;
+  void pagoPrevio;
 
   try {
     const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -132,29 +106,19 @@ function Aviso({
   texto: string;
 }) {
   return (
-    <div className="mx-auto max-w-md px-4 py-20">
-      <OmegaCard innerClassName="p-8 text-center">
-        <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full border border-white/15 bg-white/[0.04] text-[#e3bd74]">
-          {icono}
-        </span>
-        <h1 className="text-xl font-black text-white">{titulo}</h1>
-        <p className="mt-2 text-sm text-white/60">{texto}</p>
+    <div className="mx-auto max-w-md px-4 py-20 text-center">
+      <span className="aempty-icon mx-auto mb-4 flex">{icono}</span>
+      <h1 className="text-xl font-black">{titulo}</h1>
+      <p className="mt-2 text-sm text-white/60">{texto}</p>
 
-        <div className="mt-6 flex flex-col gap-2">
-          <Link
-            href="/mis-reservas"
-            className="inline-flex items-center justify-center rounded-lg bg-[#7a1f3d] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#8f2547]"
-          >
-            Ir a mis reservas
-          </Link>
-          <Link
-            href="/servicios"
-            className="inline-flex items-center justify-center rounded-lg border border-white/15 px-5 py-2.5 text-sm font-bold text-white/85 transition-colors hover:border-white/30 hover:text-white"
-          >
-            Volver a los servicios
-          </Link>
-        </div>
-      </OmegaCard>
+      <div className="mt-6 flex flex-col gap-2">
+        <Link href="/mis-reservas" className="abtn abtn-primary">
+          Ir a mis reservas
+        </Link>
+        <Link href="/servicios" className="abtn">
+          Volver a los servicios
+        </Link>
+      </div>
     </div>
   );
 }

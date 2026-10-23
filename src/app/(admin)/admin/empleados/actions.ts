@@ -1,10 +1,3 @@
-// -----------------------------------------------------------------------------
-// src/app/(admin)/admin/empleados/actions.ts
-// Server Actions para gestión de empleados (solo administrador).
-// Las Server Actions se ejecutan en el servidor y pueden ser llamadas desde
-// componentes del cliente mediante formularios o invocación directa.
-// -----------------------------------------------------------------------------
-
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -24,21 +17,13 @@ import {
 } from "@/features/admin/admin.repository";
 import { getSession } from "@/shared/auth/session";
 
-// -----------------------------------------------------------------------------
-// requireAdmin()
-// Verifica que exista una sesión y que el rol sea "admin". Si no, lanza error.
-// Se usa al inicio de cada Server Action para proteger la operación.
-// -----------------------------------------------------------------------------
 async function requireAdmin() {
   const session = await getSession();
   if (!session) throw new Error("Sesión expirada. Vuelve a iniciar sesión.");
   if (session.role !== "admin") throw new Error("Solo el administrador puede gestionar empleados.");
 }
 
-// -----------------------------------------------------------------------------
-// readServiceIds(formData)
-// Lee los IDs de servicio enviados como checkboxes repetidos en FormData.
-// -----------------------------------------------------------------------------
+/** Los checkboxes de zonas llegan como serviceIds repetido. */
 function readServiceIds(formData: FormData): string[] {
   return formData
     .getAll("serviceIds")
@@ -46,11 +31,6 @@ function readServiceIds(formData: FormData): string[] {
     .filter(Boolean);
 }
 
-// -----------------------------------------------------------------------------
-// revalidateEmployeeViews(id?)
-// Invalida la caché de Next.js de las rutas relacionadas con empleados para
-// que los cambios se reflejen inmediatamente en la UI.
-// -----------------------------------------------------------------------------
 function revalidateEmployeeViews(id?: string) {
   revalidatePath("/admin/empleados");
   revalidatePath("/turnos");
@@ -60,15 +40,6 @@ function revalidateEmployeeViews(id?: string) {
 
 export type EmployeeActionResult = { ok: boolean; message: string };
 
-// -----------------------------------------------------------------------------
-// createEmployeeAction(formData)
-// Crea un empleado con sus zonas asignadas.
-//   1. requireAdmin(): verifica sesión de admin.
-//   2. Valida el FormData con employeeCreateSchema (Zod).
-//   3. Llama a createEmployee() del repositorio.
-//   4. Revalida las rutas afectadas.
-//   5. Devuelve { ok, message }.
-// -----------------------------------------------------------------------------
 export async function createEmployeeAction(formData: FormData): Promise<EmployeeActionResult> {
   try {
     await requireAdmin();
@@ -94,10 +65,6 @@ export async function createEmployeeAction(formData: FormData): Promise<Employee
   }
 }
 
-// -----------------------------------------------------------------------------
-// updateEmployeeAction(id, formData)
-// Actualiza los datos del perfil de un empleado.
-// -----------------------------------------------------------------------------
 export async function updateEmployeeAction(
   id: string,
   formData: FormData,
@@ -123,11 +90,6 @@ export async function updateEmployeeAction(
   }
 }
 
-// -----------------------------------------------------------------------------
-// setEmployeeActiveAction(id, isActive)
-// Activa o desactiva un empleado. Un empleado desactivado no puede iniciar sesión
-// ni validar QR.
-// -----------------------------------------------------------------------------
 export async function setEmployeeActiveAction(
   id: string,
   isActive: boolean,
@@ -150,10 +112,6 @@ export async function setEmployeeActiveAction(
   }
 }
 
-// -----------------------------------------------------------------------------
-// setEmployeeZonesAction(id, formData)
-// Asigna zonas (servicios) a un empleado. Define qué instalaciones puede validar.
-// -----------------------------------------------------------------------------
 export async function setEmployeeZonesAction(
   id: string,
   formData: FormData,
@@ -174,11 +132,6 @@ export async function setEmployeeZonesAction(
   }
 }
 
-// -----------------------------------------------------------------------------
-// setEmployeePasswordAction(id, formData)
-// Actualiza la contraseña de un empleado. El admin debe comunicarla por un canal
-// seguro.
-// -----------------------------------------------------------------------------
 export async function setEmployeePasswordAction(
   id: string,
   formData: FormData,

@@ -5,7 +5,7 @@ import { ArrowRight, ArrowUpRight, Building2, Users } from "lucide-react";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { formatCOP, formatNumber } from "@/components/admin/format";
-import { servicePhoto } from "@/features/catalog/service-images";
+import { servicePhoto } from "@/components/admin/service-image";
 import { listServices } from "@/features/admin/admin.repository";
 import { listCategories } from "@/features/catalog";
 import { ServiceForm } from "./ServiceForm";
@@ -52,7 +52,7 @@ export default async function ServiciosPage() {
       <ServiceForm mode="create" categorias={opciones} />
 
       {services.length === 0 ? (
-        <div className="acard omega-ring">
+        <div className="acard">
           <EmptyState
             icon={Building2}
             title="No hay servicios configurados"

@@ -1,4 +1,3 @@
-// Repositorio de admin: métricas, reportes, reservas, accesos, servicios, empleados y clientes.
 import bcrypt from "bcryptjs";
 import { db } from "@/shared/lib/db";
 import type { Prisma } from "@prisma/client";
@@ -101,15 +100,6 @@ const reservationInclude = {
   service: { include: { category: { select: { name: true } } } },
   payments: { orderBy: { createdAt: "desc" as const } },
   holds: { where: { status: "active" as const } },
-  _count: { select: { qrTokens: true } },
-} as const;
-
-const reservationListInclude = {
-  customer: {
-    include: { user: { select: { firstName: true, lastName: true } } },
-  },
-  service: { include: { category: { select: { name: true } } } },
-  payments: { orderBy: { createdAt: "desc" as const }, take: 1 },
   _count: { select: { qrTokens: true } },
 } as const;
 
@@ -518,7 +508,7 @@ export async function listReservations(
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      include: reservationListInclude,
+      include: reservationInclude,
     }),
   ]);
   return {
@@ -563,17 +553,6 @@ export async function listServices(): Promise<ServiceRow[]> {
           },
         },
       },
-    },
-  });
-  return rows as ServiceRow[];
-}
-
-export async function listServicesLight(): Promise<ServiceRow[]> {
-  const rows = await db.service.findMany({
-    orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
-    take: 5,
-    include: {
-      category: { select: { name: true } },
     },
   });
   return rows as ServiceRow[];
@@ -715,12 +694,7 @@ export type ServiceCreateData = {
   description?: string;
   price: number;
   capacity: number;
-  /**
-   * Acepta `null` como "sin foto": el formulario manda null cuando el campo
-   * queda vacío. Sin esto, el tipo chocaba con lo que llega del cliente y la
-   * creación fallaba aunque el schema ya lo permitiera.
-   */
-  imagen?: string | null;
+  imagen?: string;
   isActive?: boolean;
 };
 

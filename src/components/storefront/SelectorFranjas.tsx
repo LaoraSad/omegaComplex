@@ -470,7 +470,6 @@ export function SelectorFranjas({
               </button>
               <button
                 type="button"
-                disabled={bloques.length === 0}
                 onClick={() => {
                   // Antes solo cerraba el selector y el carrito quedaba oculto
                   // detras: el cliente pensaba que el boton no funcionaba. Ahora
@@ -478,7 +477,7 @@ export function SelectorFranjas({
                   onClose();
                   abrirCarrito();
                 }}
-                className="w-full cursor-pointer rounded-xl bg-[#7a1f3d] py-3 text-sm font-bold text-white transition-colors hover:bg-[#8f2547] disabled:cursor-not-allowed disabled:opacity-40"
+                className="w-full cursor-pointer rounded-xl bg-[#7a1f3d] py-3 text-sm font-bold text-white transition-colors hover:bg-[#8f2547]"
               >
                 <span className="inline-flex items-center gap-2">
                   <CalendarPlus className="h-4 w-4" />

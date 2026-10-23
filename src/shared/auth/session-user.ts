@@ -1,32 +1,27 @@
-// -----------------------------------------------------------------------------
-// src/shared/auth/session-user.ts
-// Carga los datos del usuario asociado a una sesión activa.
-// Usa React `cache` para memoizar por request: si el layout y la página piden
-// el mismo usuario en la misma navegación, la base de datos se toca una sola vez.
-// -----------------------------------------------------------------------------
-
 import { cache } from "react";
 import { findSessionUserById, type SessionUser } from "@/features/auth/auth.repository";
 import { logger } from "@/shared/lib/logger";
 import { ServiceUnavailableError } from "@/shared/http/errors";
 
-// -----------------------------------------------------------------------------
-// cargarUsuarioDeSesion
-// Versión memoizada (por request) de cargarUsuarioDeSesionSinCache.
-// Se usa en getSession y en páginas de servidor para obtener los datos del
-// usuario sin consultar la BD múltiples veces.
-// -----------------------------------------------------------------------------
+/**
+ * Busca el usuario de una sesión distinguiendo dos situaciones que antes
+ * terminaban igual: que el usuario no exista o esté inactivo, y que la base de
+ * datos no responda.
+ *
+ * La diferencia importa. Con `findSessionUserById` a secas, si la base se caía
+ * la excepción del driver subía hasta el layout y se veía el error crudo
+ * ("Can't reach database server at ..."), que además confirma detalles de la
+ * infraestructura a cualquiera que abra la página. Con esto, un problema de
+ * conectividad sale como un 503 con un mensaje entendible, y un usuario
+ * simplemente inexistente sigue siendo "no hay sesión" como siempre.
+ *
+ * Con memo por request (React `cache`): el layout y la página piden al mismo
+ * usuario en la misma navegación y la BD se toca una sola vez. No se aplica a
+ * `getSession`: sus tests la llaman varias veces con distinta cookie y el memo
+ * fuera de un request los contaminaría.
+ */
 export const cargarUsuarioDeSesion = cache(cargarUsuarioDeSesionSinCache);
 
-// -----------------------------------------------------------------------------
-// cargarUsuarioDeSesionSinCache(userId)
-// Busca el usuario por id distinguiendo dos situaciones:
-//   1. Usuario no existe o está inactivo → devuelve null (no hay sesión).
-//   2. La base de datos no responde → lanza ServiceUnavailableError (503).
-//
-// Esta distinción importa: si la BD se cae, no se expone el error crudo del
-// driver al cliente (seguridad); se muestra un 503 con mensaje entendible.
-// -----------------------------------------------------------------------------
 async function cargarUsuarioDeSesionSinCache(userId: string): Promise<SessionUser | null> {
   try {
     return await findSessionUserById(userId);

@@ -1,4 +1,3 @@
-// Listado y creación de categorías (solo admin).
 import { NextRequest, NextResponse } from "next/server";
 import { createCategory, listCategories } from "@/features/catalog";
 import { handler } from "@/shared/http/handler";

@@ -1,4 +1,3 @@
-// Cron que libera holds vencidos (requiere CRON_SECRET).
 import { NextRequest, NextResponse } from "next/server";
 
 import { liberarHoldsVencidos } from "@/features/reservations/reservations.service";

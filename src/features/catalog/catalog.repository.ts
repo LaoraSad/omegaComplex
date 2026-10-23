@@ -1,5 +1,3 @@
-// Repositorio de catálogo: consulta y mutación de categorías y servicios con Prisma.
-// No aplica reglas de negocio; solo acceso a datos y consistencia de include (_count).
 import { db } from "@/shared/lib/db";
 import type { CreateCategoryInput, UpdateCategoryInput } from "./catalog.schemas";
 import type { CatalogServiceRecord, CategoryRecord } from "./catalog.types";

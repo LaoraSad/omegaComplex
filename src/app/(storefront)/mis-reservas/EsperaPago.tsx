@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check, Loader2, MailWarning, RefreshCw, TriangleAlert, X } from "lucide-react";
-import OmegaCard from "@/components/ui/OmegaCard";
 
 type Estado = "procesando" | "confirmado" | "fallido";
 
@@ -93,11 +92,8 @@ export default function EsperaPago({ reservationId }: { reservationId: string })
   const fallido = resultado?.estado === "fallido";
 
   return (
-    <OmegaCard className="mx-auto max-w-md" innerClassName="p-10 text-center" role="status">
-      <span
-        aria-hidden="true"
-        className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full border border-white/15 bg-white/[0.04] text-[#e3bd74]"
-      >
+    <div className="aempty" role="status" style={{ padding: "3.5rem 1.5rem" }}>
+      <span aria-hidden="true" className="aempty-icon">
         {confirmado ? (
           <Check className="h-6 w-6" strokeWidth={2} />
         ) : fallido ? (
@@ -109,7 +105,7 @@ export default function EsperaPago({ reservationId }: { reservationId: string })
         )}
       </span>
 
-      <p className="text-lg font-black text-white">
+      <p className="aempty-title">
         {confirmado
           ? "Pago confirmado"
           : fallido
@@ -119,7 +115,7 @@ export default function EsperaPago({ reservationId }: { reservationId: string })
               : "Procesando tu pago"}
       </p>
 
-      <p className="mt-2 text-sm text-white/60">
+      <p className="aempty-text">
         {confirmado
           ? "Tu reserva quedó confirmada. Te enviamos los códigos QR al correo."
           : fallido
@@ -130,22 +126,22 @@ export default function EsperaPago({ reservationId }: { reservationId: string })
       </p>
 
       {confirmado ? (
-        <p className="mt-3 text-sm text-white/50">
+        <p className="aempty-text" style={{ opacity: 0.7, marginTop: "0.75rem" }}>
           Redirigiendo a tus reservas…
         </p>
       ) : null}
 
       {resultado?.recuperado ? (
-        <p className="mt-3 text-sm text-white/60">
+        <p className="aempty-text" style={{ marginTop: "0.75rem" }}>
           Confirmamos tu pago directamente con la pasarela.
         </p>
       ) : null}
 
       {agotado && !confirmado && !fallido ? (
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
+        <div className="mt-3 flex flex-wrap justify-center gap-2">
           <button
             type="button"
-            className="inline-flex items-center justify-center rounded-lg bg-[#7a1f3d] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#8f2547]"
+            className="abtn abtn-primary"
             onClick={() => {
               setAgotado(false);
               setIntento(0);
@@ -154,17 +150,17 @@ export default function EsperaPago({ reservationId }: { reservationId: string })
             <RefreshCw className="mr-1.5 inline h-4 w-4" />
             Volver a comprobar
           </button>
-          <Link
-            className="inline-flex items-center justify-center rounded-lg border border-white/15 px-5 py-2.5 text-sm font-bold text-white/85 transition-colors hover:border-white/30 hover:text-white"
-            href="/mis-reservas"
-          >
+          <Link className="abtn" href="/mis-reservas">
             Ir a mis reservas
           </Link>
         </div>
       ) : null}
 
       {agotado && !confirmado ? (
-        <p className="mt-5 flex items-start gap-2 text-left text-xs text-white/50">
+        <p
+          className="aempty-text"
+          style={{ marginTop: "1.25rem", display: "flex", gap: "0.5rem", alignItems: "flex-start" }}
+        >
           <MailWarning className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
             Si el pago se completó, los QR llegan al correo aunque esta pantalla siga
@@ -172,6 +168,6 @@ export default function EsperaPago({ reservationId }: { reservationId: string })
           </span>
         </p>
       ) : null}
-    </OmegaCard>
+    </div>
   );
 }

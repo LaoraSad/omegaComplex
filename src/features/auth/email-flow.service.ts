@@ -1,4 +1,3 @@
-// Flujo de verificación de correo y recuperación de contraseña (códigos, tokens, TTL).
 import "server-only";
 
 import { createHash, createHmac, randomBytes, randomInt } from "node:crypto";

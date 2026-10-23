@@ -1,4 +1,3 @@
-// Verificación de correo con código.
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { verifyEmailCode } from "@/features/auth/email-flow.service";

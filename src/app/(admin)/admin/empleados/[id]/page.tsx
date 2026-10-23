@@ -38,12 +38,13 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
   const { page: pageParam } = await searchParams;
   const page = Number(pageParam) || 1;
 
-  const [employee, accesses, groups] = await Promise.all([
-    getEmployeeDetail(id),
+  const employee = await getEmployeeDetail(id);
+  if (!employee) notFound();
+
+  const [accesses, groups] = await Promise.all([
     listEmployeeAccesses(id, { page, pageSize: 10 }),
     listZoneOptions(),
   ]);
-  if (!employee) notFound();
 
   const name = fullName(employee.user.firstName, employee.user.lastName);
   const isActive = employee.user.isActive && employee.isActive;
@@ -72,7 +73,7 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
       />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <section aria-label="Resumen" className="acard omega-ring acard-pad">
+        <section aria-label="Resumen" className="acard acard-pad">
           <div className="flex items-center gap-3">
             <span
               aria-hidden="true"
@@ -140,7 +141,7 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
         assignedIds={assignedIds}
       />
 
-      <section aria-label="Accesos del empleado" className="acard omega-ring acard-pad">
+      <section aria-label="Accesos del empleado" className="acard acard-pad">
         <div className="acard-head">
           <div>
             <h2 className="acard-title">Accesos de {name}</h2>
@@ -153,8 +154,7 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
 
         {accesses.rows.length > 0 ? (
           <div>
-            <div className="atable-wrap omega-ring">
-              <div className="atable-scroll">
+            <div className="atable-wrap">
               <table className="atable">
                 <thead>
                   <tr>
@@ -192,18 +192,17 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
                   ))}
                 </tbody>
               </table>
-              </div>
+            </div>
+            <Suspense>
+              <Pagination
+                page={accesses.page}
+                totalPages={accesses.totalPages}
+                total={accesses.total}
+                pageSize={accesses.pageSize}
+                itemLabel="accesos"
+              />
+            </Suspense>
           </div>
-          <Suspense>
-            <Pagination
-              page={accesses.page}
-              totalPages={accesses.totalPages}
-              total={accesses.total}
-              pageSize={accesses.pageSize}
-              itemLabel="accesos"
-            />
-          </Suspense>
-        </div>
         ) : (
           <EmptyState
             icon={UserCheck}

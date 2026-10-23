@@ -1,4 +1,3 @@
-// Envía enlace de recuperación (Resend).
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requestPasswordReset } from "@/features/auth/email-flow.service";

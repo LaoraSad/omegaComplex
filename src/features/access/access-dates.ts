@@ -1,4 +1,3 @@
-// Fechas del módulo de acceso en zona horaria del complejo (America/Bogota).
 // Formateo de fechas del módulo de acceso en America/Bogota (COT = UTC-5 fijo).
 // El empleado ve la hora de la franja como la ve en el complejo, no en UTC.
 

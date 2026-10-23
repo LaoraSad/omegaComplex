@@ -1,9 +1,3 @@
-// -----------------------------------------------------------------------------
-// src/app/(admin)/admin/horarios/actions.ts
-// Server Actions para gestión de horarios y cierres de instalaciones
-// (solo administrador).
-// -----------------------------------------------------------------------------
-
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -15,21 +9,12 @@ import {
 } from "@/features/admin/admin.repository";
 import { getSession } from "@/shared/auth/session";
 
-// -----------------------------------------------------------------------------
-// requireAdmin()
-// Verifica que exista una sesión y que el rol sea "admin".
-// -----------------------------------------------------------------------------
 async function requireAdmin() {
   const session = await getSession();
   if (!session) throw new Error("Sesión expirada. Vuelve a iniciar sesión.");
   if (session.role !== "admin") throw new Error("Solo el administrador puede gestionar bloqueos.");
 }
 
-// -----------------------------------------------------------------------------
-// blockFacilityAction(formData)
-// Registra un cierre/bloqueo de una instalación (ServiceClosure) en un rango de
-// fechas. Si serviceId es vacío, se guarda como null (cierra todo el complejo).
-// -----------------------------------------------------------------------------
 export async function blockFacilityAction(formData: FormData): Promise<{ ok: boolean; message: string }> {
   try {
     await requireAdmin();
@@ -56,10 +41,6 @@ export async function blockFacilityAction(formData: FormData): Promise<{ ok: boo
   }
 }
 
-// -----------------------------------------------------------------------------
-// unblockFacilityAction(id)
-// Elimina un cierre de instalación por su ID.
-// -----------------------------------------------------------------------------
 export async function unblockFacilityAction(id: string): Promise<{ ok: boolean; message: string }> {
   try {
     await requireAdmin();
@@ -74,11 +55,6 @@ export async function unblockFacilityAction(id: string): Promise<{ ok: boolean; 
   }
 }
 
-// -----------------------------------------------------------------------------
-// saveServiceScheduleAction(formData)
-// Guarda o actualiza el horario semanal de una instalación (ServiceSchedule):
-// día de la semana, hora de apertura y hora de cierre.
-// -----------------------------------------------------------------------------
 export async function saveServiceScheduleAction(formData: FormData): Promise<{ ok: boolean; message: string }> {
   try {
     await requireAdmin();
@@ -105,10 +81,6 @@ export async function saveServiceScheduleAction(formData: FormData): Promise<{ o
   }
 }
 
-// -----------------------------------------------------------------------------
-// deleteServiceScheduleAction(serviceId, dayOfWeek)
-// Elimina un horario semanal de una instalación para un día concreto.
-// -----------------------------------------------------------------------------
 export async function deleteServiceScheduleAction(serviceId: string, dayOfWeek: number): Promise<{ ok: boolean; message: string }> {
   try {
     await requireAdmin();

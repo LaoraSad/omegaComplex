@@ -1,4 +1,3 @@
-// Listado y creación de servicios catálogo.
 import { NextRequest, NextResponse } from "next/server";
 import { listCatalogServices } from "@/features/catalog";
 import { createService } from "@/features/admin/admin.repository";

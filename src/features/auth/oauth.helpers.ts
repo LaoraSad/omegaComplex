@@ -1,9 +1,7 @@
-// Ayudas para configurar clientes y URLs de Google OAuth.
 // Utilidades de SERVIDOR del flujo OAuth con Google.
 // No se importa desde componentes de cliente: usa next/headers.
 
 import { createSession } from "@/shared/auth/session";
-import { appOrigin } from "@/shared/lib/app-url";
 
 const AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
 
@@ -12,14 +10,10 @@ export function googleConfigured(): boolean {
   return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 }
 
-/**
- * Debe coincidir exactamente con la URI de redirección registrada en Google.
- *
- * Usa el mismo origen público que el resto de redirecciones (`appOrigin`), para
- * que no haya dos formas distintas de resolver la URL de la app.
- */
+/** Debe coincidir exactamente con la URI de redireccion registrada en Google. */
 export function googleRedirectUri(): string {
-  return `${appOrigin()}/api/auth/oauth/google/callback`;
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  return `${base.replace(/\/+$/, "")}/api/auth/oauth/google/callback`;
 }
 
 export function googleAuthUrl(state: string): string {

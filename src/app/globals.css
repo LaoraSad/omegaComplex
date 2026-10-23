@@ -18,8 +18,8 @@
   --primary: #7a1f3d;
   --primary-hover: #63152f;
   --primary-soft: #f8ecf0;
-  --accent: #e3bd74;
-  --accent-hover: #f7e3ae;
+  --accent: #ffffff;
+  --accent-hover: #f3e8ec;
   --danger: #b42318;
   --success: #18794e;
 }
@@ -1086,15 +1086,21 @@ input {
   border-radius: 18px;
   padding: 1.5px;
   isolation: isolate;
+  background: conic-gradient(
+    from var(--omega-ring-angle, 0deg),
+    transparent 0deg,
+    rgb(227 189 116 / 85%) 55deg,
+    rgb(122 31 61 / 90%) 120deg,
+    transparent 175deg,
+    transparent 235deg,
+    rgb(227 189 116 / 75%) 295deg,
+    transparent 360deg
+  );
   animation: omega-ring-spin 5.5s linear infinite;
   transition: transform 300ms ease, box-shadow 300ms ease;
 }
 
-/* Halo difuminado SOLO cuando la tarjeta tiene `.omega-ring-inner`: el inner
-   opaco tapa el centro y deja el resplandor únicamente en el borde. Sin inner
-   (cards del panel admin) el halo se vería sobre toda la tarjeta, así que no
-   se aplica; esas cards usan el aro enmascarado de `::after`. */
-.omega-ring:has(.omega-ring-inner)::before {
+.omega-ring::before {
   content: '';
   position: absolute;
   inset: -1px;
@@ -1112,34 +1118,6 @@ input {
   filter: blur(12px);
   opacity: 0.6;
   z-index: -1;
-  animation: inherit;
-}
-
-/* Aro fino dibujado DENTRO del borde. Al ir sobre el `padding` (y no fuera de
-   la caja) funciona igual con o sin `.omega-ring-inner`, y no lo recorta un
-   `overflow: hidden` del propio contenedor. */
-.omega-ring::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1.5px;
-  background: conic-gradient(
-    from var(--omega-ring-angle, 0deg),
-    transparent 0deg,
-    rgb(227 189 116 / 85%) 55deg,
-    rgb(122 31 61 / 90%) 120deg,
-    transparent 175deg,
-    transparent 235deg,
-    rgb(227 189 116 / 75%) 295deg,
-    transparent 360deg
-  );
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  pointer-events: none;
-  z-index: 1;
   animation: inherit;
 }
 
@@ -1180,19 +1158,4 @@ input {
     radial-gradient(48rem 20rem at 90% 0%, rgb(201 169 107 / 8%), transparent 55%),
     #0e0b0d;
   border: 1px solid rgb(255 255 255 / 9%);
-}
-
-/* Fondos de sección oscuros reutilizables en TODA la app (antes solo storefront).
-   Misma base que el Inicio: resplandores vino + dorado sobre #0e0b0d / #141013. */
-.omega-dark-section {
-  background:
-    radial-gradient(60rem 22rem at 15% -10%, rgb(122 31 61 / 22%), transparent 60%),
-    radial-gradient(48rem 20rem at 90% 0%, rgb(201 169 107 / 8%), transparent 55%),
-    #0e0b0d;
-}
-
-.omega-dark-section-2 {
-  background:
-    radial-gradient(56rem 20rem at 85% -10%, rgb(122 31 61 / 16%), transparent 60%),
-    #141013;
 }

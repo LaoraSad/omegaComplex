@@ -1,9 +1,3 @@
-// -----------------------------------------------------------------------------
-// src/app/api/reservations/route.ts
-// Endpoint GET /api/reservations y POST /api/reservations
-// Lista y crea reservas con bloqueo temporal (hold).
-// -----------------------------------------------------------------------------
-
 import { NextResponse } from "next/server";
 
 import { handler } from "@/shared/http/handler";
@@ -14,23 +8,14 @@ import { createReservationSchema, firstIssue } from "@/features/reservations/res
 import { createReservationWithHold } from "@/features/reservations/reservations.service";
 import { listCustomerReservations } from "@/features/reservations/reservations.repository";
 
-// -----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 // Reservas del cliente (SCRUM sección 9).
 //
 // POST crea la reserva y deja la franja bloqueada 10 minutos mientras el
 // cliente paga. Lo que sigue (cobrar con Stripe, emitir los QR y mandarlos por
-// correo) se implementa en el módulo de pagos; aquí la reserva queda en
-// pending_payment.
-// -----------------------------------------------------------------------------
+// correo) lo implementa el equipo; aquí la reserva queda en pending_payment.
+// ---------------------------------------------------------------------------
 
-// -----------------------------------------------------------------------------
-// GET /api/reservations
-// Lista las reservas del cliente autenticado.
-//   1. Obtiene la sesión (getSession). Si no hay, devuelve array vacío (200).
-//   2. Llama a listCustomerReservations() para obtener las reservas del cliente.
-//   3. Mapea cada reserva a un formato simplificado para la UI.
-//   4. Devuelve 200 con la lista.
-// -----------------------------------------------------------------------------
 export const GET = handler(async () => {
   const session = await getSession();
   if (!session) return NextResponse.json(ok([]));
@@ -54,24 +39,6 @@ export const GET = handler(async () => {
   );
 });
 
-// -----------------------------------------------------------------------------
-// POST /api/reservations
-// Crea una nueva reserva con bloqueo temporal.
-//   1. Obtiene la sesión. Si no hay, devuelve 401.
-//   2. Lee y valida el body con createReservationSchema (Zod).
-//   3. Llama a createReservationWithHold() que:
-//        - Valida fechas, mantenimiento, anticipación máxima (3 meses).
-//        - Valida capacidad por franja (UPDATE condicional en BD).
-//        - Valida solape con otras reservas del cliente.
-//        - Crea Reservation (pending_payment), ReservationBlock, ReservationSlot,
-//          ReservationGuest, ReservationHold (10 min) en una transacción.
-//   4. Si el resultado no es ok:
-//        - Códigos de conflicto (sin_cupos, ya_reservado, bloque_repetido,
-//          horario_chocante, bloques_pisados) → 409.
-//        - Otros errores → 400.
-//   5. Si es ok, devuelve 201 con reservationId, holdId, expiraEn, totalCop,
-//      personas, zonas y cuposRestantes.
-// -----------------------------------------------------------------------------
 export const POST = handler(async (req) => {
   const session = await getSession();
   if (!session) {
@@ -88,6 +55,8 @@ export const POST = handler(async (req) => {
   const result = await createReservationWithHold(session.userId, parsed.data);
 
   if (!result.ok) {
+    // 409 = la franja ya no está disponible o se solapa con otra reserva del
+    // mismo cliente; el modal refresca y vuelve a pintar los cupos.
     const solapa = result.code === "horario_chocante" || result.code === "bloques_pisados";
     const status =
       result.code === "sin_cupos" ||
@@ -106,8 +75,12 @@ export const POST = handler(async (req) => {
       expiraEn: result.expiresAt,
       totalCop: result.totalCop,
       personas: result.personas,
+      // Cuantas zonas abarque la compra: la UI avisa cuántos QR recibirá cada
+      // persona (uno por puerta).
       zonas: result.zonas,
       cuposRestantes: result.cuposRestantes,
+      // Recordatorio para el equipo: el PDF sale de ReservationBlock x
+      // ReservationGuest, un QR por persona y por zona.
       siguientePaso: "Emitir un QR por persona y zona, y enviarlos al correo.",
     }),
     { status: 201 },

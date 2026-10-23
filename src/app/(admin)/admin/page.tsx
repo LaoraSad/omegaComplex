@@ -22,8 +22,8 @@ import {
   formatTime,
   fullName,
 } from "@/components/admin/format";
-import { servicePhoto } from "@/features/catalog/service-images";
-import { getDashboardOverview, listServicesLight } from "@/features/admin/admin.repository";
+import { servicePhoto } from "@/components/admin/service-image";
+import { getDashboardOverview, listServices } from "@/features/admin/admin.repository";
 
 export const metadata: Metadata = { title: "Panel" };
 
@@ -65,10 +65,11 @@ function InstOcc({ used, total, compact }: { used: number; total: number; compac
 }
 
 export default async function AdminDashboardPage() {
-  const [data, services] = await Promise.all([
-    getDashboardOverview(),
-    listServicesLight(),
-  ]);
+  // Secuencial a propósito: el pooler (session mode, 15 conexiones
+  // compartidas) colapsa con picos concurrentes. El overview ya va en
+  // oleadas internas de 3 y tarda ~1s en vez de ~5s.
+  const data = await getDashboardOverview();
+  const services = await listServices();
 
   const confirmed = data.reservationsByStatus.confirmed ?? 0;
   const pendingOnly = data.reservationsByStatus.pending_payment ?? 0;
@@ -161,7 +162,7 @@ export default async function AdminDashboardPage() {
         </header>
 
         <section aria-label="Resumen de indicadores" className="opdash-metrics">
-          <Link href="/admin/reservas" className="opdash-metric omega-ring" data-tone="wine">
+          <Link href="/admin/reservas" className="opdash-metric" data-tone="wine">
             <span className="opdash-metric-top">
               <span className="opdash-metric-icon"><CalendarDays className="h-5 w-5" /></span>
               <ArrowUpRight aria-hidden="true" className="h-4 w-4 opdash-metric-link" />
@@ -173,7 +174,7 @@ export default async function AdminDashboardPage() {
             </span>
           </Link>
 
-          <Link href="/admin/accesos" className="opdash-metric omega-ring" data-tone="blue">
+          <Link href="/admin/accesos" className="opdash-metric" data-tone="blue">
             <span className="opdash-metric-top">
               <span className="opdash-metric-icon"><ScanLine className="h-5 w-5" /></span>
               <ArrowUpRight aria-hidden="true" className="h-4 w-4 opdash-metric-link" />
@@ -185,7 +186,7 @@ export default async function AdminDashboardPage() {
             </span>
           </Link>
 
-          <Link href="/admin/servicios" className="opdash-metric omega-ring" data-tone="aqua">
+          <Link href="/admin/servicios" className="opdash-metric" data-tone="aqua">
             <span className="opdash-metric-top">
               <span className="opdash-metric-icon"><Waves className="h-5 w-5" /></span>
               <ArrowUpRight aria-hidden="true" className="h-4 w-4 opdash-metric-link" />
@@ -201,7 +202,7 @@ export default async function AdminDashboardPage() {
             </span>
           </Link>
 
-          <Link href="/admin/reportes" className="opdash-metric omega-ring" data-tone="gold">
+          <Link href="/admin/reportes" className="opdash-metric" data-tone="gold">
             <span className="opdash-metric-top">
               <span className="opdash-metric-icon"><CircleDollarSign className="h-5 w-5" /></span>
               <ArrowUpRight aria-hidden="true" className="h-4 w-4 opdash-metric-link" />
@@ -213,7 +214,7 @@ export default async function AdminDashboardPage() {
         </section>
 
         {attention.length > 0 ? (
-          <section aria-label="Pendientes operativos" className="opdash-attention omega-ring">
+          <section aria-label="Pendientes operativos" className="opdash-attention">
             <div className="opdash-attention-heading">
               <span className="opdash-attention-icon"><Activity className="h-5 w-5" /></span>
               <span>
@@ -238,7 +239,7 @@ export default async function AdminDashboardPage() {
             </ul>
           </section>
         ) : (
-          <div className="opdash-clear-state omega-ring">
+          <div className="opdash-clear-state">
             <CheckCircle2 aria-hidden="true" className="h-5 w-5" />
             <span><strong>Sin pendientes prioritarios</strong><span>La operación no requiere acciones urgentes.</span></span>
           </div>
@@ -258,7 +259,7 @@ export default async function AdminDashboardPage() {
 
           {featured ? (
             <div className="opdash-service-gallery">
-              <article className="opdash-service-feature omega-ring">
+              <article className="opdash-service-feature">
                 <Link
                   href={`/admin/servicios/${featured.id}`}
                   className="opdash-media-frame is-feature"
@@ -308,7 +309,7 @@ export default async function AdminDashboardPage() {
                   return (
                     <Link
                       href={`/admin/servicios/${service.id}`}
-                      className="opdash-service-tile omega-ring"
+                      className="opdash-service-tile"
                       key={service.id}
                       aria-label={`Ver instalación ${service.name}`}
                     >
@@ -334,14 +335,14 @@ export default async function AdminDashboardPage() {
               </div>
             </div>
           ) : (
-            <div className="opdash-empty-state omega-ring">
+            <div className="opdash-empty-state">
               <EmptyState title="Sin servicios configurados" text="Las instalaciones aparecerán aquí cuando estén disponibles." />
             </div>
           )}
         </section>
 
         <section aria-label="Reservas y tendencia" className="opdash-lower-grid">
-          <div className="opdash-panel omega-ring opdash-reservations-panel">
+          <div className="opdash-panel opdash-reservations-panel">
             <div className="opdash-panel-heading">
               <div>
                 <p className="opdash-section-kicker">Agenda</p>
@@ -374,7 +375,7 @@ export default async function AdminDashboardPage() {
             )}
           </div>
 
-          <div className="opdash-panel omega-ring opdash-trend-panel">
+          <div className="opdash-panel opdash-trend-panel">
             <div className="opdash-panel-heading">
               <div>
                 <p className="opdash-section-kicker">Últimas dos semanas</p>
@@ -402,7 +403,7 @@ export default async function AdminDashboardPage() {
           </div>
         </section>
 
-        <section aria-label="Accesos recientes" className="opdash-panel omega-ring opdash-access-panel">
+        <section aria-label="Accesos recientes" className="opdash-panel opdash-access-panel">
           <div className="opdash-panel-heading">
             <div>
               <p className="opdash-section-kicker">Control de ingreso</p>
