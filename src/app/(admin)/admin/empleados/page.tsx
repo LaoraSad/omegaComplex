@@ -60,15 +60,15 @@ export default async function EmpleadosPage({ searchParams }: EmpleadosPageProps
                   {initials(e.user.firstName, e.user.lastName)}
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-white">
+                  <p className="truncate text-sm font-bold text-[#33141f]">
                     <Link
                       href={`/admin/empleados/${e.id}`}
-                      className="hover:text-[#e3bd74] hover:underline"
+                      className="hover:text-[#9c4a66] hover:underline"
                     >
                       {fullName(e.user.firstName, e.user.lastName)}
                     </Link>
                   </p>
-                  <p className="truncate text-xs text-[#b8aca6]">{e.user.email}</p>
+                  <p className="truncate text-xs text-[#7c5560]">{e.user.email}</p>
                 </div>
                 <span
                   className={`abadge ml-auto ${e.user.isActive && e.isActive ? "abadge-emerald" : "abadge-slate"}`}
@@ -79,20 +79,20 @@ export default async function EmpleadosPage({ searchParams }: EmpleadosPageProps
               </div>
               <dl className="space-y-1.5 text-sm">
                 <div className="flex justify-between gap-4">
-                  <dt className="text-[#b8aca6]">Documento</dt>
+                  <dt className="text-[#7c5560]">Documento</dt>
                   <dd className="anum font-semibold">{e.document}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-[#b8aca6]">Teléfono</dt>
+                  <dt className="text-[#7c5560]">Teléfono</dt>
                   <dd className="font-semibold">{e.user.phone ?? "—"}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-[#b8aca6]">Accesos validados</dt>
+                  <dt className="text-[#7c5560]">Accesos validados</dt>
                   <dd className="anum font-semibold">{formatNumber(e._count.accesses)}</dd>
                 </div>
               </dl>
-              <div className="rounded-[10px] bg-[#1a1519] p-3">
-                <p className="mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider text-[#b8aca6]">
+              <div className="rounded-[10px] bg-[#f1e1d8] p-3">
+                <p className="mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider text-[#7c5560]">
                   <MapPin className="h-3 w-3" /> Zona asignada
                 </p>
                 {e.assignments.length > 0 ? (
@@ -104,7 +104,7 @@ export default async function EmpleadosPage({ searchParams }: EmpleadosPageProps
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-xs font-semibold text-[#92600a]">Sin zona asignada en el sistema.</p>
+                  <p className="text-xs font-semibold text-[#7a4f06]">Sin zona asignada en el sistema.</p>
                 )}
               </div>
               <Link href={`/admin/empleados/${e.id}`} className="asection-link inline-flex items-center gap-1">

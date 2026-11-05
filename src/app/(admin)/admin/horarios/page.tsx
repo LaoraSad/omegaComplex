@@ -63,19 +63,19 @@ export default async function HorariosPage() {
                   return (
                     <tr key={s.id}>
                       <td>
-                        <span className="block font-bold text-white">{s.name}</span>
-                        <span className="block text-xs text-[#b8aca6]">{s.category.name}</span>
+                        <span className="block font-bold text-[#33141f]">{s.name}</span>
+                        <span className="block text-xs text-[#7c5560]">{s.category.name}</span>
                       </td>
                       {DAY_ORDER.map((d) => {
                         const sc = byDay.get(d);
                         return (
                           <td key={d} className="anum text-center text-xs">
                             {sc ? (
-                              <span className="font-semibold text-[#e3bd74]">
+                              <span className="font-semibold text-[#9c4a66]">
                                 {sc.openTime.slice(0, 5)}–{sc.closeTime.slice(0, 5)}
                               </span>
                             ) : (
-                              <span className="text-[#a89c97]">—</span>
+                              <span className="text-[#8d6873]">—</span>
                             )}
                           </td>
                         );
@@ -104,15 +104,15 @@ export default async function HorariosPage() {
           </div>
           <ScheduleForm services={options} />
           {services.map((service) => (
-            <div key={service.id} className="mt-4 border-t border-[#2a2226] pt-3">
+            <div key={service.id} className="mt-4 border-t border-[#ddc6bb] pt-3">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="font-bold text-white">{service.name}</span>
+                <span className="font-bold text-[#33141f]">{service.name}</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {DAY_ORDER.map((day) => {
                   const schedule = service.serviceSchedules.find((s) => s.dayOfWeek === day);
                   return (
-                    <div key={`${service.id}-${day}`} className="inline-flex items-center gap-2 rounded-full border border-[#2a2226] bg-[#1a1519] px-2.5 py-1 text-xs text-white/80">
+                    <div key={`${service.id}-${day}`} className="inline-flex items-center gap-2 rounded-full border border-[#ddc6bb] bg-[#f1e1d8] px-2.5 py-1 text-xs text-[#5c3a44]">
                       <span className="font-semibold">{DAY_LABELS[day]}</span>
                       {schedule ? (
                         <>
@@ -120,7 +120,7 @@ export default async function HorariosPage() {
                           <ScheduleDeleteButton serviceId={service.id} dayOfWeek={day} label={`${service.name} · ${DAY_LABELS[day]}`} />
                         </>
                       ) : (
-                        <span className="text-[#a89c97]">cerrado</span>
+                        <span className="text-[#8d6873]">cerrado</span>
                       )}
                     </div>
                   );
@@ -138,14 +138,14 @@ export default async function HorariosPage() {
             </div>
           </div>
           {upcoming.length > 0 ? (
-            <ul className="divide-y divide-[#f0e9e6]">
+            <ul className="divide-y divide-[#e6d3c9]">
               {upcoming.map((c) => (
                 <li key={c.id} className="flex items-center gap-3 py-2.5">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold text-white">
+                    <p className="truncate text-sm font-bold text-[#33141f]">
                       {c.service ? c.service.name : "Todo el complejo"}
                     </p>
-                    <p className="text-xs text-[#b8aca6]">
+                    <p className="text-xs text-[#7c5560]">
                       {formatDate(c.dateFrom)} → {formatDate(c.dateTo)} · {c.reason}
                     </p>
                   </div>
@@ -162,13 +162,13 @@ export default async function HorariosPage() {
           )}
           {past.length > 0 ? (
             <details className="mt-3">
-              <summary className="cursor-pointer text-xs font-bold text-[#e3bd74]">
+              <summary className="cursor-pointer text-xs font-bold text-[#9c4a66]">
                 Ver historial ({past.length})
               </summary>
-              <ul className="mt-2 divide-y divide-[#f0e9e6]">
+              <ul className="mt-2 divide-y divide-[#e6d3c9]">
                 {past.map((c) => (
-                  <li key={c.id} className="py-2 text-xs text-[#b8aca6]">
-                    <span className="font-semibold text-white">
+                  <li key={c.id} className="py-2 text-xs text-[#7c5560]">
+                    <span className="font-semibold text-[#33141f]">
                       {c.service ? c.service.name : "Todo el complejo"}
                     </span>{" "}
                     · {formatDate(c.dateFrom)} → {formatDate(c.dateTo)} · {c.reason}

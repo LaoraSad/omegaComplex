@@ -77,13 +77,13 @@ export default async function ClientesPage({ searchParams }: ClientesPageProps) 
               <tbody>
                 {rows.map((c) => (
                   <tr key={c.id}>
-                    <td className="font-bold text-white">
+                    <td className="font-bold text-[#33141f]">
                       {fullName(c.user.firstName, c.user.lastName)}
                     </td>
                     <td className="anum">{c.document ?? "—"}</td>
                     <td>
                       <span className="block max-w-56 truncate">{c.user.email}</span>
-                      <span className="block text-xs text-[#b8aca6]">{c.user.phone ?? "Sin teléfono"}</span>
+                      <span className="block text-xs text-[#7c5560]">{c.user.phone ?? "Sin teléfono"}</span>
                     </td>
                     <td className="anum whitespace-nowrap text-[0.8rem]">
                       {c.birthDate ? formatDate(c.birthDate) : "—"}

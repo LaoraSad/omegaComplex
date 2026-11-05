@@ -123,12 +123,12 @@ export function ServiceForm({
   }
 
   const inputCls =
-    "w-full rounded-lg border border-white/20 bg-black/40 px-3 py-2.5 text-sm text-white focus:border-[#c8a96b] focus:outline-none";
-  const labelCls = "block text-xs font-semibold text-white/65";
+    "w-full rounded-lg border border-[#dcc3b8] bg-[#f0dfd6] px-3 py-2.5 text-sm text-[#33141f] focus:border-[#9c4a66] focus:outline-none";
+  const labelCls = "block text-xs font-semibold text-[#7c5560]";
 
   return (
     <form onSubmit={handleSubmit} className="acard acard-pad space-y-4">
-      <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">
+      <h3 className="text-sm font-black uppercase tracking-[0.18em] text-[#33141f]">
         {mode === "create" ? "Nuevo servicio" : "Editar servicio"}
       </h3>
 
@@ -163,7 +163,7 @@ export function ServiceForm({
             className={inputCls}
           >
             {categorias.map((c) => (
-              <option key={c.id} value={c.id} className="bg-[#171215] text-white">
+              <option key={c.id} value={c.id} className="bg-[#f8efe9] text-[#33141f]">
                 {c.name}
               </option>
             ))}
@@ -243,7 +243,7 @@ export function ServiceForm({
         {aviso360 ? <p role="status" className="text-xs font-semibold text-amber-300">{aviso360}</p> : null}
       </div>
 
-      <label className="flex items-center gap-2 text-xs font-semibold text-white/65">
+      <label className="flex items-center gap-2 text-xs font-semibold text-[#7c5560]">
         <input
           type="checkbox"
           checked={activo}

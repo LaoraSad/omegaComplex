@@ -139,7 +139,7 @@ export default async function AccesosPage({ searchParams }: AccesosPageProps) {
                 {result.rows.map((a) => (
                   <tr key={a.id}>
                     <td className="anum whitespace-nowrap text-[0.8rem]">{formatDateTime(a.accessedAt)}</td>
-                    <td className="font-bold text-white">
+                    <td className="font-bold text-[#33141f]">
                       {fullName(
                         a.qrToken.reservation.customer.user.firstName,
                         a.qrToken.reservation.customer.user.lastName,
@@ -151,7 +151,7 @@ export default async function AccesosPage({ searchParams }: AccesosPageProps) {
                     <td>
                       <StatusBadge kind="access" value={a.result} />
                       {a.denialReason ? (
-                        <span className="block text-xs text-[#b8aca6]">{a.denialReason}</span>
+                        <span className="block text-xs text-[#7c5560]">{a.denialReason}</span>
                       ) : null}
                       {a.invalidacionManual ? (
                         <span className="block text-xs font-semibold text-amber-300">

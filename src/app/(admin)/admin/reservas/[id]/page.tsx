@@ -60,47 +60,47 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
             <h2 className="acard-title">Cliente</h2>
             <dl className="mt-2 space-y-1.5 text-sm">
               <div className="flex justify-between gap-4">
-                <dt className="text-[#b8aca6]">Nombre</dt>
+                <dt className="text-[#7c5560]">Nombre</dt>
                 <dd className="font-semibold">{fullName(r.customer.user.firstName, r.customer.user.lastName)}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-[#b8aca6]">Documento</dt>
+                <dt className="text-[#7c5560]">Documento</dt>
                 <dd className="font-semibold">{r.customer.document ?? "—"}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-[#b8aca6]">Correo</dt>
+                <dt className="text-[#7c5560]">Correo</dt>
                 <dd className="max-w-[60%] truncate font-semibold">{r.customer.user.email}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-[#b8aca6]">Teléfono</dt>
+                <dt className="text-[#7c5560]">Teléfono</dt>
                 <dd className="font-semibold">{r.customer.user.phone ?? "—"}</dd>
               </div>
             </dl>
           </div>
-          <div className="border-t border-[#2a2226] pt-4">
+          <div className="border-t border-[#ddc6bb] pt-4">
             <h2 className="acard-title">Servicio y horario</h2>
             <dl className="mt-2 space-y-1.5 text-sm">
               <div className="flex justify-between gap-4">
-                <dt className="text-[#b8aca6]">Servicio</dt>
+                <dt className="text-[#7c5560]">Servicio</dt>
                 <dd className="font-semibold">{r.service.name}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-[#b8aca6]">Categoría</dt>
+                <dt className="text-[#7c5560]">Categoría</dt>
                 <dd className="font-semibold">{r.service.category.name}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-[#b8aca6]">Fecha</dt>
+                <dt className="text-[#7c5560]">Fecha</dt>
                 <dd className="font-semibold">{formatDate(r.startsAt)}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-[#b8aca6]">Hora</dt>
+                <dt className="text-[#7c5560]">Hora</dt>
                 <dd className="font-semibold">
                   {formatTime(r.startsAt)} – {formatTime(r.endsAt)}
                 </dd>
               </div>
               {r.creator ? (
                 <div className="flex justify-between gap-4">
-                  <dt className="text-[#b8aca6]">Venta física por</dt>
+                  <dt className="text-[#7c5560]">Venta física por</dt>
                   <dd className="font-semibold">
                     {fullName(r.creator.firstName, r.creator.lastName)}
                   </dd>
@@ -114,12 +114,12 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
           <h2 className="acard-title">Pagos · COP con tarjeta</h2>
           <p className="acard-sub">Intentos registrados para esta reserva.</p>
           {r.payments.length > 0 ? (
-            <ul className="mt-3 divide-y divide-[#f0e9e6]">
+            <ul className="mt-3 divide-y divide-[#e6d3c9]">
               {r.payments.map((p) => (
                 <li key={p.id} className="flex items-center justify-between gap-3 py-2.5">
                   <div>
                     <p className="anum text-sm font-bold">{formatCOP(p.amountCop)}</p>
-                    <p className="text-xs text-[#b8aca6]">
+                    <p className="text-xs text-[#7c5560]">
                       <StatusBadge kind="paymentMethod" value={p.method} /> · {formatDateTime(p.createdAt)}
                       {p.paidAt ? ` · pagado ${formatDateTime(p.paidAt)}` : ""}
                     </p>
@@ -129,7 +129,7 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
               ))}
             </ul>
           ) : (
-            <p className="mt-3 text-sm text-[#b8aca6]">Esta reserva no tiene pagos registrados.</p>
+            <p className="mt-3 text-sm text-[#7c5560]">Esta reserva no tiene pagos registrados.</p>
           )}
         </section>
       </div>
@@ -149,7 +149,7 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
         {r.qrTokens.length > 0 ? (
           <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {r.qrTokens.map((qr) => (
-              <li key={qr.id} className="rounded-[10px] border border-[#2a2226] bg-[#1a1519] p-3.5">
+              <li key={qr.id} className="rounded-[10px] border border-[#ddc6bb] bg-[#f1e1d8] p-3.5">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-bold">QR #{qr.seqNo}</p>
                   <StatusBadge kind="qr" value={qr.status} />
@@ -158,7 +158,7 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
                   <ul className="mt-2 space-y-1.5">
                     {qr.accesses.map((a) => (
                       <li key={a.id} className="flex items-center justify-between gap-2 text-xs">
-                        <span className="text-[#b8aca6]">
+                        <span className="text-[#7c5560]">
                           {formatDateTime(a.accessedAt)} ·{" "}
                           {fullName(a.employee.user.firstName, a.employee.user.lastName)}
                           {a.denialReason ? ` · ${a.denialReason}` : ""}
@@ -168,7 +168,7 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-2 text-xs text-[#b8aca6]">
+                  <p className="mt-2 text-xs text-[#7c5560]">
                     {qr.status === "active"
                       ? "Aún no se ha usado este código."
                       : qr.usedAt
@@ -180,7 +180,7 @@ export default async function ReservaDetailPage({ params }: DetailPageProps) {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-[#b8aca6]">Esta reserva aún no tiene códigos QR emitidos.</p>
+          <p className="text-sm text-[#7c5560]">Esta reserva aún no tiene códigos QR emitidos.</p>
         )}
       </section>
     </div>
