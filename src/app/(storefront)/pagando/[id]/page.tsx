@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { TriangleAlert } from "lucide-react";
 
-import { createCheckoutSession } from "@/features/payments/payments.service";
+import { appUrl, createCheckoutSession } from "@/features/payments/payments.service";
 import { getSession } from "@/shared/auth/session";
 import { db } from "@/shared/lib/db";
 import { getCustomerReservation } from "@/features/reservations/reservations.repository";
@@ -57,7 +57,7 @@ export default async function PagandoPage({
   void pagoPrevio;
 
   try {
-    const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const base = appUrl();
     const checkout = await createCheckoutSession({
       reservationId: reserva.id,
       amountCop: reserva.totalCop,

@@ -211,7 +211,7 @@ export async function getDayAvailability(
   serviceId: string,
   date: string,
 ): Promise<DayAvailability> {
-  const { start, end } = bogotaDayBounds(date);
+  const { start } = bogotaDayBounds(date);
   const now = new Date();
 
   // Antes de contar nada: si alguien abandonó el checkout, sus cupos ya no están

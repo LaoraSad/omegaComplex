@@ -109,7 +109,10 @@ const serviceCapacitySchema = z.coerce
   .min(1, "La capacidad mínima es 1 persona")
   .max(1000, "La capacidad es demasiado alta");
 
-const serviceImageSchema = z.string().trim().max(500).optional();
+const serviceImageSchema = z
+  .union([z.string().trim().max(500), z.literal("").transform(() => null)])
+  .transform((value) => (value && typeof value === "string" && value.trim()) || null)
+  .optional();
 
 const serviceCategorySchema = z.string().trim().uuid("La categoría no es válida");
 
