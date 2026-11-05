@@ -82,26 +82,26 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
               {initials(employee.user.firstName, employee.user.lastName)}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-white">{name}</p>
-              <p className="truncate text-xs text-[#b8aca6]">{employee.user.email}</p>
+              <p className="truncate text-sm font-bold text-[#33141f]">{name}</p>
+              <p className="truncate text-xs text-[#7c5560]">{employee.user.email}</p>
             </div>
           </div>
           <dl className="mt-4 space-y-2 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-[#b8aca6]">Documento</dt>
+              <dt className="text-[#7c5560]">Documento</dt>
               <dd className="anum font-semibold">{employee.document}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-[#b8aca6]">Teléfono</dt>
+              <dt className="text-[#7c5560]">Teléfono</dt>
               <dd className="font-semibold">{employee.user.phone ?? "—"}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-[#b8aca6]">Accesos validados</dt>
+              <dt className="text-[#7c5560]">Accesos validados</dt>
               <dd className="anum font-semibold">{formatNumber(employee._count.accesses)}</dd>
             </div>
           </dl>
-          <div className="mt-4 rounded-[10px] bg-[#1a1519] p-3">
-            <p className="mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider text-white/60">
+          <div className="mt-4 rounded-[10px] bg-[#f1e1d8] p-3">
+            <p className="mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider text-[#7c5560]">
               <MapPin className="h-3 w-3" /> Zonas
             </p>
             {assignedIds.length > 0 ? (
@@ -113,7 +113,7 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
                 ))}
               </ul>
             ) : (
-              <p className="text-xs font-semibold text-[#92600a]">
+              <p className="text-xs font-semibold text-[#7a4f06]">
                 Sin zona asignada. No podrá validar ningún QR hasta asignarle una.
               </p>
             )}
@@ -149,7 +149,7 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
               Cada QR que validó este empleado, con fecha y hora exacta.
             </p>
           </div>
-          <ScanLine className="h-5 w-5 text-[#e3bd74]" />
+          <ScanLine className="h-5 w-5 text-[#9c4a66]" />
         </div>
 
         {accesses.rows.length > 0 ? (
@@ -171,12 +171,12 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
                       <td className="anum whitespace-nowrap text-[0.8rem]">
                         {formatDateTime(a.accessedAt)}
                       </td>
-                      <td className="font-bold text-white">
+                      <td className="font-bold text-[#33141f]">
                         {fullName(
                           a.qrToken.reservation.customer.user.firstName,
                           a.qrToken.reservation.customer.user.lastName,
                         )}
-                        <span className="block text-xs font-normal text-[#b8aca6]">
+                        <span className="block text-xs font-normal text-[#7c5560]">
                           Doc. {a.qrToken.reservation.customer.document}
                         </span>
                       </td>
@@ -185,7 +185,7 @@ export default async function EmpleadoDetailPage({ params, searchParams }: Emple
                       <td>
                         <StatusBadge kind="access" value={a.result} />
                         {a.denialReason ? (
-                          <span className="block text-xs text-[#b8aca6]">{a.denialReason}</span>
+                          <span className="block text-xs text-[#7c5560]">{a.denialReason}</span>
                         ) : null}
                       </td>
                     </tr>

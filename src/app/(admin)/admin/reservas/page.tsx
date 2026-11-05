@@ -173,16 +173,16 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
                   return (
                     <tr key={r.id}>
                       <td>
-                        <span className="block font-bold text-white">
+                        <span className="block font-bold text-[#33141f]">
                           {fullName(r.customer.user.firstName, r.customer.user.lastName)}
                         </span>
-                        <span className="block text-xs text-[#b8aca6]">
+                        <span className="block text-xs text-[#7c5560]">
                           {r.customer.document ?? r.customer.user.email}
                         </span>
                       </td>
                       <td>
                         <span className="block font-semibold">{r.service.name}</span>
-                        <span className="block text-xs text-[#b8aca6]">{r.service.category.name}</span>
+                        <span className="block text-xs text-[#7c5560]">{r.service.category.name}</span>
                       </td>
                       <td className="anum whitespace-nowrap text-[0.8rem]">{formatDateTime(r.startsAt)}</td>
                       <td className="anum">{formatNumber(r.quantity)}</td>
@@ -191,7 +191,7 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
                         {latestPayment ? (
                           <StatusBadge kind="payment" value={latestPayment.status} />
                         ) : (
-                          <span className="text-xs text-[#a89c97]">Sin pagos</span>
+                          <span className="text-xs text-[#8d6873]">Sin pagos</span>
                         )}
                       </td>
                       <td>

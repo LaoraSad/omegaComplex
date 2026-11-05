@@ -2780,9 +2780,18 @@ li[id^="servicio-"]:target {
 
 .admin-scope {
   --admin-bg: transparent;
-  --admin-text: #ffffff;
-  --admin-muted: rgb(245 241 236 / 68%);
-  --admin-faint: rgb(245 241 236 / 48%);
+  /* Tres escalones de superficie: fondo, card/tabla y superficie elevada
+     (cabecera de tabla, inputs, hovers). Antes todo vivia en el mismo tono y
+     las tarjetas se fundian con el fondo. */
+  --admin-surface: #1c1519;
+  --admin-surface-raised: #241b20;
+  --admin-border: rgb(245 241 236 / 16%);
+  --admin-border-soft: rgb(245 241 236 / 8%);
+  --admin-text: #f7f3ee;
+  --admin-muted: #c4bcb6;
+  --admin-faint: #9e958f;
+  --admin-primary: #8f2547;
+  --admin-primary-hover: #a52c52;
   --admin-topbar-h: 68px;
   /* Fondo como el Inicio: base cílida #141013 con resplandores vino + dorado,
      igual que .omega-dark-section (no negro puro). */
@@ -2790,8 +2799,8 @@ li[id^="servicio-"]:target {
     radial-gradient(60rem 22rem at 15% -10%, rgb(122 31 61 / 26%), transparent 60%),
     radial-gradient(48rem 20rem at 90% 0%, rgb(201 169 107 / 10%), transparent 55%),
     radial-gradient(42rem 26rem at 50% 115%, rgb(122 31 61 / 14%), transparent 60%),
-    linear-gradient(180deg, #1c1518 0%, #141013 48%, #120d0f 100%);
-  background-color: #141013;
+    linear-gradient(180deg, #181114 0%, #120d0f 48%, #100b0d 100%);
+  background-color: #120d0f;
   background-attachment: fixed;
   color: var(--admin-muted);
 }
@@ -2939,14 +2948,14 @@ li[id^="servicio-"]:target {
 .ainst-feature,
 .ainst-card2,
 .atable-wrap {
-  border: 1px solid rgb(142 35 71 / 14%);
+  border: 1px solid var(--admin-border);
   border-top: 3px solid var(--admin-gold);
   border-radius: 1.1rem;
-  background: linear-gradient(180deg, var(--admin-surface) 0%, var(--admin-surface) 100%);
-  color: #fff;
+  background: var(--admin-surface);
+  color: var(--admin-text);
   box-shadow:
-    0 24px 60px rgb(61 14 32 / 14%),
-    0 4px 18px rgb(122 31 61 / 10%);
+    0 18px 44px rgb(0 0 0 / 34%),
+    0 2px 10px rgb(0 0 0 / 22%);
 }
 
 .acard-pad,
@@ -2988,18 +2997,22 @@ li[id^="servicio-"]:target {
 }
 
 .atable thead th {
-  background: rgb(142 35 71 / 5%);
-  border-bottom: 1px solid rgb(142 35 71 / 12%);
+  background: var(--admin-surface-raised);
+  border-bottom: 1px solid rgb(227 189 116 / 28%);
   color: var(--admin-gold);
 }
 
 .atable tbody td {
-  border-bottom-color: var(--admin-border);
-  color: #fff;
+  border-bottom-color: var(--admin-border-soft);
+  color: var(--admin-text);
+}
+
+.atable tbody tr:nth-child(even) {
+  background: rgb(255 255 255 / 2.5%);
 }
 
 .atable tbody tr:hover {
-  background: rgb(142 35 71 / 4%);
+  background: rgb(227 189 116 / 6%);
 }
 
 /* ---------- Seguimiento / Requiere atención SIN amarillo ---------- */
@@ -3092,11 +3105,11 @@ li[id^="servicio-"]:target {
 
 /* ---------- Badges sobrios (ímbar refinado, sin amarillo chillón) ---------- */
 
-.abadge-amber { background: rgb(245 158 11 / 14%); border-color: rgb(245 158 11 / 32%); color: #fcd34d; }
-.abadge-emerald { background: rgb(16 185 129 / 14%); border-color: rgb(16 185 129 / 32%); color: #6ee7b7; }
-.abadge-rose { background: rgb(244 63 94 / 14%); border-color: rgb(244 63 94 / 32%); color: #fda4af; }
-.abadge-blue { background: rgb(59 130 246 / 14%); border-color: rgb(59 130 246 / 32%); color: #93c5fd; }
-.abadge-slate { background: rgb(255 255 255 / 6%); border-color: rgb(255 255 255 / 14%); color: rgb(255 255 255 / 70%); }
+.abadge-amber { background: rgb(245 158 11 / 20%); border-color: rgb(245 158 11 / 42%); color: #fcd34d; }
+.abadge-emerald { background: rgb(16 185 129 / 20%); border-color: rgb(16 185 129 / 42%); color: #86efac; }
+.abadge-rose { background: rgb(244 63 94 / 20%); border-color: rgb(244 63 94 / 42%); color: #fda4af; }
+.abadge-blue { background: rgb(59 130 246 / 20%); border-color: rgb(59 130 246 / 42%); color: #93c5fd; }
+.abadge-slate { background: rgb(255 255 255 / 9%); border-color: rgb(255 255 255 / 20%); color: rgb(255 255 255 / 78%); }
 .abadge-wine { background: rgb(142 35 71 / 8%); border-color: rgb(142 35 71 / 18%); color: var(--admin-gold); }
 
 .aalert-info {
@@ -3118,9 +3131,9 @@ li[id^="servicio-"]:target {
 .aselect {
   width: 100%;
   min-height: 3.1rem;
-  border: 1px solid rgb(142 35 71 / 18%);
+  border: 1px solid var(--admin-border);
   border-radius: 0.65rem;
-  background: var(--admin-surface);
+  background: var(--admin-surface-raised);
   padding: 0.75rem 0.9rem;
   color: #fff;
   font-size: 0.96rem;
@@ -3135,15 +3148,15 @@ li[id^="servicio-"]:target {
 
 .ainput:hover,
 .aselect:hover {
-  border-color: rgb(142 35 71 / 32%);
+  border-color: rgb(245 241 236 / 30%);
 }
 
 .ainput:focus,
 .aselect:focus {
-  border-color: #b3295a;
-  box-shadow: 0 0 0 3px rgb(142 35 71 / 22%);
+  border-color: var(--admin-gold);
+  box-shadow: 0 0 0 3px rgb(227 189 116 / 20%);
   outline: none;
-  background: var(--admin-surface);
+  background: var(--admin-surface-raised);
 }
 
 .ainput[aria-invalid="true"] {
@@ -3189,14 +3202,14 @@ li[id^="servicio-"]:target {
 }
 
 .abtn-secondary {
-  border-color: rgb(142 35 71 / 20%);
-  background: var(--admin-surface-soft);
-  color: #fff;
+  border-color: var(--admin-border);
+  background: var(--admin-surface-raised);
+  color: var(--admin-text);
 }
 
 .abtn-secondary:hover:not(:disabled) {
-  background: rgb(142 35 71 / 6%);
-  border-color: rgb(142 35 71 / 34%);
+  background: rgb(255 255 255 / 8%);
+  border-color: rgb(245 241 236 / 28%);
 }
 
 .abtn-danger {
@@ -3267,8 +3280,8 @@ a.atimeline-link:hover { background: rgb(142 35 71 / 5%); }
 .aempty-text { color: var(--admin-muted); }
 
 .akpi-icon {
-  border-color: rgb(142 35 71 / 14%);
-  background: rgb(142 35 71 / 7%);
+  border-color: rgb(227 189 116 / 24%);
+  background: var(--admin-surface-raised);
   color: var(--admin-gold);
 }
 
@@ -3435,4 +3448,508 @@ a.atimeline-link:hover { background: rgb(142 35 71 / 5%); }
   .atable-wrap::after {
     animation: none;
   }
+}
+
+/* ============================================================
+   Tema claro cálido — arena rosada, marfil y vinotinto
+   ------------------------------------------------------------
+   Sustituye las superficies oscuras del panel por una base clara
+   cálida. El vinotinto de marca se conserva en sus dos tonos
+   (#7a1f3d oscuro y #a52c52 claro) y el dorado pasa a rosa-vino.
+   La barra lateral mantiene el vinotinto profundo como ancla.
+   ============================================================ */
+
+.admin-scope {
+  --admin-bg: #e7d2c8;
+  --admin-surface: #f8efe9;
+  --admin-surface-soft: #e9d3c9;
+  --admin-surface-raised: #f0dfd6;
+  --admin-hairline: rgb(74 31 45 / 12%);
+  --admin-border: rgb(74 31 45 / 16%);
+  --admin-border-soft: rgb(74 31 45 / 9%);
+  --admin-text: #33141f;
+  --admin-muted: #6b4651;
+  --admin-faint: #8a6570;
+  --admin-primary: #7a1f3d;
+  --admin-primary-hover: #a52c52;
+  --admin-primary-soft: rgb(122 31 61 / 9%);
+  /* Acento: rosa-vino en lugar del dorado. bright se usa sobre
+     superficies oscuras (sidebar) y el resto sobre las claras. */
+  --admin-gold: #8e3f5c;
+  --admin-gold-bright: #b8697f;
+  --admin-gold-deep: #6f2c42;
+  --admin-ink: #f8efe9;
+  --admin-ink-soft: #f0dfd6;
+  --admin-ink-muted: #6b4651;
+  color-scheme: light;
+  background:
+    radial-gradient(54rem 22rem at 10% -12%, rgb(122 31 61 / 12%), transparent 62%),
+    radial-gradient(48rem 20rem at 92% -4%, rgb(201 137 160 / 28%), transparent 58%),
+    radial-gradient(44rem 26rem at 50% 116%, rgb(122 31 61 / 8%), transparent 62%),
+    linear-gradient(180deg, #f0ded5 0%, #e7d2c8 50%, #dfc5ba 100%);
+  background-color: #e7d2c8;
+  color: var(--admin-muted);
+}
+
+/* ---------- Topbar clara ---------- */
+
+.admin-topbar {
+  border-bottom: 1px solid var(--admin-border);
+  background: rgb(248 239 233 / 84%);
+  box-shadow: 0 10px 26px rgb(74 31 45 / 8%);
+}
+
+.admin-topbar-title,
+.admin-breadcrumb-title {
+  color: var(--admin-text);
+}
+
+.admin-topbar-eyebrow,
+.admin-breadcrumb-trail {
+  color: var(--admin-muted);
+}
+
+.admin-topbar-mark {
+  background: linear-gradient(180deg, #a52c52, #7a1f3d);
+  box-shadow: 0.22rem 0 0 -0.06rem var(--admin-gold);
+}
+
+.admin-topbar-date {
+  border-color: var(--admin-border);
+  background: var(--admin-surface);
+  color: var(--admin-muted);
+}
+
+.admin-topbar-date svg {
+  color: var(--admin-gold-deep);
+}
+
+.admin-topbar-search {
+  border-color: var(--admin-border);
+  background: var(--admin-surface);
+  color: var(--admin-faint);
+}
+
+.admin-topbar-search:focus-within {
+  border-color: var(--admin-gold);
+  background: #fffaf6;
+  box-shadow: 0 0 0 3px rgb(156 74 102 / 16%);
+}
+
+.admin-topbar-search input {
+  color: var(--admin-text);
+}
+
+.admin-topbar-search input::placeholder {
+  color: var(--admin-faint);
+}
+
+.admin-topbar-avatar {
+  border-color: rgb(156 74 102 / 40%);
+  background: linear-gradient(135deg, #a52c52 0%, #7a1f3d 100%);
+  color: #fff;
+}
+
+.admin-topbar .aicon-btn {
+  color: var(--admin-muted);
+}
+
+.admin-topbar .aicon-btn:hover {
+  background: rgb(122 31 61 / 8%);
+  color: var(--admin-text);
+}
+
+/* ---------- Encabezados y enlaces ---------- */
+
+.admin-section-title,
+.opdash-intro h2,
+.opdash-section-heading h2,
+.opdash-panel-heading h2,
+.admin-page-title {
+  color: var(--admin-text);
+}
+
+.admin-section-sub,
+.opdash-intro-copy,
+.opdash-section-heading > div > p:last-child,
+.opdash-trend-caption,
+.admin-page-title + .admin-section-sub {
+  color: var(--admin-muted);
+}
+
+.opdash-kicker,
+.opdash-section-kicker,
+.opdash-panel .opdash-section-kicker,
+.asection-kicker,
+.admin-page-eyebrow {
+  color: var(--admin-gold);
+}
+
+.opdash-kicker span {
+  color: rgb(142 63 92 / 85%);
+}
+
+.opdash-report-link {
+  border-color: var(--admin-border);
+  background: rgb(255 251 248 / 62%);
+  color: var(--admin-text);
+}
+
+.opdash-report-link:hover {
+  border-color: var(--admin-gold);
+  color: var(--admin-primary);
+}
+
+.opdash-section-link,
+.opdash-trend-link,
+.opdash-feature-action {
+  color: var(--admin-gold-deep);
+}
+
+.opdash-section-link:hover,
+.opdash-trend-link:hover,
+.opdash-feature-action:hover {
+  color: var(--admin-primary);
+}
+
+.opdash-section-link {
+  border-bottom-color: var(--admin-border);
+}
+
+/* ---------- Cards claras ---------- */
+
+.acard,
+.opdash-panel,
+.opdash-empty-state,
+.opdash-metric,
+.opdash-service-feature,
+.opdash-service-tile,
+.akpi-card,
+.ainst-feature,
+.ainst-card2,
+.atable-wrap {
+  border: 1px solid var(--admin-border);
+  border-top: 3px solid var(--admin-gold);
+  background: var(--admin-surface);
+  color: var(--admin-text);
+  box-shadow:
+    0 16px 36px rgb(74 31 45 / 10%),
+    0 2px 6px rgb(74 31 45 / 6%);
+}
+
+.acard-title { color: var(--admin-text); }
+.acard-sub { color: var(--admin-muted); }
+
+.opdash-metric-value { color: var(--admin-text); }
+.opdash-metric-label,
+.opdash-metric-note { color: var(--admin-muted); }
+
+/* El aro en movimiento se queda, en rosa y más contenido. */
+.acard::after,
+.opdash-panel::after,
+.opdash-metric::after,
+.opdash-attention::after,
+.atable-wrap::after {
+  opacity: 0.22;
+}
+
+/* ---------- Tablas ---------- */
+
+.atable thead th {
+  background: var(--admin-surface-raised);
+  border-bottom: 1px solid rgb(122 31 61 / 22%);
+  color: var(--admin-primary);
+}
+
+.atable tbody td {
+  border-bottom-color: var(--admin-border-soft);
+  color: var(--admin-text);
+}
+
+.atable tbody tr:nth-child(even) {
+  background: rgb(122 31 61 / 3%);
+}
+
+.atable tbody tr:hover {
+  background: rgb(122 31 61 / 7%);
+}
+
+/* ---------- Seguimiento / avisos ---------- */
+
+.opdash-attention {
+  border: 1px solid var(--admin-border);
+  border-top: 3px solid var(--admin-gold);
+  background: var(--admin-surface);
+  box-shadow: 0 16px 36px rgb(74 31 45 / 8%);
+  color: var(--admin-text);
+}
+
+.opdash-attention-heading,
+.opdash-attention-heading strong {
+  color: var(--admin-text);
+}
+
+.opdash-attention-icon {
+  border-color: var(--admin-border);
+  background: var(--admin-primary-soft);
+  color: var(--admin-gold);
+}
+
+.opdash-attention-kicker {
+  color: var(--admin-gold);
+}
+
+.opdash-attention-count {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--admin-primary) 0%, #681832 100%);
+  color: #fff;
+  box-shadow: 0 8px 16px rgb(122 31 61 / 20%);
+}
+
+.opdash-alert-link {
+  border-color: var(--admin-border);
+  background: var(--admin-surface);
+  box-shadow: 0 2px 8px rgb(74 31 45 / 6%);
+}
+
+.opdash-alert-link:hover {
+  background: var(--admin-surface-raised);
+  border-color: rgb(122 31 61 / 28%);
+  box-shadow: 0 10px 22px rgb(74 31 45 / 10%);
+}
+
+.opdash-alert-count {
+  background: var(--admin-primary-soft);
+  border-color: var(--admin-border);
+  color: var(--admin-gold-deep);
+}
+
+.opdash-alert-count.is-blue { background: rgb(59 130 246 / 12%); border-color: rgb(59 130 246 / 30%); color: #1d4ed8; }
+.opdash-alert-count.is-rose { background: rgb(244 63 94 / 12%); border-color: rgb(244 63 94 / 30%); color: #be123c; }
+.opdash-alert-count.is-slate { background: rgb(74 31 45 / 7%); border-color: var(--admin-border); color: var(--admin-muted); }
+.opdash-alert-count.is-amber { background: rgb(245 158 11 / 14%); border-color: rgb(245 158 11 / 35%); color: #92400e; }
+.opdash-alert-count:not([class*="is-"]) {
+  background: var(--admin-primary-soft);
+  border-color: var(--admin-border);
+  color: var(--admin-gold-deep);
+}
+
+.opdash-alert-copy strong { color: var(--admin-text); }
+.opdash-alert-copy > span { color: var(--admin-muted); }
+.opdash-alert-link > svg { color: var(--admin-gold); }
+
+.opdash-clear-state {
+  border: 1px solid var(--admin-border);
+  border-top: 3px solid #4d9e7a;
+  background: var(--admin-surface);
+  color: #0f766e;
+  box-shadow: 0 14px 30px rgb(74 31 45 / 8%);
+}
+
+.opdash-clear-state strong { color: #0f766e; }
+.opdash-clear-state span span { color: #3f6b61; }
+
+.opdash-chart-label { color: var(--admin-muted); }
+
+/* ---------- Badges sobre claro ---------- */
+
+.abadge-amber { background: rgb(245 158 11 / 16%); border-color: rgb(245 158 11 / 38%); color: #92400e; }
+.abadge-emerald { background: rgb(16 185 129 / 14%); border-color: rgb(16 185 129 / 34%); color: #036848; }
+.abadge-rose { background: rgb(244 63 94 / 12%); border-color: rgb(244 63 94 / 32%); color: #be123c; }
+.abadge-blue { background: rgb(59 130 246 / 12%); border-color: rgb(59 130 246 / 32%); color: #1d4ed8; }
+.abadge-slate { background: rgb(74 31 45 / 7%); border-color: rgb(74 31 45 / 18%); color: #4b3138; }
+.abadge-wine { background: var(--admin-primary-soft); border-color: rgb(122 31 61 / 24%); color: var(--admin-primary); }
+
+.aalert-info {
+  border-color: rgb(122 31 61 / 18%);
+  background: var(--admin-primary-soft);
+  color: var(--admin-text);
+}
+
+/* ---------- Formularios ---------- */
+
+.alabel { color: var(--admin-text); }
+
+.ainput,
+.aselect {
+  border-color: var(--admin-border);
+  background-color: var(--admin-surface-raised);
+  color: var(--admin-text);
+}
+
+.ainput::placeholder { color: var(--admin-faint); }
+
+.ainput:hover,
+.aselect:hover {
+  border-color: rgb(122 31 61 / 30%);
+}
+
+.ainput:focus,
+.aselect:focus {
+  border-color: var(--admin-gold);
+  background-color: var(--admin-surface);
+  box-shadow: 0 0 0 3px rgb(156 74 102 / 18%);
+}
+
+.ainput[aria-invalid="true"] {
+  border-color: #c2413b;
+  background-color: rgb(244 63 94 / 8%);
+}
+
+.afield-hint { color: var(--admin-muted); }
+.afield-error { color: #b42318; }
+
+/* ---------- Botones ---------- */
+
+.abtn-primary {
+  background: linear-gradient(135deg, var(--admin-primary) 0%, #681832 100%);
+  color: #fff;
+  box-shadow: 0 8px 18px rgb(122 31 61 / 20%);
+}
+
+.abtn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #9a2b50 0%, #751a37 100%);
+  box-shadow: 0 10px 22px rgb(122 31 61 / 26%);
+}
+
+.abtn-secondary {
+  border-color: var(--admin-border);
+  background: var(--admin-surface);
+  color: var(--admin-text);
+}
+
+.abtn-secondary:hover:not(:disabled) {
+  background: var(--admin-surface-raised);
+  border-color: rgb(122 31 61 / 26%);
+}
+
+.abtn-light {
+  border-color: var(--admin-border);
+  background: rgb(255 251 248 / 72%);
+  color: var(--admin-primary);
+  backdrop-filter: blur(8px);
+}
+
+.abtn-light:hover {
+  background: #fffaf6;
+  border-color: var(--admin-gold);
+}
+
+.abtn-danger {
+  background: linear-gradient(135deg, #b3261e 0%, #7c1530 100%);
+  color: #fff;
+  box-shadow: 0 8px 18px rgb(124 21 48 / 22%);
+}
+
+.abtn-danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #9a1f19 0%, #6b1229 100%);
+}
+
+/* ---------- Detalles editoriales ---------- */
+
+.opdash-reservation-time,
+.opdash-access-time,
+.opdash-trend-total {
+  color: var(--admin-gold-deep);
+}
+
+.opdash-reservation-copy strong,
+.opdash-access-copy strong,
+.opdash-occupancy-label strong,
+.aempty-title {
+  color: var(--admin-text);
+}
+
+.opdash-reservation-copy > span,
+.opdash-access-copy > span,
+.opdash-access-employee,
+.opdash-feature-capacity,
+.opdash-occupancy-label {
+  color: var(--admin-muted);
+}
+
+.opdash-occupancy-track { background: rgb(122 31 61 / 10%); }
+.opdash-occupancy-track > span { background: linear-gradient(90deg, var(--admin-primary), #b3295a); }
+
+.opdash-feature-action.is-ghost {
+  border-color: rgb(122 31 61 / 22%);
+  color: var(--admin-text);
+}
+
+.opdash-no-schedule {
+  border-left-color: var(--admin-gold);
+  color: var(--admin-muted);
+}
+
+.opdash-chart { border-bottom-color: rgb(122 31 61 / 14%); }
+.opdash-chart-bar { background: var(--admin-primary); }
+.opdash-chart-day:nth-child(3n) .opdash-chart-bar { background: #b3295a; }
+.opdash-chart-day:nth-child(3n + 1) .opdash-chart-bar { background: #c98ca0; }
+
+.opdash-icon-link {
+  border-color: rgb(122 31 61 / 18%);
+  background: var(--admin-surface-soft);
+  color: var(--admin-gold-deep);
+}
+
+.opdash-icon-link:hover { background: var(--admin-primary-soft); }
+
+.aempty-icon {
+  border-color: rgb(122 31 61 / 18%);
+  background: var(--admin-primary-soft);
+  color: var(--admin-gold-deep);
+}
+
+.akpi-icon {
+  border-color: rgb(122 31 61 / 20%);
+  background: var(--admin-surface-raised);
+  color: var(--admin-gold-deep);
+}
+
+.apage-btn {
+  border-color: var(--admin-border);
+  background: var(--admin-surface);
+  color: var(--admin-text);
+}
+
+.apage-btn:hover {
+  border-color: rgb(122 31 61 / 32%);
+  color: var(--admin-primary);
+}
+
+.apage-btn[aria-current="page"] {
+  border-color: var(--admin-primary);
+  background: linear-gradient(135deg, var(--admin-primary), #681832);
+  color: #fff;
+}
+
+.apagination-info { color: var(--admin-muted); }
+
+.adrawer,
+.amodal {
+  border-color: var(--admin-border);
+  border-top: 3px solid var(--admin-gold);
+  background: var(--admin-surface);
+  color: var(--admin-text);
+}
+
+.adrawer h2,
+.adrawer h3,
+.adrawer h4,
+.amodal h2,
+.amodal h3,
+.amodal h4 {
+  color: var(--admin-text);
+}
+
+.aicon-btn:hover { background: rgb(122 31 61 / 8%); }
+
+/* ---------- Sidebar: se conserva el vinotinto profundo ---------- */
+
+.admin-nav-link[aria-current="page"] {
+  box-shadow: inset 3px 0 0 #e6a9bd;
+}
+
+.admin-nav-link[aria-current="page"] .admin-nav-icon {
+  color: #f4c7d5;
 }

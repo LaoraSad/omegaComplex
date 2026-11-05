@@ -108,7 +108,7 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
         <section aria-label="Fotografía y capacidad" className="acard overflow-hidden xl:col-span-3">
-          <div className="relative aspect-[16/9] w-full bg-[#1a1519]">
+          <div className="relative aspect-[16/9] w-full bg-[#f1e1d8]">
             {photo ? (
               <Image
                 src={photo}
@@ -125,23 +125,23 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
             )}
           </div>
           <div className="acard-pad">
-            <dl className="grid grid-cols-3 gap-2 rounded-[10px] bg-[#1a1519] p-3 text-center">
+            <dl className="grid grid-cols-3 gap-2 rounded-[10px] bg-[#f1e1d8] p-3 text-center">
               <div>
-                <dt className="text-[0.66rem] font-bold uppercase tracking-wider text-[#b8aca6]">Capacidad</dt>
+                <dt className="text-[0.66rem] font-bold uppercase tracking-wider text-[#7c5560]">Capacidad</dt>
                 <dd className="anum text-base font-extrabold">{formatNumber(service.capacity)}</dd>
               </div>
-              <div className="border-x border-[#2a2226]">
-                <dt className="text-[0.66rem] font-bold uppercase tracking-wider text-[#b8aca6]">Precio</dt>
+              <div className="border-x border-[#ddc6bb]">
+                <dt className="text-[0.66rem] font-bold uppercase tracking-wider text-[#7c5560]">Precio</dt>
                 <dd className="anum text-base font-extrabold">{formatCOP(service.price)}</dd>
               </div>
               <div>
-                <dt className="text-[0.66rem] font-bold uppercase tracking-wider text-[#b8aca6]">Ocupación hoy</dt>
+                <dt className="text-[0.66rem] font-bold uppercase tracking-wider text-[#7c5560]">Ocupación hoy</dt>
                 <dd className="anum text-base font-extrabold">
                   {occupancy !== null ? `${occupancy}%` : "—"}
                 </dd>
               </div>
             </dl>
-            <p className="mt-3 flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider text-[#b8aca6]">
+            <p className="mt-3 flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider text-[#7c5560]">
               <Users className="h-3 w-3" /> Horario semanal
             </p>
             {service.serviceSchedules.length > 0 ? (
@@ -153,11 +153,11 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
                       key={d}
                       title={sc ? `${DAY_LABELS[d]}: ${sc.openTime}–${sc.closeTime}` : `${DAY_LABELS[d]}: cerrado`}
                       className={`rounded-md border px-0.5 py-1 text-center ${
-                        sc ? "border-[#3a2530] bg-[#2a1520]" : "border-[#2a2226] bg-[#1a1519]"
+                        sc ? "border-[#b06a83] bg-[#f6e3e9]" : "border-[#ddc6bb] bg-[#f1e1d8]"
                       }`}
                     >
-                      <span className="block text-[0.6rem] font-bold text-[#b8aca6]">{DAY_LABELS[d]}</span>
-                      <span className={`block text-[0.6rem] font-semibold ${sc ? "text-[#e3bd74]" : "text-[#a89c97]"}`}>
+                      <span className="block text-[0.6rem] font-bold text-[#7c5560]">{DAY_LABELS[d]}</span>
+                      <span className={`block text-[0.6rem] font-semibold ${sc ? "text-[#9c4a66]" : "text-[#8d6873]"}`}>
                         {sc ? sc.openTime.slice(0, 5) : "—"}
                       </span>
                     </li>
@@ -165,7 +165,7 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
                 })}
               </ol>
             ) : (
-              <p className="mt-1.5 text-xs text-[#a89c97]">Sin horario configurado en el sistema.</p>
+              <p className="mt-1.5 text-xs text-[#8d6873]">Sin horario configurado en el sistema.</p>
             )}
           </div>
         </section>
@@ -184,7 +184,7 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
             </Link>
           </div>
           {reservations.rows.length > 0 ? (
-            <ul className="divide-y divide-[#f0e9e6]">
+            <ul className="divide-y divide-[#e6d3c9]">
               {reservations.rows.map((r) => (
                 <li key={r.id} className="py-2.5">
                   <Link href={`/admin/reservas/${r.id}`} className="group flex items-center justify-between gap-3">
@@ -192,7 +192,7 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
                       <span className="block truncate text-sm font-bold">
                         {fullName(r.customer.user.firstName, r.customer.user.lastName)}
                       </span>
-                      <span className="block truncate text-xs text-[#b8aca6]">
+                      <span className="block truncate text-xs text-[#7c5560]">
                         {formatDateTime(r.startsAt)} · {formatNumber(r.quantity)}{" "}
                         {r.quantity === 1 ? "cupo" : "cupos"}
                       </span>
@@ -222,7 +222,7 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
           </Link>
         </div>
         {accesses.rows.length > 0 ? (
-          <ul className="divide-y divide-[#f0e9e6]">
+          <ul className="divide-y divide-[#e6d3c9]">
             {accesses.rows.map((a) => (
               <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
                 <span className="font-semibold">
@@ -230,7 +230,7 @@ export default async function ServicioDetailPage({ params }: ServiceDetailPagePr
                     a.qrToken.reservation.customer.user.firstName,
                     a.qrToken.reservation.customer.user.lastName,
                   )}{" "}
-                  <span className="font-normal text-[#b8aca6]">
+                  <span className="font-normal text-[#7c5560]">
                     · {formatDateTime(a.accessedAt)} · QR #{a.qrToken.seqNo}
                   </span>
                 </span>

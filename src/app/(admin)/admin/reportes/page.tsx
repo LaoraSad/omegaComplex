@@ -124,12 +124,12 @@ export default async function ReportesPage({
             <ul className="mt-2 space-y-1">
               {metricas.ingresosPorServicio.slice(0, 5).map((s) => (
                 <li key={s.serviceId} className="flex items-baseline justify-between gap-2 text-sm">
-                  <span className="truncate text-[#6b625e]">{s.serviceName}</span>
+                  <span className="truncate text-[#6b4651]">{s.serviceName}</span>
                   <strong className="shrink-0">{formatCOP(s.totalCop)}</strong>
                 </li>
               ))}
               {metricas.ingresosPorServicio.length === 0 ? (
-                <li className="text-sm text-[#b8aca6]">Sin pagos exitosos en el rango.</li>
+                <li className="text-sm text-[#7c5560]">Sin pagos exitosos en el rango.</li>
               ) : null}
             </ul>
             <p className="akpi-context mt-2">
@@ -142,12 +142,12 @@ export default async function ReportesPage({
             <ul className="mt-2 space-y-1">
               {metricas.reservasPorServicio.slice(0, 5).map((s) => (
                 <li key={s.serviceId} className="flex items-baseline justify-between gap-2 text-sm">
-                  <span className="truncate text-[#6b625e]">{s.serviceName}</span>
+                  <span className="truncate text-[#6b4651]">{s.serviceName}</span>
                   <strong className="shrink-0">{formatNumber(s.total)}</strong>
                 </li>
               ))}
               {metricas.reservasPorServicio.length === 0 ? (
-                <li className="text-sm text-[#b8aca6]">Sin reservas en el rango.</li>
+                <li className="text-sm text-[#7c5560]">Sin reservas en el rango.</li>
               ) : null}
             </ul>
             <p className="akpi-context mt-2">
@@ -169,7 +169,7 @@ export default async function ReportesPage({
             <ul className="mt-2 space-y-1">
               {ocupacion.occupancyByService.slice(0, 5).map((s) => (
                 <li key={s.serviceId} className="flex items-baseline justify-between gap-2 text-sm">
-                  <span className="truncate text-[#6b625e]">{s.serviceName}</span>
+                  <span className="truncate text-[#6b4651]">{s.serviceName}</span>
                   <strong className="shrink-0">{formatPercent(s.used, s.total)}</strong>
                 </li>
               ))}
@@ -179,7 +179,7 @@ export default async function ReportesPage({
             <p className="akpi-label">Uso de reservas</p>
             <p className="akpi-value">
               {formatNumber(uso.usadas)}{" "}
-              <span className="text-sm font-semibold text-[#b8aca6]">utilizadas</span>
+              <span className="text-sm font-semibold text-[#7c5560]">utilizadas</span>
             </p>
             <p className="akpi-context">
               {formatNumber(uso.noUsadas)} no utilizadas (confirmadas pasadas sin ningún QR consumido).
@@ -196,7 +196,7 @@ export default async function ReportesPage({
                 <p className="akpi-label">{c.title}</p>
                 <p className="akpi-value">
                   {formatNumber(c.count)}{" "}
-                  <span className="text-sm font-semibold text-[#b8aca6]">{c.unit}</span>
+                  <span className="text-sm font-semibold text-[#7c5560]">{c.unit}</span>
                 </p>
                 <p className="akpi-context">{c.text}</p>
               </div>
