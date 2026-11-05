@@ -449,5 +449,7 @@ async function notificarPagoRechazado(reservationId: string, motivo?: string | n
 }
 
 export function appUrl(): string {
-  return env.NEXT_PUBLIC_APP_URL;
+  // Se le quita la barra final: si la variable viene como
+  // "https://dominio/" las rutas quedaban como "https://dominio//mis-reservas".
+  return env.NEXT_PUBLIC_APP_URL.replace(/\/+$/, "");
 }
