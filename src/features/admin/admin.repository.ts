@@ -694,7 +694,7 @@ export type ServiceCreateData = {
   description?: string;
   price: number;
   capacity: number;
-  imagen?: string;
+  imagen?: string | null;
   isActive?: boolean;
 };
 

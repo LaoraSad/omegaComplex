@@ -39,6 +39,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Prisma: schema, migraciones, seed y CLI para que el entrypoint pueda
 # correr `prisma migrate deploy` y `prisma db seed` en el contenedor.
+# El seed importa con el alias `@/...`: necesita tsconfig.json y el árbol src
+# para que `tsx` resuelva las rutas (antes fallaba con MODULE_NOT_FOUND).
+COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json
+COPY --from=builder --chown=nextjs:nodejs /app/src ./src
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json

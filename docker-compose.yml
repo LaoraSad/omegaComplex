@@ -1,4 +1,19 @@
 services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-omega}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-omega}
+      POSTGRES_DB: ${POSTGRES_DB:-omega}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-omega} -d ${POSTGRES_DB:-omega}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   web:
     build:
       context: .
@@ -13,33 +28,21 @@ services:
       NODE_ENV: production
       PORT: 3000
       HOSTNAME: 0.0.0.0
-    # Healthcheck real: Next responde 200 en / cuando está sano.
+      # Dentro del contenedor 127.0.0.1 es el propio contenedor: el .env local
+      # apunta al Postgres del host y aquí se sobreescribe hacia el servicio db.
+      # Para usar Supabase u otra BD externa, define DATABASE_URL_DOCKER en .env.
+      DATABASE_URL: ${DATABASE_URL_DOCKER:-postgresql://omega:omega@db:5432/omega?schema=public&connection_limit=5&pool_timeout=20}
+    # Healthcheck de liveness: no depende de la base de datos.
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/"]
+      # 127.0.0.1 explícito: Next escucha en IPv4 y `localhost` puede resolver a ::1.
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 20s
-    # En producción la BD suele estar afuera (Supabase). Si algún día se quiere
-    # levantar Postgres en el mismo compose, descomentar el servicio y el depends_on.
-    # depends_on:
-    #   db:
-    #     condition: service_healthy
+    depends_on:
+      db:
+        condition: service_healthy
 
-  # db:
-  #   image: postgres:16-alpine
-  #   restart: unless-stopped
-  #   environment:
-  #     POSTGRES_USER: omega
-  #     POSTGRES_PASSWORD: omega
-  #     POSTGRES_DB: omega
-  #   volumes:
-  #     - pgdata:/var/lib/postgresql/data
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U omega"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-
-# volumes:
-#   pgdata:
+volumes:
+  pgdata:

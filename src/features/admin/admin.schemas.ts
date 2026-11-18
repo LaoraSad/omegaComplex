@@ -110,8 +110,11 @@ const serviceCapacitySchema = z.coerce
   .max(1000, "La capacidad es demasiado alta");
 
 const serviceImageSchema = z
-  .union([z.string().trim().max(500), z.literal("").transform(() => null)])
-  .transform((value) => (value && typeof value === "string" && value.trim()) || null)
+  .union([z.string().trim().max(500), z.null()])
+  .transform((value) => (typeof value === "string" && value.trim() ? value.trim() : null))
+  // La ruta se sirve desde /public: sin la barra inicial el <Image> apunta a
+  // una URL relativa que no existe.
+  .refine((value) => value === null || value.startsWith("/"), "La ruta de la imagen debe empezar por /")
   .optional();
 
 const serviceCategorySchema = z.string().trim().uuid("La categoría no es válida");

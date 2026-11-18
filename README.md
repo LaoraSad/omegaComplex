@@ -515,6 +515,14 @@ Fuera del alcance de la app: desplegar, dominio y `migrate deploy` en prod
 
 La aplicación usa una estrategia multistage. La imagen de producción corre con un usuario no privilegiado y expone el puerto `3000`.
 
+`docker compose up --build` levanta la app y su PostgreSQL interno (servicio `db`), y el entrypoint aplica migraciones y seed. El `.env` sigue siendo necesario para los secretos (`JWT_SECRET`, Stripe, correo).
+
+| Modo | `DATABASE_URL` efectiva |
+| --- | --- |
+| Desarrollo local (`npm run dev`) | la del `.env` (por ejemplo `127.0.0.1:5435`) |
+| Docker con BD interna (por defecto) | `postgresql://omega:omega@db:5432/omega` |
+| Docker con BD externa (Supabase u otra) | define `DATABASE_URL_DOCKER` en `.env` |
+
 ```mermaid
 %%{init: {'theme':'base','themeVariables':{'primaryColor':'#7A1F3D','primaryTextColor':'#F5F5F5','lineColor':'#C8A96B'}}}%%
 flowchart LR

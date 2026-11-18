@@ -39,6 +39,9 @@ jobs:
       - name:  Linting
         run: npm run lint
 
+      - name:  Pruebas unitarias
+        run: npm test
+
       - name:  Probar compilación
         run: npm run build
 

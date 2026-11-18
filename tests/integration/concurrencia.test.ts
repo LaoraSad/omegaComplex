@@ -6,7 +6,11 @@
  * + personas`) deja pasar a una sola. Reloj congelado (now explícito) y filas
  * propias por test (sufijo único) con limpieza en `finally`.
  *
- * Requiere la BD de desarrollo levantada (`DATABASE_URL` del `.env`).
+ * Requiere la BD de desarrollo levantada. Se salta si no existe
+ * `DATABASE_URL_TEST` (esa es la señal de que hay una BD disponible para
+ * pruebas): así `npm test` no falla en CI ni en una máquina sin Postgres.
+ * Al correrlo en local, exporta `DATABASE_URL_TEST` con la misma URL de
+ * `DATABASE_URL`.
  */
 import "dotenv/config";
 
@@ -121,7 +125,7 @@ afterAll(async () => {
   await db.$disconnect();
 });
 
-describe("concurrencia real por el último cupo", () => {
+describe.skipIf(!process.env.DATABASE_URL_TEST)("concurrencia real por el último cupo", () => {
   it("dos clientes en paralelo: solo uno gana y el otro ve ya_reservado", { timeout: 60_000 }, async () => {
     const sufijo = `ultimo-${Date.now()}`;
     const esc: Escenario = { sufijo, userIds: [], serviceIds: [], slotIds: [], reservaIds: [] };
