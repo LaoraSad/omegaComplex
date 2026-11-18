@@ -1,0 +1,3 @@
+# Fuerza LF en scripts para que funcionen dentro de contenedores Linux
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf
